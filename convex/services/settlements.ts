@@ -183,6 +183,40 @@ export const requestSettlement = mutation({
       earnings_count: pendingTotal.count,
     });
 
+    // Email SA about new settlement request
+    try {
+      await ctx.scheduler.runAfter(0, api.services.emailNotifications.sendNotificationToRole, {
+        notification_type: "settlement_requested",
+        role: "super_admin",
+        variables: {
+          branch_name: branch.name || "Branch",
+          amount: `₱${pendingTotal.totalNet.toLocaleString()}`,
+          earnings_count: String(pendingTotal.count),
+        },
+      });
+    } catch (e) { console.error("[SETTLEMENTS] Email failed:", e); }
+
+    // In-app notification for SA
+    try {
+      await ctx.db.insert("notifications", {
+        title: "New Settlement Request",
+        message: `${branch.name} requested a settlement of ₱${pendingTotal.totalNet.toLocaleString()} (${pendingTotal.count} earnings)`,
+        type: "payment" as const,
+        priority: "high" as const,
+        recipient_type: "admin" as const,
+        is_read: false,
+        is_archived: false,
+        action_label: "Review Settlement",
+        metadata: {
+          settlement_id: settlementId,
+          branch_id: args.branch_id,
+          amount: pendingTotal.totalNet,
+        },
+        createdAt: now,
+        updatedAt: now,
+      });
+    } catch (e) { console.error("[SETTLEMENTS] In-app notification failed:", e); }
+
     return {
       settlementId,
       amount: pendingTotal.totalNet,
@@ -259,6 +293,18 @@ export const approveSettlement = mutation({
         updatedAt: now,
       });
     }
+
+    // Email BA about settlement approval
+    try {
+      await ctx.scheduler.runAfter(0, api.services.emailNotifications.sendNotificationToRole, {
+        notification_type: "settlement_approved",
+        role: "branch_admin",
+        branch_id: settlement.branch_id,
+        variables: {
+          amount: `₱${settlement.amount.toLocaleString()}`,
+        },
+      });
+    } catch (e) { console.error("[SETTLEMENTS] Approval email failed:", e); }
 
     console.log("[SETTLEMENTS] Settlement approved:", {
       settlementId: args.settlement_id,
@@ -369,6 +415,19 @@ export const rejectSettlement = mutation({
         updatedAt: now,
       });
     }
+
+    // Email BA about settlement rejection (urgent)
+    try {
+      await ctx.scheduler.runAfter(0, api.services.emailNotifications.sendNotificationToRole, {
+        notification_type: "settlement_rejected",
+        role: "branch_admin",
+        branch_id: settlement.branch_id,
+        variables: {
+          amount: `₱${settlement.amount.toLocaleString()}`,
+          rejection_reason: args.rejection_reason,
+        },
+      });
+    } catch (e) { console.error("[SETTLEMENTS] Rejection email failed:", e); }
 
     console.log("[SETTLEMENTS] Settlement rejected:", {
       settlementId: args.settlement_id,
@@ -939,6 +998,29 @@ export const completeSettlement = mutation({
         updatedAt: now,
       });
     }
+
+    // Email SA + BA about settlement completion
+    try {
+      const settlementBranch = await ctx.db.get(settlement.branch_id);
+      await ctx.scheduler.runAfter(0, api.services.emailNotifications.sendNotificationToRole, {
+        notification_type: "settlement_completed",
+        role: "super_admin",
+        variables: {
+          branch_name: settlementBranch?.name || "Branch",
+          amount: `₱${settlement.amount.toLocaleString()}`,
+          transfer_reference: args.transfer_reference.trim(),
+        },
+      });
+      await ctx.scheduler.runAfter(0, api.services.emailNotifications.sendNotificationToRole, {
+        notification_type: "settlement_completed",
+        role: "branch_admin",
+        branch_id: settlement.branch_id,
+        variables: {
+          amount: `₱${settlement.amount.toLocaleString()}`,
+          transfer_reference: args.transfer_reference.trim(),
+        },
+      });
+    } catch (e) { console.error("[SETTLEMENTS] Completion email failed:", e); }
 
     console.log("[SETTLEMENTS] Settlement completed:", {
       settlementId: args.settlement_id,

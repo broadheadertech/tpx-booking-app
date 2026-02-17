@@ -6,8 +6,20 @@ import { User, UserPlus, Edit, Trash2, Shield, Building, Users, Search, Filter, 
 import UserFormModal from './UserFormModal'
 import WalkthroughOverlay from '../common/WalkthroughOverlay'
 import { userManagementSteps } from '../../config/walkthroughSteps'
+import { useCurrentUser } from '../../hooks/useCurrentUser'
 
 export default function UserManagement() {
+  const { user: currentUser } = useCurrentUser()
+  const isItAdmin = currentUser?.role === 'it_admin'
+
+  // IT Admin can only manage IT Admins; others get the default set
+  const availableRoles = isItAdmin
+    ? [{ value: 'it_admin', label: 'IT Administrator' }]
+    : [
+        { value: 'branch_admin', label: 'Branch Admin' },
+        { value: 'staff', label: 'Staff' },
+        { value: 'super_admin', label: 'Super Admin' },
+      ]
   const [searchTerm, setSearchTerm] = useState('')
   const [filterRole, setFilterRole] = useState('all')
   const [filterBranch, setFilterBranch] = useState('all')
@@ -20,7 +32,7 @@ export default function UserManagement() {
     password: '',
     mobile_number: '',
     address: '',
-    role: 'branch_admin',
+    role: isItAdmin ? 'it_admin' : 'branch_admin',
     branch_id: '',
     page_access: []
   })
@@ -36,7 +48,9 @@ export default function UserManagement() {
   // Queries
   const users = useQuery(api.services.auth.getAllUsers, {
     limit: 1000,
-    roles: ['super_admin', 'admin', 'branch_admin', 'staff']
+    roles: isItAdmin
+      ? ['it_admin']
+      : ['super_admin', 'admin', 'branch_admin', 'staff']
   }) || []
   const branches = useQuery(api.services.branches.getActiveBranches) || []
 
@@ -92,7 +106,7 @@ export default function UserManagement() {
       password: '',
       mobile_number: '',
       address: '',
-      role: 'branch_admin',
+      role: isItAdmin ? 'it_admin' : 'branch_admin',
       branch_id: '',
       page_access: []
     })
@@ -587,6 +601,7 @@ export default function UserManagement() {
         loading={loading}
         branches={branches}
         isEditMode={false}
+        availableRoles={availableRoles}
       />
 
       {/* Edit User Modal */}
@@ -607,6 +622,7 @@ export default function UserManagement() {
         loading={loading}
         branches={branches}
         isEditMode={true}
+        availableRoles={availableRoles}
       />
 
       {/* User Management Tutorial */}

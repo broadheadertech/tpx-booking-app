@@ -28,6 +28,9 @@ import SecuritySettings from "./pages/settings/Security";
 import StaffDashboard from "./pages/staff/Dashboard";
 import POS from "./pages/staff/POS";
 import AdminDashboard from "./pages/admin/Dashboard";
+import ITAdminDashboard from "./pages/it-admin/Dashboard";
+import AccountBanned from "./pages/AccountBanned";
+import SubscriptionBlocked from "./pages/SubscriptionBlocked";
 import CustomerDashboard from "./pages/customer/Dashboard";
 import CustomerBooking from "./pages/customer/Booking";
 import GuestServiceBooking from "./pages/customer/GuestServiceBooking.jsx";
@@ -181,6 +184,20 @@ function App() {
                   </AuthRedirect>
                 }
               />
+              <Route
+                path="/it-admin"
+                element={<Navigate to="/it-admin/dashboard" replace />}
+              />
+              <Route
+                path="/it-admin/dashboard"
+                element={
+                  <ProtectedRoute requireItAdmin={true}>
+                    <ITAdminDashboard />
+                  </ProtectedRoute>
+                }
+              />
+              <Route path="/account-banned" element={<AccountBanned />} />
+              <Route path="/subscription-blocked" element={<SubscriptionBlocked />} />
               <Route
                 path="/admin"
                 element={<Navigate to="/admin/dashboard" replace />}

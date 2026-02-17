@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react'
-import { Calendar, Clock, User, CheckCircle, XCircle, AlertCircle, Search, Filter, Plus, Edit, Trash2, RotateCcw, Save, X, QrCode, CreditCard, Receipt, DollarSign, Eye, ChevronLeft, ChevronRight, MessageSquare, MoreVertical, Check, Ban, Settings, Banknote, HelpCircle } from 'lucide-react'
+import { Calendar, Clock, User, CheckCircle, XCircle, AlertCircle, Search, Filter, Plus, Edit, Trash2, RotateCcw, Save, X, QrCode, CreditCard, Receipt, DollarSign, Eye, ChevronLeft, ChevronRight, MessageSquare, MoreVertical, Check, Ban, Settings, Banknote, HelpCircle, ClipboardList } from 'lucide-react'
 import { useQuery, useMutation } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
 import { useAppModal } from '../../context/AppModalContext'
@@ -9,6 +9,7 @@ import CreateBookingModal from './CreateBookingModal'
 import Modal from '../common/Modal'
 import BookingSettingsModal from './BookingSettingsModal'
 import PaymentHistory from './PaymentHistory'
+import BookingEditRequests from './BookingEditRequests'
 import WalkthroughOverlay from '../common/WalkthroughOverlay'
 import { bookingsManagementSteps } from '../../config/walkthroughSteps'
 
@@ -46,6 +47,22 @@ const BookingsManagement = ({ onRefresh, user }) => {
   const [dropdownState, setDropdownState] = useState({ id: null, position: null })
   const [currentTime, setCurrentTime] = useState(Date.now())
   const [showTutorial, setShowTutorial] = useState(false)
+  const [editReason, setEditReason] = useState('')
+
+  const isStaffRole = user?.role === 'staff'
+  const isBranchAdminOrAbove = ['branch_admin', 'admin_staff', 'super_admin', 'it_admin'].includes(user?.role)
+
+  // Edit request mutations & queries
+  const submitEditRequest = useMutation(api.services.bookingEditRequests.submitEditRequest)
+  const pendingEditCount = useQuery(
+    api.services.bookingEditRequests.getPendingCount,
+    user?.branch_id ? { branch_id: user.branch_id } : 'skip'
+  )
+  const pendingForBooking = useQuery(
+    api.services.bookingEditRequests.getEditRequestsByBooking,
+    editingBooking?._id ? { booking_id: editingBooking._id } : 'skip'
+  )
+  const hasPendingRequest = pendingForBooking?.some(r => r.status === 'pending')
 
   // Update time every minute for countdown timers
   useEffect(() => {
@@ -279,6 +296,7 @@ const BookingsManagement = ({ onRefresh, user }) => {
     setShowEditModal(false)
     setEditingBooking(null)
     resetEditForm()
+    setEditReason('')
     setError('')
   }
 
@@ -293,42 +311,70 @@ const BookingsManagement = ({ onRefresh, user }) => {
       return
     }
 
+    // Staff must provide a reason
+    if (isStaffRole && !editReason.trim()) {
+      setError('Please provide a reason for this edit')
+      return
+    }
+
     setLoading(true)
     setError('')
 
     try {
-      // Check if date was changed (affects payroll calculations)
-      const dateChanged = editFormData.date !== editingBooking.date
+      if (isStaffRole) {
+        // Staff: submit edit request for branch admin approval
+        const requestArgs = {
+          booking_id: editingBooking._id,
+          requested_by: user._id,
+          reason: editReason.trim(),
+          service: editFormData.service !== editingBooking.service ? editFormData.service : undefined,
+          date: editFormData.date !== editingBooking.date ? editFormData.date : undefined,
+          time: editFormData.time !== editingBooking.time ? editFormData.time : undefined,
+          notes: editFormData.notes !== (editingBooking.notes || '') ? editFormData.notes : undefined,
+        }
 
-      const bookingData = {
-        id: editingBooking._id,
-        service: editFormData.service,
-        date: editFormData.date,
-        time: editFormData.time,
-        notes: editFormData.notes?.trim() || undefined
-      }
+        // Handle barber changes
+        if (editFormData.barber && editFormData.barber.trim() !== '' && editFormData.barber !== editingBooking.barber) {
+          requestArgs.barber = editFormData.barber
+        } else if ((!editFormData.barber || editFormData.barber.trim() === '') && editingBooking.barber) {
+          requestArgs.clear_barber = true
+        }
 
-      // Only include barber if one is selected (empty string means no barber)
-      if (editFormData.barber && editFormData.barber.trim() !== '') {
-        bookingData.barber = editFormData.barber
+        await submitEditRequest(requestArgs)
+        handleCloseEditModal()
+        showAlert({
+          title: 'Edit Request Submitted',
+          message: 'Your changes have been submitted for branch admin approval.',
+          type: 'info',
+        })
       } else {
-        // Explicitly set to undefined to remove the barber assignment
-        bookingData.barber = undefined
+        // Branch admin / super admin: apply directly (existing behavior)
+        const dateChanged = editFormData.date !== editingBooking.date
+
+        const bookingData = {
+          id: editingBooking._id,
+          service: editFormData.service,
+          date: editFormData.date,
+          time: editFormData.time,
+          notes: editFormData.notes?.trim() || undefined
+        }
+
+        if (editFormData.barber && editFormData.barber.trim() !== '') {
+          bookingData.barber = editFormData.barber
+        } else {
+          bookingData.barber = undefined
+        }
+
+        await updateBookingStatus(bookingData)
+        handleCloseEditModal()
+
+        if (dateChanged) {
+          console.log('Booking date changed - payroll may need recalculation')
+        }
       }
-
-      await updateBookingStatus(bookingData)
-      handleCloseEditModal()
-
-      // Show payroll recalculation warning if date changed
-      if (dateChanged) {
-        // Could add a toast notification here or set a temporary message
-        console.log('Booking date changed - payroll may need recalculation')
-      }
-
-      // No need to call onRefresh() - Convex will automatically update the UI
     } catch (err) {
       console.error('Error updating booking:', err)
-      setError(err.message || 'Failed to update booking')
+      setError(err.data?.message || err.message || 'Failed to update booking')
     } finally {
       setLoading(false)
     }
@@ -901,6 +947,14 @@ const BookingsManagement = ({ onRefresh, user }) => {
                 Edit Booking Details
               </h4>
 
+              {/* Pending request warning */}
+              {isStaffRole && hasPendingRequest && (
+                <div className="mb-4 p-3 bg-amber-500/10 border border-amber-500/30 rounded-lg flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 text-amber-400 flex-shrink-0" />
+                  <p className="text-sm text-amber-300">This booking already has a pending edit request awaiting approval.</p>
+                </div>
+              )}
+
               <div className="grid grid-cols-1 gap-4">
                 {/* Service Selection */}
                 <div>
@@ -925,6 +979,95 @@ const BookingsManagement = ({ onRefresh, user }) => {
                       Duration: {currentService.duration_minutes}min • Price: ₱{parseFloat(currentService.price || 0).toFixed(2)}
                     </p>
                   )}
+
+                  {/* Price Difference Indicator */}
+                  {editFormData.service && editFormData.service !== editingBooking.service && currentService && (() => {
+                    const newPrice = currentService.price || 0
+                    const discountAmount = editingBooking.discount_amount || 0
+                    const newFinalPrice = Math.max(0, newPrice - discountAmount)
+                    const amountPaid = editingBooking.amount_paid
+                    const isPaid = editingBooking.payment_status === 'paid' || editingBooking.payment_status === 'partial'
+                    const originalPrice = editingBooking.final_price || editingBooking.price || 0
+
+                    // If customer has paid, show balance based on actual amount paid
+                    if (isPaid && amountPaid !== undefined && amountPaid > 0) {
+                      const balance = newFinalPrice - amountPaid
+                      return (
+                        <div className={`mt-2 p-2.5 rounded-lg border text-sm ${
+                          balance > 0
+                            ? 'bg-amber-500/10 border-amber-500/30'
+                            : balance < 0
+                              ? 'bg-blue-500/10 border-blue-500/30'
+                              : 'bg-green-500/10 border-green-500/30'
+                        }`}>
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="text-gray-400 text-xs">Amount paid ({editingBooking.payment_method || 'online'}):</span>
+                            <span className="text-green-400 font-medium">₱{amountPaid.toFixed(2)}</span>
+                          </div>
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="text-gray-400 text-xs">New service total:</span>
+                            <span className="text-white font-medium">₱{newFinalPrice.toFixed(2)}</span>
+                          </div>
+                          <div className="border-t border-[#333] my-1.5"></div>
+                          {balance > 0 ? (
+                            <>
+                              <div className="flex items-center justify-between">
+                                <span className="text-xs font-semibold text-amber-400">Balance to collect at POS</span>
+                                <span className="font-bold text-amber-400">+₱{balance.toFixed(2)}</span>
+                              </div>
+                              <p className="text-[10px] text-gray-500 mt-1">
+                                Payment status will change to "Partial". Collect the remaining ₱{balance.toFixed(2)} at checkout.
+                              </p>
+                            </>
+                          ) : balance < 0 ? (
+                            <>
+                              <div className="flex items-center justify-between">
+                                <span className="text-xs font-semibold text-blue-400">Overpayment / credit due</span>
+                                <span className="font-bold text-blue-400">₱{Math.abs(balance).toFixed(2)}</span>
+                              </div>
+                              <p className="text-[10px] text-gray-500 mt-1">
+                                Customer overpaid by ₱{Math.abs(balance).toFixed(2)}. Process refund or store as wallet credit.
+                              </p>
+                            </>
+                          ) : (
+                            <div className="flex items-center justify-between">
+                              <span className="text-xs font-semibold text-green-400">No balance change</span>
+                              <span className="font-bold text-green-400">₱0.00</span>
+                            </div>
+                          )}
+                        </div>
+                      )
+                    }
+
+                    // Not paid yet — just show price comparison
+                    const diff = newFinalPrice - originalPrice
+                    if (diff === 0) return null
+                    return (
+                      <div className={`mt-2 p-2.5 rounded-lg border text-sm ${
+                        diff > 0
+                          ? 'bg-amber-500/10 border-amber-500/30'
+                          : 'bg-blue-500/10 border-blue-500/30'
+                      }`}>
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="text-gray-400 text-xs">Original price:</span>
+                          <span className="text-gray-300 font-medium">₱{originalPrice.toFixed(2)}</span>
+                        </div>
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="text-gray-400 text-xs">New service price:</span>
+                          <span className="text-white font-medium">₱{newFinalPrice.toFixed(2)}</span>
+                        </div>
+                        <div className="border-t border-[#333] my-1.5"></div>
+                        <div className="flex items-center justify-between">
+                          <span className={`text-xs font-semibold ${diff > 0 ? 'text-amber-400' : 'text-blue-400'}`}>
+                            {diff > 0 ? 'Price increase' : 'Price decrease'}
+                          </span>
+                          <span className={`font-bold ${diff > 0 ? 'text-amber-400' : 'text-blue-400'}`}>
+                            {diff > 0 ? '+' : ''}₱{diff.toFixed(2)}
+                          </span>
+                        </div>
+                      </div>
+                    )
+                  })()}
                 </div>
 
                 {/* Barber Selection */}
@@ -987,6 +1130,24 @@ const BookingsManagement = ({ onRefresh, user }) => {
                     className="w-full px-3 py-2 bg-[#2A2A2A] border border-[#3A3A3A] text-white rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)] transition-colors resize-none"
                   />
                 </div>
+
+                {/* Reason for edit (staff only) */}
+                {isStaffRole && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-2">
+                      Reason for Edit <span className="text-red-400">*</span>
+                    </label>
+                    <textarea
+                      value={editReason}
+                      onChange={(e) => setEditReason(e.target.value)}
+                      placeholder="Explain why this booking needs to be changed..."
+                      rows={2}
+                      className="w-full px-3 py-2 bg-[#2A2A2A] border border-[#3A3A3A] text-white rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)] transition-colors resize-none"
+                      required
+                    />
+                    <p className="text-xs text-gray-500 mt-1">This will be reviewed by the branch admin before changes are applied.</p>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -1007,12 +1168,12 @@ const BookingsManagement = ({ onRefresh, user }) => {
                 {loading ? (
                   <>
                     <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                    <span>Saving...</span>
+                    <span>{isStaffRole ? 'Submitting...' : 'Saving...'}</span>
                   </>
                 ) : (
                   <>
                     <Save className="h-4 w-4" />
-                    <span>Save Changes</span>
+                    <span>{isStaffRole ? 'Submit for Approval' : 'Save Changes'}</span>
                   </>
                 )}
               </button>
@@ -2060,6 +2221,23 @@ const BookingsManagement = ({ onRefresh, user }) => {
             <Banknote className="w-3.5 h-3.5" />
             <span>Payment History</span>
           </button>
+          {isBranchAdminOrAbove && (
+            <button
+              onClick={() => setActiveTab('edit_requests')}
+              className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg font-semibold transition-colors text-xs ${activeTab === 'edit_requests'
+                ? 'bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-accent)] text-white shadow-md'
+                : 'text-gray-400 hover:bg-[#1A1A1A] hover:text-white'
+                }`}
+            >
+              <ClipboardList className="w-3.5 h-3.5" />
+              <span>Edit Requests</span>
+              {pendingEditCount > 0 && (
+                <span className="ml-1 bg-red-500 text-white text-[10px] px-1.5 py-0.5 rounded-full min-w-[18px] text-center">
+                  {pendingEditCount}
+                </span>
+              )}
+            </button>
+          )}
         </div>
       </div>
 
@@ -2444,23 +2622,23 @@ const BookingsManagement = ({ onRefresh, user }) => {
                                         </>
                                       )}
 
-                                      {/* Divider */}
-                                      {(booking.status === 'pending' || booking.status === 'booked' || booking.status === 'confirmed') && (
-                                        <div className="my-1 border-t border-[#2A2A2A]"></div>
+                                      {/* Divider + Edit (only for non-completed/cancelled bookings) */}
+                                      {booking.status !== 'completed' && booking.status !== 'cancelled' && (
+                                        <>
+                                          <div className="my-1 border-t border-[#2A2A2A]"></div>
+                                          <button
+                                            onClick={() => {
+                                              handleEdit(booking)
+                                              setDropdownState({ id: null, position: null })
+                                            }}
+                                            className="w-full px-3 py-2 text-left text-sm text-white hover:bg-[#2A2A2A] transition-colors flex items-center gap-2"
+                                            disabled={loading}
+                                          >
+                                            <Edit className="h-4 w-4 text-blue-400" />
+                                            <span>Edit</span>
+                                          </button>
+                                        </>
                                       )}
-
-                                      {/* Edit & Delete */}
-                                      <button
-                                        onClick={() => {
-                                          handleEdit(booking)
-                                          setDropdownState({ id: null, position: null })
-                                        }}
-                                        className="w-full px-3 py-2 text-left text-sm text-white hover:bg-[#2A2A2A] transition-colors flex items-center gap-2"
-                                        disabled={loading}
-                                      >
-                                        <Edit className="h-4 w-4 text-blue-400" />
-                                        <span>Edit</span>
-                                      </button>
                                       {(user?.role === 'branch_admin' || user?.role === 'super_admin') && (
                                         <button
                                           onClick={() => {
@@ -2534,6 +2712,8 @@ const BookingsManagement = ({ onRefresh, user }) => {
         </>
       ) : activeTab === 'transaction' ? (
         <TransactionTab />
+      ) : activeTab === 'edit_requests' && isBranchAdminOrAbove ? (
+        <BookingEditRequests user={user} />
       ) : (
         <PaymentHistory />
       )}

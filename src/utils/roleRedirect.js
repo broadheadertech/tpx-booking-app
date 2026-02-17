@@ -12,6 +12,8 @@
  */
 export function getRoleRedirectPath(role) {
   switch (role) {
+    case "it_admin":
+      return "/it-admin/dashboard";
     case "super_admin":
       return "/admin/dashboard";
     case "admin_staff":
@@ -33,7 +35,7 @@ export function getRoleRedirectPath(role) {
  * @returns {boolean}
  */
 export function isStaffRole(role) {
-  return ["super_admin", "admin_staff", "branch_admin", "admin", "staff"].includes(role);
+  return ["it_admin", "super_admin", "admin_staff", "branch_admin", "admin", "staff"].includes(role);
 }
 
 /**
@@ -42,5 +44,5 @@ export function isStaffRole(role) {
  * @returns {boolean}
  */
 export function isAdminRole(role) {
-  return ["super_admin", "admin_staff", "branch_admin", "admin"].includes(role);
+  return ["it_admin", "super_admin", "admin_staff", "branch_admin", "admin"].includes(role);
 }

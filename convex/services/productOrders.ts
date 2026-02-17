@@ -1,5 +1,6 @@
 import { v, ConvexError } from "convex/values";
 import { query, mutation } from "../_generated/server";
+import { api } from "../_generated/api";
 
 /**
  * Generate order number: PO-YYYY-XXXXX
@@ -160,6 +161,41 @@ export const createOrder = mutation({
       wallet_hold_amount: totalAmount,
       wallet_transaction_id: walletTransactionId,
     });
+
+    // Email SA about new product order
+    try {
+      await ctx.scheduler.runAfter(0, api.services.emailNotifications.sendNotificationToRole, {
+        notification_type: "new_product_order",
+        role: "super_admin",
+        variables: {
+          order_number: orderNumber,
+          branch_name: branch.name || "Branch",
+          amount: `₱${totalAmount.toLocaleString()}`,
+        },
+      });
+    } catch (e) { console.error("[PRODUCT_ORDERS] Email failed:", e); }
+
+    // In-app notification for SA
+    try {
+      await ctx.db.insert("notifications", {
+        title: "New Product Order",
+        message: `${branch.name} placed order #${orderNumber} — ₱${totalAmount.toLocaleString()} (${orderItems.length} items)`,
+        type: "alert" as const,
+        priority: "high" as const,
+        recipient_type: "admin" as const,
+        is_read: false,
+        is_archived: false,
+        action_label: "Review Order",
+        metadata: {
+          order_id: orderId,
+          order_number: orderNumber,
+          branch_id: args.branch_id,
+          total_amount: totalAmount,
+        },
+        createdAt: now,
+        updatedAt: now,
+      });
+    } catch (e) { console.error("[PRODUCT_ORDERS] In-app notification failed:", e); }
 
     return {
       success: true,
@@ -334,6 +370,19 @@ export const approveOrder = mutation({
       }
     }
 
+    // Email BA about order approval
+    try {
+      await ctx.scheduler.runAfter(0, api.services.emailNotifications.sendNotificationToRole, {
+        notification_type: "order_approved",
+        role: "branch_admin",
+        branch_id: order.branch_id,
+        variables: {
+          order_number: order.order_number,
+          amount: `₱${newTotal.toLocaleString()}`,
+        },
+      });
+    } catch (e) { console.error("[PRODUCT_ORDERS] Approval email failed:", e); }
+
     return { success: true };
   },
 });
@@ -400,6 +449,19 @@ export const rejectOrder = mutation({
       approved_by: args.rejected_by, // Using approved_by to track who handled it
       approved_at: now,
     });
+
+    // Email BA about order rejection
+    try {
+      await ctx.scheduler.runAfter(0, api.services.emailNotifications.sendNotificationToRole, {
+        notification_type: "order_rejected",
+        role: "branch_admin",
+        branch_id: order.branch_id,
+        variables: {
+          order_number: order.order_number,
+          rejection_reason: args.rejection_reason.trim(),
+        },
+      });
+    } catch (e) { console.error("[PRODUCT_ORDERS] Rejection email failed:", e); }
 
     return { success: true };
   },
@@ -477,6 +539,18 @@ export const shipOrder = mutation({
       status: "shipped",
       shipped_at: now,
     });
+
+    // Email BA about order shipment
+    try {
+      await ctx.scheduler.runAfter(0, api.services.emailNotifications.sendNotificationToRole, {
+        notification_type: "order_shipped",
+        role: "branch_admin",
+        branch_id: order.branch_id,
+        variables: {
+          order_number: order.order_number,
+        },
+      });
+    } catch (e) { console.error("[PRODUCT_ORDERS] Shipment email failed:", e); }
 
     return { success: true };
   },
@@ -641,6 +715,18 @@ export const receiveOrder = mutation({
           }
         : {}),
     });
+
+    // Email BA about order delivery confirmation
+    try {
+      await ctx.scheduler.runAfter(0, api.services.emailNotifications.sendNotificationToRole, {
+        notification_type: "order_delivered",
+        role: "branch_admin",
+        branch_id: order.branch_id,
+        variables: {
+          order_number: order.order_number,
+        },
+      });
+    } catch (e) { console.error("[PRODUCT_ORDERS] Delivery email failed:", e); }
 
     return { success: true };
   },

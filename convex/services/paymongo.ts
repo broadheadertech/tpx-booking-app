@@ -1315,6 +1315,9 @@ export const createBookingFromPending = mutation({
     const discountAmount = pending.discount_amount || 0;
     const finalPrice = pending.price - discountAmount;
 
+    // Track actual amount paid by customer (for price adjustment tracking on edits)
+    const amountPaid = paymentStatus === "paid" ? finalPrice : (convenienceFeePaid || 0);
+
     // Determine payment method based on payment type
     const paymentMethod = args.payment_type === "combo_wallet_online"
       ? "combo"
@@ -1342,6 +1345,7 @@ export const createBookingFromPending = mutation({
       booking_code: bookingCode,
       payment_status: paymentStatus,
       payment_method: paymentMethod,
+      amount_paid: amountPaid,
       paymongo_link_id: args.paymongo_link_id,
       paymongo_payment_id: args.paymongo_payment_id,
       convenience_fee_paid: convenienceFeePaid,
@@ -1450,6 +1454,34 @@ export const createBookingFromPending = mutation({
         console.error("Voucher redemption error:", voucherError);
         // Don't fail the booking if voucher redemption fails
       }
+    }
+
+    // Send booking confirmation email (was missing for PayMongo bookings)
+    try {
+      const customer = pending.customer_id ? await ctx.db.get(pending.customer_id) : null;
+      const branch = await ctx.db.get(pending.branch_id);
+      const barber = pending.barber_id ? await ctx.db.get(pending.barber_id) : null;
+      const customerEmail = pending.customer_email || (customer as any)?.email;
+      const customerName = pending.customer_name || (customer as any)?.nickname || (customer as any)?.username || "Customer";
+
+      if (customerEmail && branch) {
+        await ctx.scheduler.runAfter(0, api.services.auth.sendBookingConfirmationEmail, {
+          email: customerEmail,
+          customerName,
+          bookingCode,
+          serviceName: service.name,
+          servicePrice: finalPrice,
+          barberName: (barber as any)?.full_name || "Any Available",
+          branchName: branch.name || "Our Branch",
+          branchAddress: branch.address,
+          date: pending.date,
+          time: pending.time,
+          bookingId: bookingId.toString(),
+        });
+        console.log("[PAYMONGO] Booking confirmation email scheduled for:", customerEmail);
+      }
+    } catch (emailError) {
+      console.error("[PAYMONGO] Failed to send booking email:", emailError);
     }
 
     return { bookingId, alreadyProcessed: false, bookingCode };
@@ -2025,6 +2057,13 @@ export const updateBookingPaymentStatus = mutation({
 
     if (args.convenience_fee_paid !== undefined) {
       updates.convenience_fee_paid = args.convenience_fee_paid;
+    }
+
+    // Track actual amount paid for price adjustment tracking on edits
+    if (args.payment_status === "paid" && booking) {
+      updates.amount_paid = booking.final_price || booking.price || 0;
+    } else if (args.convenience_fee_paid !== undefined) {
+      updates.amount_paid = args.convenience_fee_paid;
     }
 
     await ctx.db.patch(args.booking_id, updates);

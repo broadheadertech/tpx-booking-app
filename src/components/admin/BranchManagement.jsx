@@ -4,8 +4,11 @@ import { api } from '../../../convex/_generated/api'
 import { Building, MapPin, Phone, Mail, CheckCircle, XCircle, AlertCircle, Search, Filter, Plus, Edit, Trash2, RotateCcw, Eye, Users, Calendar, Wallet, DollarSign, TrendingUp } from 'lucide-react'
 import BranchFormModal from './BranchFormModal'
 import { formatErrorForDisplay } from '../../utils/errorHandler'
+import { useCurrentUser } from '../../hooks/useCurrentUser'
 
 export default function BranchManagement() {
+  const { user: currentUser } = useCurrentUser()
+  const canCreateBranch = currentUser?.role === 'it_admin'
   const [searchTerm, setSearchTerm] = useState('')
   const [filterStatus, setFilterStatus] = useState('all')
   const [sortBy, setSortBy] = useState('name')
@@ -319,13 +322,15 @@ export default function BranchManagement() {
               <RotateCcw className="h-4 w-4" />
               <span>Refresh</span>
             </button>
-            <button
-              onClick={handleCreate}
-              className="flex items-center space-x-2 px-4 py-2 bg-[var(--color-primary)] text-white rounded-lg hover:bg-[var(--color-accent)] transition-colors text-sm"
-            >
-              <Plus className="h-4 w-4" />
-              <span>New Branch</span>
-            </button>
+            {canCreateBranch && (
+              <button
+                onClick={handleCreate}
+                className="flex items-center space-x-2 px-4 py-2 bg-[var(--color-primary)] text-white rounded-lg hover:bg-[var(--color-accent)] transition-colors text-sm"
+              >
+                <Plus className="h-4 w-4" />
+                <span>New Branch</span>
+              </button>
+            )}
           </div>
         </div>
       </div>
@@ -468,7 +473,7 @@ export default function BranchManagement() {
                 : 'Get started by creating a new branch.'
               }
             </p>
-            {!searchTerm && filterStatus === 'all' && (
+            {!searchTerm && filterStatus === 'all' && canCreateBranch && (
               <div className="mt-6">
                 <button
                   onClick={handleCreate}

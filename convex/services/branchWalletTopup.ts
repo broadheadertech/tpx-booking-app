@@ -430,6 +430,44 @@ export const processBranchWalletTopupWebhook = internalAction({
       newBalance: creditResult.newBalance,
     });
 
+    // In-app notification for SA about wallet top-up
+    try {
+      await ctx.runMutation(api.services.notifications.createNotification, {
+        title: "Branch Wallet Top-Up",
+        message: `Branch wallet topped up ₱${pending.amount.toLocaleString()} via ${args.paymentMethod}`,
+        type: "payment",
+        priority: "medium",
+        recipient_type: "admin",
+        metadata: {
+          branch_id: pending.branch_id,
+          amount: pending.amount,
+          payment_method: args.paymentMethod,
+          new_balance: creditResult.newBalance,
+        },
+      });
+    } catch (e) { console.error("[BRANCH_WALLET_WEBHOOK] In-app notification failed:", e); }
+
+    // Email SA + BA about branch wallet top-up
+    try {
+      await ctx.runAction(api.services.emailNotifications.sendNotificationToRole, {
+        notification_type: "branch_wallet_topup",
+        role: "super_admin",
+        variables: {
+          amount: `₱${pending.amount.toLocaleString()}`,
+          payment_method: args.paymentMethod,
+        },
+      });
+      await ctx.runAction(api.services.emailNotifications.sendNotificationToRole, {
+        notification_type: "branch_wallet_topup",
+        role: "branch_admin",
+        branch_id: pending.branch_id,
+        variables: {
+          amount: `₱${pending.amount.toLocaleString()}`,
+          payment_method: args.paymentMethod,
+        },
+      });
+    } catch (e) { console.error("[BRANCH_WALLET_WEBHOOK] Email failed:", e); }
+
     return {
       success: true,
       branchId: pending.branch_id,

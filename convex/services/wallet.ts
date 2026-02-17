@@ -313,6 +313,22 @@ export const creditWallet = mutation({
       });
     }
 
+    // Email customer with top-up receipt
+    try {
+      if (user?.email) {
+        await ctx.scheduler.runAfter(0, api.services.emailNotifications.sendNotificationEmail, {
+          notification_type: "customer_wallet_topup",
+          to_email: user.email,
+          to_name: user.nickname || user.username || "Customer",
+          variables: {
+            amount: `₱${args.amount.toLocaleString()}`,
+            bonus: totalBonus > 0 ? `₱${totalBonus.toLocaleString()}` : "₱0",
+            total: `₱${(args.amount + totalBonus).toLocaleString()}`,
+          },
+        });
+      }
+    } catch (e) { console.error("[WALLET] Top-up email failed:", e); }
+
     return {
       success: true,
       bonus: totalBonus,
@@ -795,6 +811,7 @@ export const payBookingWithWallet = mutation({
           await ctx.db.patch(args.bookingId, {
             payment_status: "paid",
             payment_method: "wallet",
+            amount_paid: args.amount,
             updatedAt: now,
           });
           console.log("[WALLET_PAY] Booking payment status updated");

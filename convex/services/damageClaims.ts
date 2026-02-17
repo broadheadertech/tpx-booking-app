@@ -13,6 +13,7 @@
 
 import { mutation, query } from "../_generated/server";
 import { v, ConvexError } from "convex/values";
+import { api } from "../_generated/api";
 
 // ============================================================================
 // QUERIES
@@ -266,6 +267,21 @@ export const submitDamageClaim = mutation({
       createdAt: now,
       updatedAt: now,
     });
+
+    // Email SA about damage claim
+    try {
+      const branch = await ctx.db.get(order.branch_id);
+      await ctx.scheduler.runAfter(0, api.services.emailNotifications.sendNotificationToRole, {
+        notification_type: "damage_claim_filed",
+        role: "super_admin",
+        variables: {
+          branch_name: branch?.name || "Unknown Branch",
+          item_name: claimItems.map(i => i.product_name).join(", "),
+          estimated_cost: `₱${totalDamageAmount.toLocaleString()}`,
+          description: args.description.trim(),
+        },
+      });
+    } catch (e) { console.error("[DAMAGE_CLAIMS] Email failed:", e); }
 
     return {
       success: true,

@@ -15,7 +15,9 @@ import {
   Youtube,
   ExternalLink,
   CheckCircle,
-  AlertCircle
+  AlertCircle,
+  Phone,
+  MapPin
 } from 'lucide-react'
 import ImageUploadInput from '../admin/ImageUploadInput'
 
@@ -29,6 +31,8 @@ const BranchProfileSettings = ({ user }) => {
     cover_photo: '',
     slug: '',
     description: '',
+    phone: '',
+    address: '',
     social_links: {
       facebook: '',
       instagram: '',
@@ -57,6 +61,8 @@ const BranchProfileSettings = ({ user }) => {
         cover_photo: branch.cover_photo || '',
         slug: branch.slug || '',
         description: branch.description || '',
+        phone: branch.phone || '',
+        address: branch.address || '',
         social_links: {
           facebook: branch.social_links?.facebook || '',
           instagram: branch.social_links?.instagram || '',
@@ -106,6 +112,8 @@ const BranchProfileSettings = ({ user }) => {
         cover_photo: formData.cover_photo || undefined,
         slug: formData.slug || undefined,
         description: formData.description || undefined,
+        phone: formData.phone || undefined,
+        address: formData.address || undefined,
         social_links: Object.keys(cleanedSocialLinks).length > 0 ? cleanedSocialLinks : undefined
       })
 
@@ -258,6 +266,38 @@ const BranchProfileSettings = ({ user }) => {
               <p className="mt-2 text-xs text-gray-500">
                 This will appear on your public profile page
               </p>
+            </div>
+
+            {/* Contact Number & Address */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-400 mb-2 flex items-center gap-2">
+                  <Phone className="w-4 h-4" />
+                  Contact Number
+                </label>
+                <input
+                  type="tel"
+                  name="phone"
+                  value={formData.phone}
+                  onChange={handleInputChange}
+                  className="w-full px-4 py-3 bg-[#0D0D0D] border border-[#333] text-white placeholder-gray-500 rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent"
+                  placeholder="e.g. +63 912 345 6789"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-400 mb-2 flex items-center gap-2">
+                  <MapPin className="w-4 h-4" />
+                  Address
+                </label>
+                <input
+                  type="text"
+                  name="address"
+                  value={formData.address}
+                  onChange={handleInputChange}
+                  className="w-full px-4 py-3 bg-[#0D0D0D] border border-[#333] text-white placeholder-gray-500 rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent"
+                  placeholder="Branch street address, city"
+                />
+              </div>
             </div>
           </div>
         </div>

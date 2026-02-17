@@ -127,6 +127,59 @@ export const clearAndSeed = mutation({
 });
 
 /**
+ * Seed or upgrade the IT Administrator account
+ * Run via: npx convex run seed:seedItAdmin
+ */
+export const seedItAdmin = mutation({
+  args: {},
+  handler: async (ctx) => {
+    const email = "tech@broadheader.com";
+    const now = Date.now();
+
+    // Check if user already exists
+    const existingUser = await ctx.db
+      .query("users")
+      .withIndex("by_email", (q) => q.eq("email", email))
+      .first();
+
+    if (existingUser) {
+      // Upgrade existing user to it_admin
+      await ctx.db.patch(existingUser._id, {
+        role: "it_admin",
+        password: hashPassword("Broadheader_8080"),
+        updatedAt: now,
+      });
+      return {
+        success: true,
+        message: `Upgraded existing user ${email} to it_admin role`,
+        data: { userId: existingUser._id, email, role: "it_admin", action: "upgraded" },
+      };
+    }
+
+    // Create new IT admin account
+    const userId = await ctx.db.insert("users", {
+      username: "broadheader_it_admin",
+      email,
+      password: hashPassword("Broadheader_8080"),
+      nickname: "IT Administrator",
+      mobile_number: "+63 000 000 0000",
+      role: "it_admin",
+      is_active: true,
+      skills: [],
+      isVerified: true,
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    return {
+      success: true,
+      message: `Created IT Admin account: ${email}`,
+      data: { userId, email, role: "it_admin", action: "created" },
+    };
+  },
+});
+
+/**
  * Development Seeder
  * Clears ALL tables and seeds comprehensive test data.
  * Run via: npx convex run seed:devSeed

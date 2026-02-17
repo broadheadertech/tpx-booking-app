@@ -934,11 +934,27 @@ export const updateBooking = mutation({
       throwUserError(ERROR_CODES.BOOKING_NOT_FOUND);
     }
 
+    // Block editing completed or cancelled bookings (service/barber/date/time/notes changes)
+    // Status changes are still allowed (e.g., marking as completed)
+    const hasFieldEdits = args.service || args.barber || args.date || args.time || args.notes !== undefined;
+    if (hasFieldEdits && (currentBooking.status === "completed" || currentBooking.status === "cancelled")) {
+      throwUserError(
+        ERROR_CODES.BOOKING_NOT_FOUND,
+        "Booking cannot be edited",
+        `This booking has already been ${currentBooking.status}. Completed or cancelled bookings cannot be modified.`
+      );
+    }
+
     // Validate referenced entities if updated
+    let newServicePrice: number | undefined;
     if (args.service) {
       const service = await ctx.db.get(args.service);
       if (!service) {
         throwUserError(ERROR_CODES.BOOKING_SERVICE_UNAVAILABLE, "Service not found", "The selected service does not exist.");
+      }
+      // Track new price if service actually changed
+      if (args.service !== currentBooking.service) {
+        newServicePrice = service!.price;
       }
     }
 
@@ -957,8 +973,30 @@ export const updateBooking = mutation({
     const barberChanged = args.barber && args.barber !== currentBooking.barber;
     const previousBarber = currentBooking.barber;
 
+    // Build price updates if service changed
+    const priceUpdates: Record<string, any> = {};
+    if (newServicePrice !== undefined) {
+      priceUpdates.price = newServicePrice;
+      const discountAmount = currentBooking.discount_amount || 0;
+      const newFinalPrice = Math.max(0, newServicePrice - discountAmount);
+      priceUpdates.final_price = newFinalPrice;
+
+      // Adjust payment_status if customer already paid and new price differs
+      const amountPaid = currentBooking.amount_paid;
+      if (amountPaid !== undefined && amountPaid > 0) {
+        if (newFinalPrice > amountPaid) {
+          // Customer owes more — mark as partial
+          priceUpdates.payment_status = "partial";
+        } else {
+          // Same or less — keep as paid (overpayment handled as credit/refund at POS)
+          priceUpdates.payment_status = "paid";
+        }
+      }
+    }
+
     await ctx.db.patch(id, {
       ...updates,
+      ...priceUpdates,
       updatedAt: Date.now(),
     });
 
@@ -1654,6 +1692,67 @@ export const cancelBooking = mutation({
       console.error("Failed to send cancellation notifications:", error);
       // Don't fail the cancellation if notifications fail
     }
+
+    // Send cancellation email notifications
+    try {
+      const cancelService = await ctx.db.get(booking.service);
+      const cancelBranch = await ctx.db.get(booking.branch_id);
+      const cancelCustomer = booking.customer ? await ctx.db.get(booking.customer) : null;
+      const cancelCustomerEmail = booking.customer_email || cancelCustomer?.email;
+      const cancelCustomerName = booking.customer_name || cancelCustomer?.nickname || cancelCustomer?.username || "Customer";
+
+      // Email branch admin about cancellation
+      await ctx.scheduler.runAfter(0, api.services.emailNotifications.sendNotificationToRole, {
+        notification_type: "booking_cancellation_to_branch",
+        role: "branch_admin",
+        branch_id: booking.branch_id,
+        variables: {
+          customer_name: cancelCustomerName,
+          service_name: cancelService?.name || "Service",
+          date: booking.date,
+          time: booking.time,
+          reason: args.reason || "No reason provided",
+        },
+      });
+
+      // Email customer about cancellation
+      if (cancelCustomerEmail) {
+        await ctx.scheduler.runAfter(0, api.services.emailNotifications.sendNotificationEmail, {
+          notification_type: "booking_cancellation_to_customer",
+          to_email: cancelCustomerEmail,
+          to_name: cancelCustomerName,
+          variables: {
+            service_name: cancelService?.name || "Service",
+            branch_name: cancelBranch?.name || "Our Branch",
+            date: booking.date,
+            time: booking.time,
+            reason: args.reason || "No reason provided",
+          },
+        });
+      }
+    } catch (e) { console.error("[BOOKINGS] Cancellation email failed:", e); }
+
+    // In-app notification for SA about cancellation
+    try {
+      const svc = await ctx.db.get(booking.service);
+      await ctx.db.insert("notifications", {
+        title: "Booking Cancelled",
+        message: `${booking.customer_name || "Customer"}'s ${svc?.name || "appointment"} on ${booking.date} at ${booking.time} was cancelled`,
+        type: "booking" as const,
+        priority: "medium" as const,
+        recipient_type: "admin" as const,
+        branch_id: booking.branch_id,
+        is_read: false,
+        is_archived: false,
+        metadata: {
+          booking_id: args.id,
+          booking_code: booking.booking_code,
+          reason: args.reason,
+        },
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+      });
+    } catch (e) { console.error("[BOOKINGS] In-app cancellation notification failed:", e); }
 
     return { success: true, booking_id: args.id };
   },
