@@ -336,7 +336,6 @@ function AdminDashboard() {
       { id: 'default_services', label: 'Services', icon: 'scissors', category: 'Commerce' },
       { id: 'catalog', label: 'Catalog', icon: 'package', category: 'Commerce' },
       { id: 'vouchers', label: 'Vouchers', icon: 'ticket', category: 'Commerce' },
-      { id: 'shop_config', label: 'Shop Config', icon: 'shopping-cart', category: 'Commerce' },
       { id: 'shop_banners', label: 'Banners', icon: 'image', category: 'Commerce' },
       { id: 'delivery_orders', label: 'Deliveries', icon: 'truck', category: 'Commerce' },
       { id: 'damage_claims', label: 'Damage Claims', icon: 'alert-triangle', category: 'Commerce' },
@@ -345,15 +344,17 @@ function AdminDashboard() {
       { id: 'balance_sheet', label: 'Balance Sheet', icon: 'scale', category: 'Finance' },
       { id: 'royalty', label: 'Royalty', icon: 'percent', category: 'Finance' },
       { id: 'settlements', label: 'Settlements', icon: 'banknote', category: 'Finance' },
-      { id: 'wallet', label: 'Wallet', icon: 'wallet', category: 'Finance' },
       { id: 'wallet_analytics', label: 'Wallet Analytics', icon: 'activity', category: 'Finance' },
       // Marketing category
-      { id: 'loyalty', label: 'Loyalty', icon: 'star', category: 'Marketing' },
       { id: 'promotions', label: 'Promos', icon: 'zap', category: 'Marketing' },
       { id: 'email_marketing', label: 'Email AI', icon: 'brain', category: 'Marketing' },
       { id: 'branding', label: 'Branding', icon: 'palette', category: 'Marketing' },
       { id: 'emails', label: 'Emails', icon: 'mail', category: 'Marketing' },
       { id: 'customer_analytics', label: 'Customers', icon: 'target', category: 'Marketing' },
+      // Configs category
+      { id: 'shop_config', label: 'Shop Config', icon: 'shopping-cart', category: 'Configs' },
+      { id: 'wallet', label: 'Wallet Config', icon: 'wallet', category: 'Configs' },
+      { id: 'loyalty', label: 'Loyalty Config', icon: 'star', category: 'Configs' },
       // Reports category
       { id: 'reports', label: 'Reports', icon: 'chart', category: 'Reports' },
       { id: 'audit_trail', label: 'Audit Trail', icon: 'history', category: 'Reports' },

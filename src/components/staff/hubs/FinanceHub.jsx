@@ -14,7 +14,11 @@ import BranchAdminWallet from '../BranchAdminWallet'
  * Groups: Payroll, Cash Advances, Royalty, P&L, Balance Sheet, Payment History, Wallet Earnings
  */
 const FinanceHub = ({ user, onRefresh, pendingAdvancesCount = 0 }) => {
-  const [activeSection, setActiveSection] = useState('accounting')
+  const [activeSection, setActiveSection] = useState(() => localStorage.getItem('staff_hub_finance_section') || 'accounting')
+
+  useEffect(() => {
+    localStorage.setItem('staff_hub_finance_section', activeSection)
+  }, [activeSection])
 
   const allSections = [
     { id: 'accounting', label: 'P&L', icon: PieChart },

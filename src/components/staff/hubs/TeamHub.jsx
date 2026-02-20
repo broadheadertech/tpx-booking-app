@@ -17,7 +17,11 @@ import { teamHubSteps } from '../../../config/walkthroughSteps'
  * Groups: Barbers, Users, Attendance
  */
 const TeamHub = ({ user, barbers = [], onRefresh }) => {
-  const [activeSection, setActiveSection] = useState('barbers')
+  const [activeSection, setActiveSection] = useState(() => localStorage.getItem('staff_hub_team_section') || 'barbers')
+
+  useEffect(() => {
+    localStorage.setItem('staff_hub_team_section', activeSection)
+  }, [activeSection])
   const [showTutorial, setShowTutorial] = useState(false)
   const [showAttendanceConfig, setShowAttendanceConfig] = useState(false)
   const [bioReviewBarber, setBioReviewBarber] = useState(null)

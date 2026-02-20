@@ -592,12 +592,12 @@ const RatingModal = ({ booking, onSubmit, onClose, loading }) => {
                 const isExpanded = expandedBooking === booking._id;
 
                 // Calculate price breakdown
-                const servicePrice = booking.service_price || service.price || 0;
+                const servicePrice = booking.final_price || booking.service_price || service.price || 0;
                 const bookingFee = booking.booking_fee || 0;
                 const convenienceFee = booking.convenience_fee_paid || booking.convenience_fee || bookingFee || 0;
                 const discount = booking.discount_amount || 0;
                 const voucherCode = booking.voucher_code || booking.voucherCode || booking.voucher?.code;
-                const totalPaid = booking.total_amount || booking.amount_paid || 0;
+                const totalPrice = booking.final_price || booking.price || (servicePrice + convenienceFee - discount);
                 // Due at shop is the full service price + booking fee (convenience fee is just for reservation)
                 const amountDue = booking.amount_due || (servicePrice + bookingFee);
 
@@ -685,7 +685,7 @@ const RatingModal = ({ booking, onSubmit, onClose, loading }) => {
                           <div>
                             <p className="text-[10px] text-gray-500 uppercase tracking-wider">Total</p>
                             <p className="text-lg font-black" style={{ color: primaryColor }}>
-                              ₱{parseFloat(totalPaid || (servicePrice + convenienceFee - discount)).toLocaleString()}
+                              ₱{parseFloat(totalPrice).toLocaleString()}
                             </p>
                           </div>
                           {/* Booking Fee indicator (if paid) */}
@@ -773,7 +773,7 @@ const RatingModal = ({ booking, onSubmit, onClose, loading }) => {
                             <div className="flex justify-between text-xs pt-2 border-t border-[#2A2A2A]">
                               <span className="text-white font-bold">Total</span>
                               <span className="font-black" style={{ color: primaryColor }}>
-                                ₱{parseFloat(totalPaid || (servicePrice + convenienceFee - discount)).toLocaleString()}
+                                ₱{parseFloat(totalPrice).toLocaleString()}
                               </span>
                             </div>
                             {booking.payment_status === 'partial' && (

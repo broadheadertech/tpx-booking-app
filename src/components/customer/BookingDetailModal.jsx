@@ -264,7 +264,7 @@ const BookingDetailModal = ({ booking, onClose, onRebook, onCancel }) => {
           <div className="bg-[#1A1A1A] rounded-2xl p-4 border border-[#2A2A2A]">
             <div className="flex items-center justify-between mb-3">
               <span className="text-gray-400">Service Price</span>
-              <span className="text-white">₱{(booking.service?.price || 0).toLocaleString()}</span>
+              <span className="text-white">₱{(booking.final_price || booking.price || booking.service?.price || 0).toLocaleString()}</span>
             </div>
             {booking.booking_fee > 0 && (
               <div className="flex items-center justify-between mb-3">
@@ -281,11 +281,11 @@ const BookingDetailModal = ({ booking, onClose, onRebook, onCancel }) => {
             <div className="flex items-center justify-between pt-3 border-t border-[#2A2A2A]">
               <span className="text-white font-semibold">Total</span>
               <span className="text-xl font-bold" style={{ color: branding?.primary_color || '#F68B24' }}>
-                ₱{(
-                  (booking.service?.price || 0) +
+                ₱{(booking.final_price || (
+                  (booking.price || booking.service?.price || 0) +
                   (booking.booking_fee || 0) -
                   (booking.discount_amount || 0)
-                ).toLocaleString()}
+                )).toLocaleString()}
               </span>
             </div>
             <div className="flex items-center gap-2 mt-3">
@@ -294,6 +294,21 @@ const BookingDetailModal = ({ booking, onClose, onRebook, onCancel }) => {
                 {booking.payment_status === 'paid' ? 'Paid' : 'Payment pending'}
               </span>
             </div>
+
+            {/* Payment history note when price was updated at POS */}
+            {booking.amount_paid > 0 && (booking.final_price || booking.price || 0) > booking.amount_paid && (
+              <div className="mt-3 p-3 bg-[#0A0A0A] rounded-xl border border-[#2A2A2A] space-y-1.5">
+                <p className="text-xs font-bold text-gray-500 uppercase tracking-wider">Payment History</p>
+                <div className="flex justify-between text-xs">
+                  <span className="text-blue-400">Online Payment</span>
+                  <span className="text-blue-400">₱{booking.amount_paid.toLocaleString()}</span>
+                </div>
+                <div className="flex justify-between text-xs">
+                  <span className="text-green-400">Paid at Shop</span>
+                  <span className="text-green-400">₱{((booking.final_price || booking.price || 0) - booking.amount_paid).toLocaleString()}</span>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Action Buttons */}

@@ -13,7 +13,11 @@ import BranchCustomerAnalytics from '../../admin/BranchCustomerAnalytics'
 const PERM_MAP = { analytics: 'customer_analytics' }
 
 const CustomersHub = ({ user, customers = [], wallets = [], onRefresh }) => {
-  const [activeSection, setActiveSection] = useState('customers')
+  const [activeSection, setActiveSection] = useState(() => localStorage.getItem('staff_hub_customers_section') || 'customers')
+
+  useEffect(() => {
+    localStorage.setItem('staff_hub_customers_section', activeSection)
+  }, [activeSection])
   const [showTutorial, setShowTutorial] = useState(false)
 
   const allSections = [

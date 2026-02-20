@@ -1,15 +1,13 @@
 import React, { useState, useEffect } from 'react'
-import { Settings, Save, Database, Shield, Mail, Bell, Globe, Server, User, Lock, AlertCircle, CheckCircle, LogOut, Wrench, Clock } from 'lucide-react'
+import { Settings, Save, Database, Shield, Mail, Bell, Globe, Server, User, Lock, AlertCircle, CheckCircle, LogOut } from 'lucide-react'
 import { useCurrentUser } from '../../hooks/useCurrentUser'
-import { useMutation, useQuery } from 'convex/react'
+import { useMutation } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
 import { APP_VERSION } from '../../config/version'
 
 const GlobalSettings = ({ onRefresh }) => {
   const { user, logout } = useCurrentUser()
   const updateUserProfile = useMutation(api.services.auth.updateUserProfile)
-  const maintenanceStatus = useQuery(api.services.maintenanceConfig.getMaintenanceStatus)
-  const updateMaintenance = useMutation(api.services.maintenanceConfig.updateMaintenanceConfig)
 
   const [activeTab, setActiveTab] = useState('profile')
   const [loading, setLoading] = useState(false)
@@ -38,11 +36,6 @@ const GlobalSettings = ({ onRefresh }) => {
     bookingReminderHours: 24,
     cancelBookingHours: 2
   })
-
-  // Maintenance mode local state
-  const [maintenanceDuration, setMaintenanceDuration] = useState('2h')
-  const [maintenanceMessage, setMaintenanceMessage] = useState('')
-  const [maintenanceSaving, setMaintenanceSaving] = useState(false)
 
   const [showPasswordModal, setShowPasswordModal] = useState(false)
   const [passwordForm, setPasswordForm] = useState({
@@ -402,147 +395,6 @@ const GlobalSettings = ({ onRefresh }) => {
             </div>
           ))}
         </div>
-      </div>
-
-      {/* Maintenance Mode */}
-      <div className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] rounded-2xl p-8 border border-[#444444]/50">
-        <div className="flex items-center space-x-3 mb-6">
-          <div className="w-8 h-8 bg-gradient-to-r from-amber-500 to-amber-600 rounded-lg flex items-center justify-center">
-            <Wrench className="w-4 h-4 text-white" />
-          </div>
-          <h3 className="text-xl font-semibold text-white">Maintenance Mode</h3>
-        </div>
-
-        {/* Current Status */}
-        <div className={`rounded-xl p-4 mb-4 flex items-center justify-between ${
-          maintenanceStatus?.is_enabled
-            ? 'bg-amber-500/10 border border-amber-500/30'
-            : 'bg-[#1A1A1A]/50 border border-[#333333]'
-        }`}>
-          <div>
-            <p className="text-white font-medium">
-              {maintenanceStatus?.is_enabled ? 'Maintenance is ACTIVE' : 'Maintenance Mode'}
-            </p>
-            <p className="text-sm text-gray-400">
-              {maintenanceStatus?.is_enabled
-                ? 'Users cannot access the app right now'
-                : 'Enable to block user access during maintenance'}
-            </p>
-            {maintenanceStatus?.is_enabled && maintenanceStatus?.end_time && (
-              <p className="text-xs text-amber-400 mt-1 flex items-center gap-1">
-                <Clock className="w-3 h-3" />
-                Ends: {new Date(maintenanceStatus.end_time).toLocaleString('en-PH', {
-                  month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
-                })}
-              </p>
-            )}
-          </div>
-          <button
-            disabled={maintenanceSaving}
-            onClick={async () => {
-              if (maintenanceStatus?.is_enabled) {
-                // Turn OFF
-                setMaintenanceSaving(true)
-                try {
-                  await updateMaintenance({ is_enabled: false })
-                  setMessage({ type: 'success', text: '✓ Maintenance mode disabled' })
-                } catch (e) {
-                  setMessage({ type: 'error', text: 'Failed to disable maintenance mode' })
-                } finally {
-                  setMaintenanceSaving(false)
-                }
-              }
-            }}
-            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-              maintenanceStatus?.is_enabled
-                ? 'bg-gradient-to-r from-amber-500 to-amber-600'
-                : 'bg-gray-600'
-            } ${maintenanceStatus?.is_enabled ? 'cursor-pointer' : 'cursor-default'}`}
-          >
-            <span
-              className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                maintenanceStatus?.is_enabled ? 'translate-x-6' : 'translate-x-1'
-              }`}
-            />
-          </button>
-        </div>
-
-        {/* Enable Maintenance Controls (only show when OFF) */}
-        {!maintenanceStatus?.is_enabled && (
-          <div className="space-y-4 bg-[#1A1A1A]/50 rounded-xl p-4">
-            {/* Duration */}
-            <div>
-              <label className="text-sm text-gray-400 mb-2 block">Duration</label>
-              <div className="flex flex-wrap gap-2">
-                {[
-                  { value: '30m', label: '30 min' },
-                  { value: '1h', label: '1 hour' },
-                  { value: '2h', label: '2 hours' },
-                  { value: '4h', label: '4 hours' },
-                  { value: '8h', label: '8 hours' },
-                  { value: '24h', label: '24 hours' },
-                ].map((opt) => (
-                  <button
-                    key={opt.value}
-                    onClick={() => setMaintenanceDuration(opt.value)}
-                    className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-                      maintenanceDuration === opt.value
-                        ? 'bg-amber-500 text-white'
-                        : 'bg-[#2A2A2A] text-gray-400 hover:bg-[#3A3A3A]'
-                    }`}
-                  >
-                    {opt.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Custom Message */}
-            <div>
-              <label className="text-sm text-gray-400 mb-2 block">Message (optional)</label>
-              <textarea
-                value={maintenanceMessage}
-                onChange={(e) => setMaintenanceMessage(e.target.value)}
-                placeholder="We're making improvements. Please check back soon."
-                rows={2}
-                className="w-full bg-[#2A2A2A] text-white rounded-lg p-3 text-sm border border-[#3A3A3A] focus:border-amber-500 focus:outline-none resize-none"
-              />
-            </div>
-
-            {/* Enable Button */}
-            <button
-              disabled={maintenanceSaving}
-              onClick={async () => {
-                setMaintenanceSaving(true)
-                try {
-                  const durationMap = {
-                    '30m': 30 * 60 * 1000,
-                    '1h': 60 * 60 * 1000,
-                    '2h': 2 * 60 * 60 * 1000,
-                    '4h': 4 * 60 * 60 * 1000,
-                    '8h': 8 * 60 * 60 * 1000,
-                    '24h': 24 * 60 * 60 * 1000,
-                  }
-                  const durationMs = durationMap[maintenanceDuration] || 2 * 60 * 60 * 1000
-                  await updateMaintenance({
-                    is_enabled: true,
-                    end_time: Date.now() + durationMs,
-                    message: maintenanceMessage || undefined,
-                  })
-                  setMessage({ type: 'success', text: '✓ Maintenance mode enabled' })
-                } catch (e) {
-                  setMessage({ type: 'error', text: 'Failed to enable maintenance mode' })
-                } finally {
-                  setMaintenanceSaving(false)
-                }
-              }}
-              className="w-full py-3 bg-gradient-to-r from-amber-500 to-amber-600 text-white font-semibold rounded-xl hover:opacity-90 transition-opacity disabled:opacity-50 flex items-center justify-center gap-2"
-            >
-              <Wrench className="w-4 h-4" />
-              {maintenanceSaving ? 'Enabling...' : 'Enable Maintenance Mode'}
-            </button>
-          </div>
-        )}
       </div>
 
       {/* Data & Security */}

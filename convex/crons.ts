@@ -61,4 +61,12 @@ crons.weekly(
   internal.services.emailNotifications.sendWeeklyPayrollSummary
 );
 
+// Membership card daily maintenance — expiry, grace, inactivity, birthdays
+// Runs at 4:30 AM PHT (20:30 UTC)
+crons.daily(
+  "membership card maintenance",
+  { hourUTC: 20, minuteUTC: 30 },
+  internal.services.membershipCards.dailyCardMaintenance
+);
+
 export default crons;

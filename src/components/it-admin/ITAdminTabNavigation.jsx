@@ -31,11 +31,13 @@ import {
   Megaphone,
   Scissors,
   AlertTriangle,
+  SlidersHorizontal,
   CreditCard,
   Key,
   Bug,
   Ban,
   ShieldAlert,
+  Wrench,
 } from 'lucide-react'
 
 const CATEGORIES = [
@@ -44,8 +46,9 @@ const CATEGORIES = [
   { id: 'users', label: 'Users' },
   { id: 'Commerce', label: 'Commerce', isCategory: true, defaultTab: 'default_services' },
   { id: 'Finance', label: 'Finance', isCategory: true, defaultTab: 'pl' },
-  { id: 'Marketing', label: 'Marketing', isCategory: true, defaultTab: 'loyalty' },
+  { id: 'Marketing', label: 'Marketing', isCategory: true, defaultTab: 'promotions' },
   { id: 'Reports', label: 'Reports', isCategory: true, defaultTab: 'reports' },
+  { id: 'Configs', label: 'Configs', isCategory: true, defaultTab: 'shop_config' },
   { id: 'Platform', label: 'Platform', isCategory: true, defaultTab: 'subscriptions' },
   { id: 'settings', label: 'Settings' },
 ]
@@ -99,11 +102,13 @@ const ITAdminTabNavigation = ({ tabs, activeTab, onTabChange }) => {
       error_monitor: Bug,
       security_monitor: ShieldAlert,
       bans: Ban,
+      maintenance: Wrench,
       // Category icons
       Commerce: ShoppingCart,
       Finance: DollarSign,
       Marketing: Megaphone,
       Reports: BarChart3,
+      Configs: SlidersHorizontal,
       Platform: Shield,
     }
     return iconMap[id] || LayoutDashboard

@@ -171,7 +171,9 @@ export const getTierByName = query({
 });
 
 /**
- * Get user's current tier with benefits
+ * Get user's current tier with benefits.
+ * Checks membership_cards first — if active card exists, uses card-based tier.
+ * If no card, returns null (no free tier anymore).
  */
 export const getUserTier = query({
   args: { userId: v.id("users") },
@@ -179,46 +181,40 @@ export const getUserTier = query({
     const user = await ctx.db.get(args.userId);
     if (!user) return null;
 
-    // If user has no tier set, they're Bronze (default)
-    if (!user.current_tier_id) {
-      const bronzeTier = await ctx.db
+    // Check for active membership card first
+    const cards = await ctx.db
+      .query("membership_cards")
+      .withIndex("by_user", (q) => q.eq("user_id", args.userId))
+      .collect();
+    const activeCard = cards.find(
+      (c) => c.status === "active" || c.status === "grace_period"
+    );
+
+    if (activeCard) {
+      const tier = await ctx.db
         .query("tiers")
-        .withIndex("by_name", (q) => q.eq("name", "Bronze"))
+        .withIndex("by_name", (q) => q.eq("name", activeCard.tier_name))
         .first();
 
-      if (!bronzeTier) {
-        return {
-          tier: null,
-          benefits: [],
-          isDefault: true,
-        };
-      }
-
-      const benefits = await ctx.db
-        .query("tier_benefits")
-        .withIndex("by_tier", (q) => q.eq("tier_id", bronzeTier._id))
-        .collect();
+      const benefits = tier
+        ? await ctx.db
+            .query("tier_benefits")
+            .withIndex("by_tier", (q) => q.eq("tier_id", tier._id))
+            .collect()
+        : [];
 
       return {
-        tier: bronzeTier,
+        tier,
         benefits,
-        isDefault: true,
+        isDefault: false,
+        isCardBased: true,
+        cardStatus: activeCard.status,
+        multiplier: activeCard.points_multiplier,
       };
     }
 
-    const tier = await ctx.db.get(user.current_tier_id);
-    if (!tier) return null;
-
-    const benefits = await ctx.db
-      .query("tier_benefits")
-      .withIndex("by_tier", (q) => q.eq("tier_id", tier._id))
-      .collect();
-
-    return {
-      tier,
-      benefits,
-      isDefault: false,
-    };
+    // No active card — no tier
+    return null;
   },
 });
 
@@ -265,70 +261,82 @@ export const calculateTierForPoints = query({
 });
 
 /**
- * Get tier progress for a user
+ * Get tier progress for a user.
+ * Uses card XP progress if user has an active membership card.
  */
 export const getTierProgress = query({
   args: { userId: v.id("users") },
   handler: async (ctx, args) => {
-    // Get user's points ledger
-    const ledger = await ctx.db
-      .query("points_ledger")
+    // Check for active membership card
+    const cards = await ctx.db
+      .query("membership_cards")
       .withIndex("by_user", (q) => q.eq("user_id", args.userId))
-      .unique();
-
-    const lifetimePoints = ledger?.lifetime_earned || 0;
-
-    // Get all tiers
-    const tiers = await ctx.db
-      .query("tiers")
-      .withIndex("by_display_order")
       .collect();
+    const activeCard = cards.find(
+      (c) => c.status === "active" || c.status === "grace_period"
+    );
 
-    if (tiers.length === 0) {
+    if (activeCard) {
+      // Card-based progress using XP
+      const currentTier = await ctx.db
+        .query("tiers")
+        .withIndex("by_name", (q) => q.eq("name", activeCard.tier_name))
+        .first();
+
+      // Get config thresholds
+      const getNum = async (key: string, fb: number) => {
+        const cfg = await ctx.db
+          .query("loyalty_config")
+          .withIndex("by_key", (q: any) => q.eq("config_key", key))
+          .unique();
+        return cfg ? parseFloat(cfg.config_value) : fb;
+      };
+
+      const goldThreshold = await getNum("card_gold_xp_threshold", 200000);
+      const platinumThreshold = await getNum("card_platinum_xp_threshold", 500000);
+
+      let nextTier = null;
+      let nextTierThreshold = 0;
+      let progressPercent = 100;
+      let isMaxTier = activeCard.tier_name === "Platinum";
+
+      if (activeCard.tier_name === "Silver") {
+        nextTier = await ctx.db
+          .query("tiers")
+          .withIndex("by_name", (q) => q.eq("name", "Gold"))
+          .first();
+        nextTierThreshold = goldThreshold;
+        progressPercent = Math.min(100, Math.round((activeCard.card_xp / goldThreshold) * 100));
+      } else if (activeCard.tier_name === "Gold") {
+        nextTier = await ctx.db
+          .query("tiers")
+          .withIndex("by_name", (q) => q.eq("name", "Platinum"))
+          .first();
+        nextTierThreshold = platinumThreshold;
+        progressPercent = Math.min(100, Math.round((activeCard.card_xp / platinumThreshold) * 100));
+      }
+
       return {
-        currentTier: null,
-        nextTier: null,
-        lifetimePoints,
-        pointsToNextTier: 0,
-        progressPercent: 0,
-        isMaxTier: false,
+        currentTier,
+        nextTier,
+        lifetimePoints: activeCard.lifetime_xp,
+        pointsToNextTier: isMaxTier ? 0 : Math.max(0, nextTierThreshold - activeCard.card_xp),
+        progressPercent,
+        isMaxTier,
+        isCardBased: true,
+        cardXP: activeCard.card_xp,
       };
     }
 
-    // Find current and next tier
-    const sortedTiers = [...tiers].sort((a, b) => a.display_order - b.display_order);
-    let currentTier = sortedTiers[0];
-    let nextTier = null;
-
-    for (let i = 0; i < sortedTiers.length; i++) {
-      if (lifetimePoints >= sortedTiers[i].threshold) {
-        currentTier = sortedTiers[i];
-        nextTier = sortedTiers[i + 1] || null;
-      }
-    }
-
-    // Calculate progress
-    const isMaxTier = nextTier === null;
-    let pointsToNextTier = 0;
-    let progressPercent = 100;
-
-    if (!isMaxTier && nextTier) {
-      const currentThreshold = currentTier.threshold;
-      const nextThreshold = nextTier.threshold;
-      const pointsInTier = lifetimePoints - currentThreshold;
-      const tierRange = nextThreshold - currentThreshold;
-
-      pointsToNextTier = nextThreshold - lifetimePoints;
-      progressPercent = Math.min(100, Math.floor((pointsInTier / tierRange) * 100));
-    }
-
+    // No active card — no tier progress
     return {
-      currentTier,
-      nextTier,
-      lifetimePoints,
-      pointsToNextTier,
-      progressPercent,
-      isMaxTier,
+      currentTier: null,
+      nextTier: null,
+      lifetimePoints: 0,
+      pointsToNextTier: 0,
+      progressPercent: 0,
+      isMaxTier: false,
+      isCardBased: false,
     };
   },
 });
@@ -392,120 +400,66 @@ export const seedTiers = mutation({
 });
 
 /**
- * Update user's tier based on lifetime points
- * Called after points are earned
+ * Update user's tier based on lifetime points.
+ * No-op for cardholders — their tier is managed by the card system.
  */
 export const updateUserTier = mutation({
   args: { userId: v.id("users") },
   handler: async (ctx, args) => {
-    const now = Date.now();
-
-    // Get user's points ledger
-    const ledger = await ctx.db
-      .query("points_ledger")
+    // Check for active card — if yes, skip (card manages tier)
+    const cards = await ctx.db
+      .query("membership_cards")
       .withIndex("by_user", (q) => q.eq("user_id", args.userId))
-      .unique();
-
-    if (!ledger) {
-      return { promoted: false, reason: "No points ledger found" };
-    }
-
-    const lifetimePoints = ledger.lifetime_earned;
-
-    // Get all tiers sorted by threshold descending
-    const tiers = await ctx.db
-      .query("tiers")
-      .withIndex("by_display_order")
       .collect();
-
-    if (tiers.length === 0) {
-      return { promoted: false, reason: "No tiers configured" };
+    const hasActiveCard = cards.some(
+      (c) => c.status === "active" || c.status === "grace_period"
+    );
+    if (hasActiveCard) {
+      return { promoted: false, reason: "Tier managed by membership card" };
     }
 
-    // Find the appropriate tier
-    const sortedTiers = [...tiers].sort((a, b) => b.threshold - a.threshold);
-    let newTier = tiers.find((t) => t.display_order === 1); // Default to Bronze
-
-    for (const tier of sortedTiers) {
-      if (lifetimePoints >= tier.threshold) {
-        newTier = tier;
-        break;
-      }
-    }
-
-    if (!newTier) {
-      return { promoted: false, reason: "Could not determine tier" };
-    }
-
-    // Get user's current tier
-    const user = await ctx.db.get(args.userId);
-    if (!user) {
-      return { promoted: false, reason: "User not found" };
-    }
-
-    const currentTierId = user.current_tier_id;
-    const currentTier = currentTierId ? await ctx.db.get(currentTierId) : null;
-
-    // Check if promotion is needed
-    const currentOrder = currentTier?.display_order || 0;
-    const newOrder = newTier.display_order;
-
-    if (newOrder > currentOrder) {
-      // Promote user
-      await ctx.db.patch(args.userId, {
-        current_tier_id: newTier._id,
-        updatedAt: now,
-      });
-
-      console.log(`[TIERS] User ${args.userId} promoted from ${currentTier?.name || "None"} to ${newTier.name}`);
-
-      return {
-        promoted: true,
-        previousTier: currentTier?.name || "None",
-        newTier: newTier.name,
-        newTierIcon: newTier.icon,
-        newTierColor: newTier.color,
-      };
-    }
-
-    return {
-      promoted: false,
-      currentTier: newTier.name,
-      reason: "Already at correct tier",
-    };
+    // No card — legacy behavior (kept for backward compat but effectively unused)
+    return { promoted: false, reason: "No membership card — tier system requires a card" };
   },
 });
 
 /**
- * Get VIP stats for a customer (for profile display)
- * Returns tier info, member since, total visits, lifetime points
+ * Get VIP stats for a customer (for profile display).
+ * Returns card-based tier info if active card exists, otherwise null tier.
  */
 export const getCustomerVipStats = query({
   args: { userId: v.id("users") },
   handler: async (ctx, args) => {
-    // Get user info
     const user = await ctx.db.get(args.userId);
     if (!user) return null;
 
-    // Get tier info
-    let tierInfo = null;
-    if (user.current_tier_id) {
-      const tier = await ctx.db.get(user.current_tier_id);
-      if (tier) {
-        tierInfo = {
-          name: tier.name,
-          icon: tier.icon,
-          color: tier.color,
-        };
-      }
-    }
+    // Check for active membership card
+    const cards = await ctx.db
+      .query("membership_cards")
+      .withIndex("by_user", (q) => q.eq("user_id", args.userId))
+      .collect();
+    const activeCard = cards.find(
+      (c) => c.status === "active" || c.status === "grace_period"
+    );
 
-    // Default to Bronze if no tier
-    if (!tierInfo) {
-      tierInfo = {
-        name: DEFAULT_TIERS[0].name,
-        icon: DEFAULT_TIERS[0].icon,
-        color: DEFAULT_TIERS[0].color,
+    let tierInfo = null;
+    let cardInfo = null;
+
+    if (activeCard) {
+      const tier = await ctx.db
+        .query("tiers")
+        .withIndex("by_name", (q) => q.eq("name", activeCard.tier_name))
+        .first();
+      if (tier) {
+        tierInfo = { name: tier.name, icon: tier.icon, color: tier.color };
+      }
+      cardInfo = {
+        tier: activeCard.tier_name,
+        multiplier: activeCard.points_multiplier,
+        xp: activeCard.card_xp,
+        lifetimeXp: activeCard.lifetime_xp,
+        status: activeCard.status,
+        expiresAt: activeCard.expires_at,
       };
     }
 
@@ -528,11 +482,12 @@ export const getCustomerVipStats = query({
       (b) => b.status === "completed"
     ).length;
 
-    // Member since (user creation date)
     const memberSince = user.createdAt || user._creationTime;
 
     return {
       tierInfo,
+      cardInfo,
+      hasCard: !!activeCard,
       lifetimePoints,
       currentPoints,
       completedVisits,
@@ -554,26 +509,32 @@ export const getCustomerWelcomeInfo = query({
     const user = await ctx.db.get(args.userId);
     if (!user) return null;
 
-    // Get tier info
+    // Check for active membership card
+    const cards = await ctx.db
+      .query("membership_cards")
+      .withIndex("by_user", (q) => q.eq("user_id", args.userId))
+      .collect();
+    const activeCard = cards.find(
+      (c) => c.status === "active" || c.status === "grace_period"
+    );
+
     let tierInfo = null;
-    if (user.current_tier_id) {
-      const tier = await ctx.db.get(user.current_tier_id);
+    if (activeCard) {
+      const tier = await ctx.db
+        .query("tiers")
+        .withIndex("by_name", (q) => q.eq("name", activeCard.tier_name))
+        .first();
       if (tier) {
-        tierInfo = {
-          name: tier.name,
-          icon: tier.icon,
-          color: tier.color,
-        };
+        tierInfo = { name: tier.name, icon: tier.icon, color: tier.color };
       }
     }
 
-    // Default to Bronze if no tier
-    if (!tierInfo) {
-      tierInfo = {
-        name: DEFAULT_TIERS[0].name,
-        icon: DEFAULT_TIERS[0].icon,
-        color: DEFAULT_TIERS[0].color,
-      };
+    // Fallback to user's current_tier_id if no card
+    if (!tierInfo && user.current_tier_id) {
+      const tier = await ctx.db.get(user.current_tier_id);
+      if (tier) {
+        tierInfo = { name: tier.name, icon: tier.icon, color: tier.color };
+      }
     }
 
     // Get all completed bookings
@@ -779,31 +740,27 @@ export const getCustomerServiceHistory = query({
 });
 
 /**
- * Get the points multiplier for a user's tier
- * Returns 1.0 if no bonus, otherwise the multiplier (e.g., 1.05, 1.1, 1.15)
+ * Get the points multiplier for a user.
+ * Returns the card multiplier (1.5/2.0/3.0) if active card exists, otherwise 1.0.
  */
 export const getUserTierMultiplier = query({
   args: { userId: v.id("users") },
   handler: async (ctx, args) => {
-    const user = await ctx.db.get(args.userId);
-    if (!user) return 1.0;
-
-    // If user has no tier set, return base multiplier
-    if (!user.current_tier_id) {
-      return 1.0;
-    }
-
-    // Get the points_multiplier benefit for this tier
-    const benefits = await ctx.db
-      .query("tier_benefits")
-      .withIndex("by_tier", (q) => q.eq("tier_id", user.current_tier_id!))
+    // Check membership card first
+    const cards = await ctx.db
+      .query("membership_cards")
+      .withIndex("by_user", (q) => q.eq("user_id", args.userId))
       .collect();
-
-    const multiplierBenefit = benefits.find(
-      (b) => b.benefit_type === "points_multiplier" && b.is_active !== false
+    const activeCard = cards.find(
+      (c) => c.status === "active" || c.status === "grace_period"
     );
 
-    return multiplierBenefit?.benefit_value || 1.0;
+    if (activeCard) {
+      return activeCard.points_multiplier;
+    }
+
+    // No card — no multiplier bonus
+    return 1.0;
   },
 });
 

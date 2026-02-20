@@ -31,6 +31,7 @@ import {
   Megaphone,
   Scissors,
   AlertTriangle,
+  SlidersHorizontal,
 } from 'lucide-react'
 
 // Category definitions for primary nav
@@ -40,8 +41,9 @@ const CATEGORIES = [
   { id: 'users', label: 'Users' },
   { id: 'Commerce', label: 'Commerce', isCategory: true, defaultTab: 'default_services' },
   { id: 'Finance', label: 'Finance', isCategory: true, defaultTab: 'pl' },
-  { id: 'Marketing', label: 'Marketing', isCategory: true, defaultTab: 'loyalty' },
+  { id: 'Marketing', label: 'Marketing', isCategory: true, defaultTab: 'promotions' },
   { id: 'Reports', label: 'Reports', isCategory: true, defaultTab: 'reports' },
+  { id: 'Configs', label: 'Configs', isCategory: true, defaultTab: 'shop_config' },
   { id: 'settings', label: 'Settings' },
 ]
 
@@ -94,6 +96,7 @@ const TabNavigation = ({ tabs, activeTab, onTabChange }) => {
       Finance: DollarSign,
       Marketing: Megaphone,
       Reports: BarChart3,
+      Configs: SlidersHorizontal,
     }
     return iconMap[id] || LayoutDashboard
   }

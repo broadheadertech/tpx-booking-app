@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
+import { useSearchParams } from "react-router-dom";
 import {
   ArrowLeft,
   Clock,
@@ -11,6 +12,7 @@ import {
   X,
   MapPin,
   AlertTriangle,
+  AlertCircle,
   Lock,
   Banknote,
   ChevronRight,
@@ -117,6 +119,7 @@ const GuestServiceBooking = ({ onBack }) => {
   const createUser = useMutation(api.services.auth.createUser);
   const createGuestUser = useMutation(api.services.auth.createGuestUser);
   const { user, isAuthenticated } = useCurrentUser();
+  const [searchParams] = useSearchParams();
   const [selectedBranch, setSelectedBranch] = useState(null);
   const [selectedService, setSelectedService] = useState(null);
   const [selectedDate, setSelectedDate] = useState(() => {
@@ -305,6 +308,18 @@ const GuestServiceBooking = ({ onBack }) => {
       clearInterval(pollInterval);
     };
   }, [pendingPaymentSessionId, checkPaymentStatus, selectedService, selectedStaff, selectedDate, selectedTime, paymentType]);
+
+  // Auto-select branch from URL query param (e.g., /guest/booking?branch=<branchId>)
+  useEffect(() => {
+    const branchIdParam = searchParams.get("branch");
+    if (branchIdParam && branches && !selectedBranch) {
+      const matchingBranch = branches.find((b) => b._id === branchIdParam);
+      if (matchingBranch) {
+        setSelectedBranch(matchingBranch);
+        setStep(2); // Skip branch selection, go to services
+      }
+    }
+  }, [branches, searchParams, selectedBranch]);
 
   // Check for pre-selected service from AI assistant
   useEffect(() => {
@@ -502,9 +517,39 @@ const GuestServiceBooking = ({ onBack }) => {
     });
   };
 
+  // Check if selected date is closed for the branch
+  const branchClosedMessage = React.useMemo(() => {
+    if (!selectedDate || !selectedBranch) return null;
+    // Manual close
+    if (selectedBranch.is_manually_closed) {
+      return selectedBranch.manual_close_reason || "This branch is temporarily closed.";
+    }
+    // Closed dates
+    if (selectedBranch.closed_dates?.length > 0) {
+      const closedDate = selectedBranch.closed_dates.find(cd => cd.date === selectedDate);
+      if (closedDate) return closedDate.reason || `Branch is closed on ${selectedDate}.`;
+    }
+    // Weekly schedule
+    if (selectedBranch.weekly_schedule) {
+      const dayNames = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"];
+      const dayOfWeek = dayNames[new Date(selectedDate + "T00:00:00").getDay()];
+      const daySchedule = selectedBranch.weekly_schedule[dayOfWeek];
+      if (daySchedule && !daySchedule.is_open) {
+        return `Branch is closed on ${dayOfWeek.charAt(0).toUpperCase() + dayOfWeek.slice(1)}s.`;
+      }
+    }
+    return null;
+  }, [selectedDate, selectedBranch]);
+
   // Generate time slots for the selected date
   const timeSlots = React.useMemo(() => {
     if (!selectedDate || !selectedStaff || !selectedBranch) return [];
+
+    // If branch is closed on this date, return empty
+    if (selectedBranch.is_manually_closed) return [];
+    if (selectedBranch.closed_dates?.length > 0) {
+      if (selectedBranch.closed_dates.find(cd => cd.date === selectedDate)) return [];
+    }
 
     const slots = [];
     // Use Philippine time for all time comparisons
@@ -526,6 +571,12 @@ const GuestServiceBooking = ({ onBack }) => {
       .toLocaleDateString("en-US", { weekday: "long" })
       .toLowerCase();
 
+    // Check if branch is closed on this day via weekly schedule
+    if (selectedBranch.weekly_schedule) {
+      const branchDaySchedule = selectedBranch.weekly_schedule[dayOfWeek];
+      if (branchDaySchedule && !branchDaySchedule.is_open) return [];
+    }
+
     // Check barber's schedule for this day
     const barberSchedule = selectedStaff.schedule?.[dayOfWeek];
 
@@ -540,19 +591,21 @@ const GuestServiceBooking = ({ onBack }) => {
       [startHour, startMin] = barberSchedule.start.split(":").map(Number);
       [endHour, endMin] = barberSchedule.end.split(":").map(Number);
     } else {
-      // No barber schedule data - fall back to branch hours
-      startHour = selectedBranch?.booking_start_hour ?? 10;
+      // No barber schedule data - fall back to branch hours (with weekly schedule override)
+      const branchDaySchedule = selectedBranch.weekly_schedule?.[dayOfWeek];
+      startHour = branchDaySchedule?.start_hour ?? selectedBranch?.booking_start_hour ?? 10;
       startMin = 0;
-      endHour = selectedBranch?.booking_end_hour ?? 20;
+      endHour = branchDaySchedule?.end_hour ?? selectedBranch?.booking_end_hour ?? 20;
       endMin = 0;
     }
 
     // Apply Branch Operating Hours Constraints
-    // Ensure that even if a barber sets availability outside branch hours, 
+    // Ensure that even if a barber sets availability outside branch hours,
     // the branch's operating hours take precedence.
     if (selectedBranch) {
-      const branchStart = selectedBranch.booking_start_hour ?? 10;
-      const branchEnd = selectedBranch.booking_end_hour ?? 20;
+      const branchDaySchedule = selectedBranch.weekly_schedule?.[dayOfWeek];
+      const branchStart = branchDaySchedule?.start_hour ?? selectedBranch.booking_start_hour ?? 10;
+      const branchEnd = branchDaySchedule?.end_hour ?? selectedBranch.booking_end_hour ?? 20;
 
       // New start hour is the later of the two
       startHour = Math.max(startHour, branchStart);
@@ -1506,21 +1559,24 @@ const GuestServiceBooking = ({ onBack }) => {
                     <MapPin className="w-5 h-5 text-[var(--color-primary)] flex-shrink-0 mt-0.5" />
 
                     <div className="flex-1 min-w-0">
-                      {/* Branch Name */}
-                      <h3 className="text-base font-semibold text-white mb-1 group-hover:text-[var(--color-primary)] transition-colors">
-                        {branch.name}
-                      </h3>
+                      {/* Branch Name + Closed Badge */}
+                      <div className="flex items-center gap-2 mb-1">
+                        <h3 className="text-base font-semibold text-white group-hover:text-[var(--color-primary)] transition-colors">
+                          {branch.name}
+                        </h3>
+                        {branch.is_manually_closed && (
+                          <span className="px-1.5 py-0.5 text-[10px] font-semibold bg-red-500/20 text-red-400 rounded">
+                            Closed
+                          </span>
+                        )}
+                      </div>
 
                       {/* Branch Details - Compact */}
                       <div className="space-y-0.5 text-xs text-gray-400">
                         <p className="truncate">{branch.address}</p>
-                        <div className="flex items-center gap-3">
-                          {/* <span>{branch.phone}</span> */}
-                          {/* <span className="text-gray-600">•</span>
-                          <span className="text-gray-500">
-                            #{branch.branch_code} */}
-                          {/* </span> */}
-                        </div>
+                        {branch.is_manually_closed && branch.manual_close_reason && (
+                          <p className="text-red-400/70 text-[10px]">{branch.manual_close_reason}</p>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -1826,8 +1882,21 @@ const GuestServiceBooking = ({ onBack }) => {
           </div>
         )}
 
+        {/* Branch Closed Message */}
+        {selectedDate && branchClosedMessage && (
+          <div className="bg-red-500/10 border border-red-500/30 rounded-2xl p-4 flex items-center gap-3">
+            <div className="w-10 h-10 bg-red-500/20 rounded-full flex items-center justify-center flex-shrink-0">
+              <AlertCircle className="w-5 h-5 text-red-400" />
+            </div>
+            <div>
+              <p className="text-red-400 font-semibold text-sm">Branch is Closed</p>
+              <p className="text-gray-400 text-xs">{branchClosedMessage}</p>
+            </div>
+          </div>
+        )}
+
         {/* Modern Time Slot Pills */}
-        {selectedDate && !blockedPeriodForDate && !isBarberScheduledOff && (
+        {selectedDate && !blockedPeriodForDate && !isBarberScheduledOff && !branchClosedMessage && (
           <div className="bg-[#1A1A1A] border border-[#2A2A2A] rounded-2xl p-4">
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-lg font-bold text-white">Available Times</h3>
@@ -1873,29 +1942,48 @@ const GuestServiceBooking = ({ onBack }) => {
     );
   };
 
+  // Check if selected branch is currently closed (manual close, not schedule-based)
+  const isBranchClosed = selectedBranch?.is_manually_closed;
+  const branchCloseReasonText = selectedBranch?.manual_close_reason || "This branch is temporarily closed and not accepting bookings.";
+
   const renderStaffSelection = () => (
     <div className="pb-6 px-4 max-w-2xl mx-auto">
+      {/* Branch Closed Banner */}
+      {isBranchClosed && (
+        <div className="bg-red-500/10 border border-red-500/30 rounded-2xl p-4 flex items-center gap-3 mb-6">
+          <div className="w-10 h-10 bg-red-500/20 rounded-full flex items-center justify-center flex-shrink-0">
+            <AlertCircle className="w-5 h-5 text-red-400" />
+          </div>
+          <div>
+            <p className="text-red-400 font-semibold text-sm">Branch is Closed</p>
+            <p className="text-gray-400 text-xs">{branchCloseReasonText}</p>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <div className="text-center mb-6">
         <h2 className="text-2xl md:text-3xl font-bold text-white mb-2">
           Choose Your Barber
         </h2>
         <p className="text-sm md:text-base text-gray-400">
-          Select your preferred professional
+          {isBranchClosed ? 'Barbers are unavailable while the branch is closed' : 'Select your preferred professional'}
         </p>
       </div>
 
-      {/* Modern Barber Cards */}
-      <BarberCardGrid
-        barbers={getAvailableBarbers()}
-        selectedBarber={selectedStaff}
-        onSelect={handleStaffSelect}
-        compact={false}
-        loading={!barbers}
-      />
+      {/* Modern Barber Cards — disabled when closed */}
+      <div className={isBranchClosed ? 'opacity-40 pointer-events-none' : ''}>
+        <BarberCardGrid
+          barbers={getAvailableBarbers()}
+          selectedBarber={selectedStaff}
+          onSelect={handleStaffSelect}
+          compact={false}
+          loading={!barbers}
+        />
+      </div>
 
       {/* Empty State */}
-      {barbers && getAvailableBarbers().length === 0 && (
+      {barbers && getAvailableBarbers().length === 0 && !isBranchClosed && (
         <div className="text-center py-12">
           <User className="w-12 h-12 text-gray-500 mx-auto mb-3 opacity-50" />
           <p className="text-gray-400">No barbers available at this branch</p>

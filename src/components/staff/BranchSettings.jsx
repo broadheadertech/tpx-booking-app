@@ -10,6 +10,7 @@ import {
 import BranchProfileSettings from './BranchProfileSettings'
 import PaymentSettings from './PaymentSettings'
 import BranchWalletView from './BranchWalletView'
+import BranchScheduleSettings from './BranchScheduleSettings'
 
 /**
  * Branch Settings Component
@@ -22,6 +23,7 @@ const BranchSettings = ({ user, onRefresh }) => {
     { id: 'profile', label: 'Branch Profile', icon: Store, description: 'Logo, cover photo, social links' },
     { id: 'payments', label: 'Payment Settings', icon: CreditCard, description: 'Payment methods & fees' },
     { id: 'wallet', label: 'Wallet Settings', icon: Wallet, description: 'Customer wallet configuration' },
+    { id: 'schedule', label: 'Schedule', icon: Clock, description: 'Operating hours & closures' },
   ]
 
   const renderSectionContent = () => {
@@ -32,6 +34,8 @@ const BranchSettings = ({ user, onRefresh }) => {
         return <PaymentSettings onRefresh={onRefresh} />
       case 'wallet':
         return <BranchWalletView />
+      case 'schedule':
+        return <BranchScheduleSettings />
       default:
         return <BranchProfileSettings user={user} />
     }

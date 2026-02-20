@@ -418,11 +418,31 @@ const BranchProfile = () => {
               <div className="bg-[#1A1A1A] rounded-xl p-4 border border-[#2A2A2A]">
                 <div className="flex items-start gap-3">
                   <Clock className="w-5 h-5 text-[var(--color-primary)] mt-0.5 shrink-0" />
-                  <div>
-                    <h3 className="text-white font-medium text-sm mb-0.5">Hours</h3>
-                    <p className="text-gray-400 text-sm">
-                      {formatHour(branch.booking_start_hour)} - {formatHour(branch.booking_end_hour)}
-                    </p>
+                  <div className="flex-1">
+                    <h3 className="text-white font-medium text-sm mb-1.5">Hours</h3>
+                    {branch.weekly_schedule ? (
+                      <div className="space-y-1">
+                        {['monday','tuesday','wednesday','thursday','friday','saturday','sunday'].map(day => {
+                          const daySchedule = branch.weekly_schedule[day]
+                          return (
+                            <div key={day} className="flex justify-between text-sm">
+                              <span className="text-gray-400 capitalize w-20">{day.slice(0, 3)}</span>
+                              {daySchedule?.is_open ? (
+                                <span className="text-gray-300">{formatHour(daySchedule.start_hour)} - {formatHour(daySchedule.end_hour)}</span>
+                              ) : daySchedule ? (
+                                <span className="text-red-400 text-xs">Closed</span>
+                              ) : (
+                                <span className="text-gray-300">{formatHour(branch.booking_start_hour)} - {formatHour(branch.booking_end_hour)}</span>
+                              )}
+                            </div>
+                          )
+                        })}
+                      </div>
+                    ) : (
+                      <p className="text-gray-400 text-sm">
+                        {formatHour(branch.booking_start_hour)} - {formatHour(branch.booking_end_hour)}
+                      </p>
+                    )}
                   </div>
                 </div>
               </div>

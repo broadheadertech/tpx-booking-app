@@ -16,7 +16,11 @@ const PERM_MAP = { custom: 'custom_bookings' }
 const SUB_KEYS = ['custom_bookings', 'calendar', 'walkins', 'queue']
 
 const BookingsHub = ({ user, onRefresh, incompleteBookingsCount = 0, waitingWalkInsCount = 0 }) => {
-  const [activeSection, setActiveSection] = useState('bookings')
+  const [activeSection, setActiveSection] = useState(() => localStorage.getItem('staff_hub_bookings_section') || 'bookings')
+
+  useEffect(() => {
+    localStorage.setItem('staff_hub_bookings_section', activeSection)
+  }, [activeSection])
 
   const allSections = [
     {

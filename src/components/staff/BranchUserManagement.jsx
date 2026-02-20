@@ -4,7 +4,6 @@ import { api } from '../../../convex/_generated/api'
 import { useCurrentUser } from '../../hooks/useCurrentUser'
 import { User, UserPlus, Edit, Building, Users, Search, Filter, X, AlertCircle, Shield, HelpCircle, Scan, RefreshCw, CheckCircle, UserX, UserCheck } from 'lucide-react'
 import UserFormModal from '../admin/UserFormModal'
-import PermissionConfigModal from '../admin/PermissionConfigModal'
 import FaceEnrollment from './FaceEnrollment'
 import { createPortal } from 'react-dom'
 import WalkthroughOverlay from '../common/WalkthroughOverlay'
@@ -116,9 +115,7 @@ export default function BranchUserManagement() {
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [showEditModal, setShowEditModal] = useState(false)
   const [showDeleteModal, setShowDeleteModal] = useState(false)
-  const [showPermissionsModal, setShowPermissionsModal] = useState(false)
   const [selectedUser, setSelectedUser] = useState(null)
-  const [selectedUserForPermissions, setSelectedUserForPermissions] = useState(null)
   const [showTutorial, setShowTutorial] = useState(false)
   const [enrollUser, setEnrollUser] = useState(null)
 
@@ -257,11 +254,6 @@ export default function BranchUserManagement() {
   const handleDelete = (user) => {
     setSelectedUser(user)
     setShowDeleteModal(true)
-  }
-
-  const handleConfigurePermissions = (user) => {
-    setSelectedUserForPermissions(user)
-    setShowPermissionsModal(true)
   }
 
   const handleSubmitEdit = async (e) => {
@@ -544,16 +536,6 @@ export default function BranchUserManagement() {
                         >
                           <Scan className="h-4 w-4" />
                         </button>
-                        {/* Configure Permissions - Story 12-3 */}
-                        {branchUser.role === 'staff' && (user?.role === 'branch_admin' || user?.role === 'super_admin' || user?.role === 'admin_staff') && (
-                          <button
-                            onClick={() => handleConfigurePermissions(branchUser)}
-                            className="text-[#FF8C42] hover:text-[#E67E3C] transition-colors"
-                            title="Configure permissions"
-                          >
-                            <Shield className="h-4 w-4" />
-                          </button>
-                        )}
                         <button
                           onClick={() => handleEdit(branchUser)}
                           className="text-blue-400 hover:text-blue-300 transition-colors"
@@ -650,29 +632,17 @@ export default function BranchUserManagement() {
         error={error}
       />
 
-      {/* Permission Configuration Modal - Story 12-3 */}
-      <PermissionConfigModal
-        isOpen={showPermissionsModal}
-        onClose={() => {
-          setShowPermissionsModal(false)
-          setSelectedUserForPermissions(null)
-        }}
-        user={selectedUserForPermissions}
-        onSuccess={() => {
-          // Permissions updated successfully
-          setShowPermissionsModal(false)
-          setSelectedUserForPermissions(null)
-        }}
-      />
-
-      {/* Face Enrollment Modal */}
-      <FaceEnrollment
-        isOpen={!!enrollUser}
-        onClose={() => setEnrollUser(null)}
-        userId={enrollUser?._id}
-        barberName={enrollUser?.nickname || enrollUser?.username || 'Staff'}
-        branchId={user?.branch_id}
-      />
+      {/* Face Enrollment Modal - portal to body to escape stacking context */}
+      {enrollUser && createPortal(
+        <FaceEnrollment
+          isOpen={!!enrollUser}
+          onClose={() => setEnrollUser(null)}
+          userId={enrollUser?._id}
+          barberName={enrollUser?.nickname || enrollUser?.username || 'Staff'}
+          branchId={user?.branch_id}
+        />,
+        document.body
+      )}
 
       {/* Clerk Sync Modal */}
       {showSyncModal && syncTargetUser && createPortal(

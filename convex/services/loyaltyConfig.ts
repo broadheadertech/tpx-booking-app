@@ -73,6 +73,91 @@ export const DEFAULT_CONFIGS = [
     config_type: "number" as const,
     description: "Days before expiry to show warning to customers",
   },
+  // === Membership Card Configuration ===
+  {
+    config_key: "card_enabled",
+    config_value: "true",
+    config_type: "boolean" as const,
+    description: "Master toggle for membership card system",
+  },
+  {
+    config_key: "card_silver_price",
+    config_value: "299",
+    config_type: "number" as const,
+    description: "Silver card purchase price in pesos",
+  },
+  {
+    config_key: "card_gold_topup_threshold",
+    config_value: "2000",
+    config_type: "number" as const,
+    description: "Wallet top-up amount for Gold fast-track in pesos",
+  },
+  {
+    config_key: "card_platinum_topup_threshold",
+    config_value: "5000",
+    config_type: "number" as const,
+    description: "Wallet top-up amount for Platinum fast-track in pesos",
+  },
+  {
+    config_key: "card_silver_multiplier",
+    config_value: "1.5",
+    config_type: "number" as const,
+    description: "Points multiplier for Silver cardholders",
+  },
+  {
+    config_key: "card_gold_multiplier",
+    config_value: "2.0",
+    config_type: "number" as const,
+    description: "Points multiplier for Gold cardholders",
+  },
+  {
+    config_key: "card_platinum_multiplier",
+    config_value: "3.0",
+    config_type: "number" as const,
+    description: "Points multiplier for Platinum cardholders",
+  },
+  {
+    config_key: "card_gold_xp_threshold",
+    config_value: "200000",
+    config_type: "number" as const,
+    description: "XP needed to earn Gold (×100 format, 200000 = 2000 XP)",
+  },
+  {
+    config_key: "card_platinum_xp_threshold",
+    config_value: "500000",
+    config_type: "number" as const,
+    description: "XP needed to earn Platinum (×100 format, 500000 = 5000 XP)",
+  },
+  {
+    config_key: "card_xp_per_peso",
+    config_value: "100",
+    config_type: "number" as const,
+    description: "XP earned per peso spent (×100 format, 100 = 1 XP per peso)",
+  },
+  {
+    config_key: "card_xp_per_booking",
+    config_value: "5000",
+    config_type: "number" as const,
+    description: "Bonus XP earned per completed booking (×100 format, 5000 = 50 XP)",
+  },
+  {
+    config_key: "card_renewal_months",
+    config_value: "12",
+    config_type: "number" as const,
+    description: "Card validity period in months",
+  },
+  {
+    config_key: "card_grace_period_days",
+    config_value: "30",
+    config_type: "number" as const,
+    description: "Grace period in days after card expiry before full deactivation",
+  },
+  {
+    config_key: "card_maintenance_days",
+    config_value: "30",
+    config_type: "number" as const,
+    description: "Maximum days between visits before tier drop (0 = disabled)",
+  },
 ];
 
 // ============================================================================

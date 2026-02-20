@@ -4,6 +4,7 @@ import { useMutation, useQuery } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
 import { useCurrentUser } from '../../hooks/useCurrentUser'
 import TierManagementPanel from './TierManagementPanel'
+import CardConfigPanel from './CardConfigPanel'
 import LoyaltyAnalyticsDashboard from './LoyaltyAnalyticsDashboard'
 import ManualPointsAdjustment from './ManualPointsAdjustment'
 import PointsExpiryPanel from './PointsExpiryPanel'
@@ -469,6 +470,12 @@ const PointsConfigPanel = () => {
           </div>
         </div>
       )}
+
+      {/* Divider */}
+      <div className="border-t border-[#2A2A2A] my-8"></div>
+
+      {/* Membership Card Configuration */}
+      <CardConfigPanel onViewHistory={(key) => setSelectedConfigKey(key)} />
 
       {/* Divider */}
       <div className="border-t border-[#2A2A2A] my-8"></div>

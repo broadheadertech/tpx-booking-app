@@ -527,6 +527,15 @@ export const calculateBarberEarnings = query({
       }
     }
 
+    // Build a map of booking_id → transaction for POS service change detection
+    // This handles backward compatibility for bookings processed before the original_service fix
+    const transactionByBookingId = new Map<string, any>();
+    for (const tx of allTransactions) {
+      if (tx.booking_id) {
+        transactionByBookingId.set(String(tx.booking_id), tx);
+      }
+    }
+
     // Per-day commission and daily rate calculation
     // Load bookings for the barber and group by date
     const allBookings = await ctx.db
@@ -597,8 +606,24 @@ export const calculateBarberEarnings = query({
             "Customer";
         }
 
-        // Calculate commission for this booking
-        const rates = serviceRateMap.get(String(b.service)) || [];
+        // Determine the actual service performed (may differ from booking if changed at POS)
+        // New bookings: b.service already points to the actual service (original_service has the old one)
+        // Old bookings (pre-fix): check linked POS transaction for service mismatch
+        let actualServiceId = b.service;
+        let actualServiceName = service?.name || "Service";
+
+        if (!b.original_service) {
+          // Backward compatibility: check POS transaction for service change
+          const linkedTx = transactionByBookingId.get(String(b._id));
+          const txService = linkedTx?.services?.[0];
+          if (txService?.service_id && String(txService.service_id) !== String(b.service)) {
+            actualServiceId = txService.service_id;
+            actualServiceName = txService.service_name || actualServiceName;
+          }
+        }
+
+        // Calculate commission using the ACTUAL service performed
+        const rates = serviceRateMap.get(String(actualServiceId)) || [];
         // Sort rates by effective_from DESC and take the most recent one (retroactive rule)
         const activeRate = rates.slice().sort((a, b) => (b.effective_from || 0) - (a.effective_from || 0))[0];
 
@@ -613,7 +638,7 @@ export const calculateBarberEarnings = query({
           date: b.date,
           time: b.time,
           price: b.price,
-          service_name: service?.name || "Service",
+          service_name: actualServiceName,
           customer_name: customerName,
           updatedAt: b.updatedAt,
           commission: bookingCommission,
@@ -1095,6 +1120,16 @@ export const getBookingsByBarberAndPeriod = query({
       );
     });
 
+    // Build transaction lookup for POS service change detection (backward compat)
+    const allTxs = await ctx.db
+      .query("transactions")
+      .withIndex("by_barber", (q) => q.eq("barber", args.barber_id))
+      .collect();
+    const txByBookingId = new Map<string, any>();
+    for (const tx of allTxs) {
+      if (tx.booking_id) txByBookingId.set(String(tx.booking_id), tx);
+    }
+
     // Populate service + customer display info
     const withDetails = await Promise.all(
       filtered.map(async (b) => {
@@ -1108,14 +1143,27 @@ export const getBookingsByBarberAndPeriod = query({
             customer?.email ||
             "Customer";
         }
+
+        // Determine actual service (may differ for POS service changes)
+        let actualServiceId: any = b.service;
+        let actualServiceName = service?.name || "Service";
+        if (!b.original_service) {
+          const linkedTx = txByBookingId.get(String(b._id));
+          const txSvc = linkedTx?.services?.[0];
+          if (txSvc?.service_id && String(txSvc.service_id) !== String(b.service)) {
+            actualServiceId = txSvc.service_id;
+            actualServiceName = txSvc.service_name || actualServiceName;
+          }
+        }
+
         return {
           id: b._id,
           booking_code: b.booking_code,
           date: b.date,
           time: b.time,
           price: b.price,
-          service_id: b.service,
-          service_name: service?.name || "Service",
+          service_id: actualServiceId,
+          service_name: actualServiceName,
           customer_name: customerName,
           updatedAt: b.updatedAt,
         };

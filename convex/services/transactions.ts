@@ -136,6 +136,7 @@ export const createTransaction = mutation({
     cash_collected: v.optional(v.number()), // Cash portion (e.g., 150 = ₱150)
     processed_by: v.id("users"),
     skip_booking_creation: v.optional(v.boolean()), // Flag to skip automatic booking creation
+    booking_id: v.optional(v.id("bookings")), // Existing booking ID for POS price update
     // Delivery fields
     fulfillment_type: v.optional(v.literal("delivery")),
     delivery_address: v.optional(v.object({
@@ -524,6 +525,50 @@ export const createTransaction = mutation({
             skip_booking_creation ? 'skip_booking_creation flag is true' :
               'Unknown'
       });
+
+      // When skipping booking creation (POS booking payment), update the existing booking's price + status
+      if (skip_booking_creation && args.booking_id) {
+        try {
+          const existingBooking = await ctx.db.get(args.booking_id);
+          if (existingBooking) {
+            // Check if service was changed at POS
+            const newServiceId = args.services?.[0]?.service_id;
+            const serviceChanged = newServiceId && String(newServiceId) !== String(existingBooking.service);
+
+            // Look up original service name if service changed
+            let originalServiceName: string | undefined;
+            if (serviceChanged) {
+              const originalService = await ctx.db.get(existingBooking.service);
+              originalServiceName = originalService?.name || "Service";
+              console.log("[BOOKING UPDATE] Service changed at POS:", {
+                original: existingBooking.service,
+                originalName: originalServiceName,
+                new: newServiceId,
+                newName: args.services?.[0]?.service_name,
+              });
+            }
+
+            await ctx.db.patch(args.booking_id, {
+              status: "completed" as const,
+              payment_status: "paid" as const,
+              price: args.total_amount,
+              final_price: args.total_amount - (args.discount_amount || 0),
+              completed_at: timestamp,
+              updatedAt: timestamp,
+              // Update service to the actual service performed at POS
+              // Preserve original for Payment Breakdown display
+              ...(serviceChanged ? {
+                original_service: existingBooking.service,
+                original_service_name: originalServiceName,
+                service: newServiceId!,
+              } : {}),
+            });
+            createdBookingIds.push(args.booking_id);
+          }
+        } catch (error) {
+          console.error('[BOOKING UPDATE] Failed:', error);
+        }
+      }
     }
 
     // Update product stock if products were sold
@@ -745,13 +790,24 @@ export const createTransaction = mutation({
           notesMessage = `Earned from payment (${BASE_EARNING_RATE}x rate) - Receipt: ${receiptNumber}`;
         }
 
-        const pointsToEarn = toStorageFormat(pointsAmount); // ×100 format
+        // Apply membership card multiplier on top of base points
+        const activeCard = await ctx.db
+          .query("membership_cards")
+          .withIndex("by_user", (q: any) => q.eq("user_id", args.customer))
+          .collect()
+          .then((cards: any[]) => cards.find((c: any) => c.status === "active"));
+        const cardMultiplier = activeCard?.points_multiplier || 1.0;
+        const finalPointsAmount = pointsAmount * cardMultiplier;
+
+        const pointsToEarn = toStorageFormat(finalPointsAmount); // ×100 format
 
         console.log("[POINTS] Awarding points for completed payment:", {
           customerId: args.customer,
           amount: args.total_amount,
           paymentMethod: args.payment_method,
-          pointsAmount,
+          basePoints: pointsAmount,
+          cardMultiplier,
+          finalPointsAmount,
           pointsToEarn,
           transactionId,
         });
@@ -764,15 +820,48 @@ export const createTransaction = mutation({
             sourceType,
             sourceId: transactionId,
             branchId: args.branch_id,
-            notes: notesMessage,
+            notes: cardMultiplier > 1
+              ? `${notesMessage} (${cardMultiplier}x card bonus applied)`
+              : notesMessage,
           });
 
           console.log("[POINTS] Successfully awarded points to customer:", {
             paymentMethod: args.payment_method,
-            pointsEarned: pointsAmount,
+            basePoints: pointsAmount,
+            cardMultiplier,
+            finalPointsEarned: finalPointsAmount,
           });
         } else {
           console.log("[POINTS] No points to earn (likely full points redemption)");
+        }
+
+        // Award XP to cardholder (if applicable)
+        if (activeCard) {
+          try {
+            // XP from spending: xp_per_peso × total amount
+            const xpPerPesoRaw = await ctx.runQuery(api.services.loyaltyConfig.getConfig, { key: "card_xp_per_peso" }) || 100;
+            const xpFromSpending = Math.round(args.total_amount * (xpPerPesoRaw as number));
+
+            // XP bonus from completed booking
+            const isServiceTx = txType === "service";
+            const xpPerBooking = isServiceTx
+              ? (await ctx.runQuery(api.services.loyaltyConfig.getConfig, { key: "card_xp_per_booking" }) || 5000)
+              : 0;
+
+            const totalXP = xpFromSpending + (xpPerBooking as number);
+
+            if (totalXP > 0) {
+              await ctx.runMutation(api.services.membershipCards.awardXP, {
+                userId: args.customer,
+                xpAmount: totalXP,
+                source: isServiceTx ? "booking_payment" : "retail_payment",
+                sourceId: transactionId,
+              });
+              console.log("[CARD XP] Awarded XP:", { xpFromSpending, xpPerBooking, totalXP });
+            }
+          } catch (xpError) {
+            console.error("[CARD XP] Failed to award XP:", xpError);
+          }
         }
         } // Close else block for pointsEnabled check
       } catch (pointsError) {
@@ -781,10 +870,61 @@ export const createTransaction = mutation({
       }
     }
 
+    // Create branch earning record for wallet/combo payments (Settlement tracking)
+    // Wallet payments are collected by the platform and need to be settled with the branch.
+    // Cash/card payments go directly to the branch and don't need settlement tracking.
+    if (
+      (args.payment_method === "wallet" || args.payment_method === "combo") &&
+      args.payment_status === "completed"
+    ) {
+      // Determine the wallet portion amount
+      const walletGrossAmount =
+        args.payment_method === "wallet"
+          ? args.total_amount
+          : (comboResult?.walletUsed || 0);
+
+      // Only create earning record if there's a wallet portion and we have a booking
+      const bookingIdForEarning = createdBookingIds[0] || args.booking_id;
+
+      if (walletGrossAmount > 0 && bookingIdForEarning) {
+        try {
+          // Get service name for display
+          const earningServiceName =
+            args.services?.[0]?.service_name || "POS Payment";
+
+          await ctx.runMutation(api.services.branchEarnings.createEarningRecord, {
+            branch_id: args.branch_id,
+            booking_id: bookingIdForEarning,
+            customer_id: args.customer!,
+            staff_id: args.processed_by,
+            service_name: earningServiceName,
+            gross_amount: walletGrossAmount,
+            processed_via: "branch",
+            payment_source: "wallet",
+          });
+
+          console.log("[SETTLEMENT] Created earning record for wallet payment:", {
+            bookingId: bookingIdForEarning,
+            walletAmount: walletGrossAmount,
+            paymentMethod: args.payment_method,
+          });
+        } catch (earningError) {
+          // Don't fail the transaction if earning record creation fails
+          console.error("[SETTLEMENT] Failed to create earning record:", earningError);
+        }
+      } else {
+        console.log("[SETTLEMENT] Skipping earning record:", {
+          walletGrossAmount,
+          hasBookingId: !!bookingIdForEarning,
+          reason: walletGrossAmount <= 0 ? "No wallet amount" : "No booking ID",
+        });
+      }
+    }
+
     return {
       transactionId: transactionDocId,
       transaction_id: transactionId,
-      receipt_number: receiptNumber
+      receipt_number: receiptNumber,
     };
   },
 });

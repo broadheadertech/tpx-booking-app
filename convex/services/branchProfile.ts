@@ -310,12 +310,61 @@ export const getBranchProfileSummary = query({
       .filter((q) => q.eq(q.field("status"), "completed"))
       .collect();
 
-    // Determine open/closed status based on current time and branch hours
-    const now = new Date();
-    const currentHour = now.getHours();
-    const startHour = branch.booking_start_hour || 10;
-    const endHour = branch.booking_end_hour || 20;
-    const isOpen = currentHour >= startHour && currentHour < endHour;
+    // Determine open/closed status with enhanced logic
+    // Convert UTC to Philippine time (UTC+8) since Convex servers run in UTC
+    const utcNow = new Date();
+    const phNow = new Date(utcNow.getTime() + utcNow.getTimezoneOffset() * 60000 + 8 * 3600000);
+    const currentHour = phNow.getHours();
+    let isOpen = false;
+    let closeReason: string | null = null;
+
+    // 1. Manual close overrides everything
+    if (branch.is_manually_closed) {
+      isOpen = false;
+      closeReason = branch.manual_close_reason || "Temporarily closed";
+    }
+    // 2. Check closed dates
+    else if (branch.closed_dates && branch.closed_dates.length > 0) {
+      const todayStr = `${phNow.getFullYear()}-${String(phNow.getMonth() + 1).padStart(2, "0")}-${String(phNow.getDate()).padStart(2, "0")}`;
+      const closedToday = branch.closed_dates.find((cd: { date: string; reason: string }) => cd.date === todayStr);
+      if (closedToday) {
+        isOpen = false;
+        closeReason = closedToday.reason || "Closed today";
+      } else {
+        // Fall through to weekly schedule check
+        isOpen = true; // Will be overridden below
+      }
+    } else {
+      isOpen = true; // Will be overridden below
+    }
+
+    // 3. Check weekly schedule (only if not already closed by manual/date)
+    if (isOpen && !closeReason) {
+      const dayNames = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"] as const;
+      const todayDay = dayNames[phNow.getDay()];
+
+      if (branch.weekly_schedule) {
+        const daySchedule = branch.weekly_schedule[todayDay];
+        if (daySchedule) {
+          if (!daySchedule.is_open) {
+            isOpen = false;
+            closeReason = `Closed on ${todayDay.charAt(0).toUpperCase() + todayDay.slice(1)}s`;
+          } else {
+            isOpen = currentHour >= daySchedule.start_hour && currentHour < daySchedule.end_hour;
+          }
+        } else {
+          // No schedule for this day, use default hours
+          const startHour = branch.booking_start_hour || 10;
+          const endHour = branch.booking_end_hour || 20;
+          isOpen = currentHour >= startHour && currentHour < endHour;
+        }
+      } else {
+        // 4. Fallback: use default booking hours
+        const startHour = branch.booking_start_hour || 10;
+        const endHour = branch.booking_end_hour || 20;
+        isOpen = currentHour >= startHour && currentHour < endHour;
+      }
+    }
 
     return {
       branch: {
@@ -331,6 +380,7 @@ export const getBranchProfileSummary = query({
         booking_end_hour: branch.booking_end_hour || 20,
         profile_photo: branch.profile_photo || null,
         cover_photo: branch.cover_photo || null,
+        weekly_schedule: branch.weekly_schedule || null,
       },
       branding: branding
         ? {
@@ -348,6 +398,7 @@ export const getBranchProfileSummary = query({
         posts_count: posts.length,
         bookings_count: completedBookings.length,
         is_open: isOpen,
+        close_reason: closeReason,
       },
     };
   },

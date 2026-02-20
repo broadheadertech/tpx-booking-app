@@ -11,6 +11,7 @@ import { useNavigate } from 'react-router-dom'
 import { APP_VERSION } from '../../config/version'
 import { useBranding } from '../../context/BrandingContext'
 import StarRewardsCard from '../../components/common/StarRewardsCard'
+import CardPurchaseFlow from '../../components/customer/CardPurchaseFlow'
 import { useAppModal } from '../../context/AppModalContext'
 
 // Bottom Navigation
@@ -69,6 +70,7 @@ const Profile = () => {
   const [error, setError] = useState('')
   const [isNavHidden, setIsNavHidden] = useState(false)
   const [showTutorial, setShowTutorial] = useState(false)
+  const [showCardPurchase, setShowCardPurchase] = useState(false)
   const lastScrollY = useRef(0)
 
   // Scroll-aware navigation - hide on scroll down, show on scroll up
@@ -587,7 +589,12 @@ const Profile = () => {
               <Sparkles className="w-4 h-4 text-[var(--color-primary)]" />
               Your Rewards
             </h3>
-            <StarRewardsCard userId={user._id} />
+            <StarRewardsCard userId={user._id} onGetCard={() => setShowCardPurchase(true)} />
+            <CardPurchaseFlow
+              userId={user._id}
+              isOpen={showCardPurchase}
+              onClose={() => setShowCardPurchase(false)}
+            />
           </div>
         )}
 

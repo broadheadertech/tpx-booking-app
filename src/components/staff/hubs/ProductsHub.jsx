@@ -15,7 +15,11 @@ import ServicesManagement from '../ServicesManagement'
 const PERM_MAP = { order: 'order_products' }
 
 const ProductsHub = ({ user, services = [], vouchers = [], onRefresh, onCreateVoucher }) => {
-  const [activeSection, setActiveSection] = useState('services')
+  const [activeSection, setActiveSection] = useState(() => localStorage.getItem('staff_hub_products_section') || 'services')
+
+  useEffect(() => {
+    localStorage.setItem('staff_hub_products_section', activeSection)
+  }, [activeSection])
   const [showTutorial, setShowTutorial] = useState(false)
 
   const allSections = [

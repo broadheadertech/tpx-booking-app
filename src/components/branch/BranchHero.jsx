@@ -109,6 +109,9 @@ const BranchHero = ({ branch, branding, stats }) => {
               <span className={`text-sm font-medium ${stats.is_open ? 'text-green-400' : 'text-red-400'}`}>
                 {stats.is_open ? 'Open Now' : 'Closed'}
               </span>
+              {!stats.is_open && stats.close_reason && (
+                <span className="text-xs text-gray-500">— {stats.close_reason}</span>
+              )}
             </div>
           </div>
 

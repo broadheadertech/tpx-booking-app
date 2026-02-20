@@ -1223,7 +1223,17 @@ const BookingsManagement = ({ onRefresh, user }) => {
                   </div>
                   <div>
                     <p className="text-sm font-medium text-gray-400">Service</p>
-                    <p className="text-sm font-bold text-white">{service?.name || 'Unknown'}</p>
+                    {(() => {
+                      const serviceChanged = !!booking.original_service_name
+                      return serviceChanged ? (
+                        <div>
+                          <p className="text-sm font-bold text-yellow-400">{service?.name}</p>
+                          <p className="text-xs text-gray-500 line-through">{booking.original_service_name}</p>
+                        </div>
+                      ) : (
+                        <p className="text-sm font-bold text-white">{service?.name || 'Unknown'}</p>
+                      )
+                    })()}
                   </div>
                   <div>
                     <p className="text-sm font-medium text-gray-400">Date & Time</p>
@@ -1233,9 +1243,88 @@ const BookingsManagement = ({ onRefresh, user }) => {
                   </div>
                   <div>
                     <p className="text-sm font-medium text-gray-400">Amount</p>
-                    <p className="text-sm font-bold text-green-400">₱{service?.price?.toFixed(2) || '0.00'}</p>
+                    <p className="text-sm font-bold text-green-400">₱{(booking.final_price || booking.price || service?.price || 0).toFixed(2)}</p>
                   </div>
                 </div>
+
+                {/* Payment Breakdown — shows how payments were split */}
+                {(() => {
+                  const originalServicePrice = booking.original_service_price || service?.price || 0
+                  const finalPrice = booking.final_price || booking.price || originalServicePrice
+                  const onlinePaid = booking.amount_paid || 0
+                  const convFee = booking.convenience_fee_paid || 0
+                  const posTransaction = bookingTransactions?.[0]
+                  const serviceChanged = !!booking.original_service_name
+                  const posCashPaid = posTransaction ? (posTransaction.cash_received || posTransaction.total_amount || 0) : 0
+
+                  // Show breakdown if there's any payment info
+                  if (!posTransaction && !onlinePaid) return null
+
+                  return (
+                    <div className="mt-4 pt-4 border-t border-[#2A2A2A]/50">
+                      <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3">Payment Breakdown</p>
+                      <div className="space-y-2">
+
+                        {/* Original Booking */}
+                        <div className="flex items-center justify-between text-sm">
+                          <span className="text-gray-400">Booked: {booking.original_service_name || service?.name || 'Service'}</span>
+                          <span className="text-white">₱{originalServicePrice.toFixed(2)}</span>
+                        </div>
+
+                        {/* Service Change at POS */}
+                        {serviceChanged && (
+                          <div className="flex items-center justify-between text-sm">
+                            <span className="text-yellow-400">Changed to: {service?.name}</span>
+                            <span className="text-yellow-400 font-medium">₱{(service?.price || booking.price || 0).toFixed(2)}</span>
+                          </div>
+                        )}
+
+                        {/* Divider before payments */}
+                        <div className="border-t border-[#2A2A2A]/50 my-1"></div>
+
+                        {/* Online Payment */}
+                        {onlinePaid > 0 && (
+                          <div className="flex items-center justify-between text-sm">
+                            <span className="text-blue-400 flex items-center gap-1.5">
+                              <span className="w-2 h-2 rounded-full bg-blue-400 inline-block"></span>
+                              Paid Online
+                            </span>
+                            <span className="text-blue-400 font-bold">₱{onlinePaid.toFixed(2)}</span>
+                          </div>
+                        )}
+
+                        {/* Convenience Fee */}
+                        {convFee > 0 && (
+                          <div className="flex items-center justify-between text-sm">
+                            <span className="text-gray-500 ml-3.5">Convenience Fee</span>
+                            <span className="text-gray-500">₱{convFee.toFixed(2)}</span>
+                          </div>
+                        )}
+
+                        {/* POS Payment */}
+                        {posTransaction && (
+                          <div className="flex items-center justify-between text-sm">
+                            <span className="text-green-400 flex items-center gap-1.5">
+                              <span className="w-2 h-2 rounded-full bg-green-400 inline-block"></span>
+                              Paid at POS ({posTransaction.payment_method})
+                            </span>
+                            <span className="text-green-400 font-bold">
+                              ₱{onlinePaid > 0
+                                ? Math.max(0, finalPrice - onlinePaid).toFixed(2)
+                                : posTransaction.total_amount.toFixed(2)}
+                            </span>
+                          </div>
+                        )}
+
+                        {/* Final Total */}
+                        <div className="flex items-center justify-between text-sm pt-2 border-t border-[#2A2A2A]/50">
+                          <span className="text-white font-bold">Total Collected</span>
+                          <span className="text-green-400 font-bold text-base">₱{finalPrice.toFixed(2)}</span>
+                        </div>
+                      </div>
+                    </div>
+                  )
+                })()}
               </div>
 
               {/* Payment History */}
@@ -1692,7 +1781,7 @@ const BookingsManagement = ({ onRefresh, user }) => {
                             ) : booking.booking_fee > 0 ? (
                               <div className="text-right">
                                 <span className="text-sm text-green-400 font-medium">
-                                  ₱{((service?.price || 0) + booking.booking_fee).toLocaleString()}
+                                  ₱{((booking.final_price || booking.price || service?.price || 0) + booking.booking_fee).toLocaleString()}
                                 </span>
                                 <p className="text-xs text-gray-500">Full + Fee</p>
                               </div>
@@ -1744,7 +1833,17 @@ const BookingsManagement = ({ onRefresh, user }) => {
             </div>
             <div>
               <p className="text-sm font-medium text-gray-400">Service</p>
-              <p className="text-sm font-bold text-white">{service?.name || 'Unknown'}</p>
+              {(() => {
+                const serviceChanged = !!booking.original_service_name
+                return serviceChanged ? (
+                  <div>
+                    <p className="text-sm font-bold text-yellow-400">{service?.name}</p>
+                    <p className="text-xs text-gray-500 line-through">{booking.original_service_name}</p>
+                  </div>
+                ) : (
+                  <p className="text-sm font-bold text-white">{service?.name || 'Unknown'}</p>
+                )
+              })()}
             </div>
             <div>
               <p className="text-sm font-medium text-gray-400">Date & Time</p>
@@ -1754,7 +1853,7 @@ const BookingsManagement = ({ onRefresh, user }) => {
             </div>
             <div>
               <p className="text-sm font-medium text-gray-400">Amount</p>
-              <p className="text-sm font-bold text-green-400">₱{service?.price?.toFixed(2) || '0.00'}</p>
+              <p className="text-sm font-bold text-green-400">₱{(booking.final_price || booking.price || service?.price || 0).toFixed(2)}</p>
             </div>
           </div>
 
@@ -1823,7 +1922,7 @@ const BookingsManagement = ({ onRefresh, user }) => {
               ) : booking.booking_fee > 0 ? (
                 <div>
                   <p className="text-sm font-bold text-green-400">
-                    ₱{((service?.price || 0) + booking.booking_fee).toLocaleString()}
+                    ₱{((booking.final_price || booking.price || service?.price || 0) + booking.booking_fee).toLocaleString()}
                   </p>
                   <p className="text-xs text-gray-500">
                     (Service + Fee)
@@ -1839,12 +1938,88 @@ const BookingsManagement = ({ onRefresh, user }) => {
                 booking.payment_status === 'paid' ? 'text-green-400' : 'text-yellow-400'
               }`}>
                 {booking.payment_status === 'paid' ? '₱0 (Paid)' :
-                 booking.convenience_fee_paid > 0 ? `₱${(service?.price || 0).toLocaleString()}` :
+                 booking.convenience_fee_paid > 0 ? `₱${(booking.final_price || booking.price || service?.price || 0).toLocaleString()}` :
                  booking.booking_fee > 0 ? '₱0 (Paid Online)' :
-                 `₱${((service?.price || 0) - (booking.cash_collected || 0)).toLocaleString()}`}
+                 `₱${((booking.final_price || booking.price || service?.price || 0) - (booking.cash_collected || 0)).toLocaleString()}`}
               </p>
             </div>
           </div>
+
+          {/* Payment Breakdown — shows how payments were split */}
+          {(() => {
+            const originalServicePrice = booking.original_service_price || service?.price || 0
+            const finalPrice = booking.final_price || booking.price || originalServicePrice
+            const onlinePaid = booking.amount_paid || 0
+            const convFee = booking.convenience_fee_paid || 0
+            const posTransaction = bookingTransactions?.[0]
+            const serviceChanged = !!booking.original_service_name
+
+            // Show breakdown if there's any payment info
+            if (!posTransaction && !onlinePaid) return null
+
+            return (
+              <div className="mt-4 pt-4 border-t border-[#444444]/30">
+                <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3">Payment Breakdown</p>
+                <div className="space-y-2">
+                  {/* Original Booking */}
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-gray-400">Booked: {booking.original_service_name || service?.name || 'Service'}</span>
+                    <span className="text-white">₱{originalServicePrice.toFixed(2)}</span>
+                  </div>
+
+                  {/* Service Change at POS */}
+                  {serviceChanged && (
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-yellow-400">Changed to: {service?.name}</span>
+                      <span className="text-yellow-400 font-medium">₱{(service?.price || booking.price || 0).toFixed(2)}</span>
+                    </div>
+                  )}
+
+                  <div className="border-t border-[#444444]/30 my-1"></div>
+
+                  {/* Online Payment */}
+                  {onlinePaid > 0 && (
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-blue-400 flex items-center gap-1.5">
+                        <span className="w-2 h-2 rounded-full bg-blue-400 inline-block"></span>
+                        Paid Online
+                      </span>
+                      <span className="text-blue-400 font-bold">₱{onlinePaid.toFixed(2)}</span>
+                    </div>
+                  )}
+
+                  {/* Convenience Fee */}
+                  {convFee > 0 && (
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-gray-500 ml-3.5">Convenience Fee</span>
+                      <span className="text-gray-500">₱{convFee.toFixed(2)}</span>
+                    </div>
+                  )}
+
+                  {/* POS Payment */}
+                  {posTransaction && (
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-green-400 flex items-center gap-1.5">
+                        <span className="w-2 h-2 rounded-full bg-green-400 inline-block"></span>
+                        Paid at POS ({posTransaction.payment_method})
+                      </span>
+                      <span className="text-green-400 font-bold">
+                        ₱{onlinePaid > 0
+                          ? Math.max(0, finalPrice - onlinePaid).toFixed(2)
+                          : posTransaction.total_amount.toFixed(2)}
+                      </span>
+                    </div>
+                  )}
+
+                  {/* Final Total */}
+                  <div className="flex items-center justify-between text-sm pt-2 border-t border-[#444444]/30">
+                    <span className="text-white font-bold">Total Collected</span>
+                    <span className="text-green-400 font-bold text-base">₱{finalPrice.toFixed(2)}</span>
+                  </div>
+                </div>
+              </div>
+            )
+          })()}
         </div>
 
         {/* Payment History */}
@@ -2326,6 +2501,9 @@ const BookingsManagement = ({ onRefresh, user }) => {
                           <td className="px-6 py-4 whitespace-nowrap">
                             <div className="text-sm font-medium text-white">
                               {service?.name || 'Unknown Service'}
+                              {(booking.original_service_name || (booking.final_price && service?.price && booking.final_price !== service.price)) && (
+                                <span className="ml-1 text-[10px] text-yellow-400 font-medium">(edited)</span>
+                              )}
                             </div>
                             <div className="text-sm text-gray-400">
                               {service?.duration_minutes}min
@@ -2397,7 +2575,7 @@ const BookingsManagement = ({ onRefresh, user }) => {
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
                             <div className="text-sm font-bold text-green-400">
-                              ₱{service ? parseFloat(service.price).toFixed(2) : '0.00'}
+                              ₱{(booking.final_price || booking.price || service?.price || 0).toFixed(2)}
                             </div>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-right">
