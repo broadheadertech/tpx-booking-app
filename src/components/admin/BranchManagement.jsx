@@ -1,7 +1,7 @@
 import React, { useState } from 'react'
 import { useQuery, useMutation } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
-import { Building, MapPin, Phone, Mail, CheckCircle, XCircle, AlertCircle, Search, Filter, Plus, Edit, Trash2, RotateCcw, Eye, Users, Calendar, Wallet, DollarSign, TrendingUp } from 'lucide-react'
+import { Building, MapPin, Phone, Mail, CheckCircle, XCircle, AlertCircle, Search, Filter, Plus, Edit, Trash2, RotateCcw, Eye, Users, Calendar, Wallet, DollarSign, TrendingUp, Link, Copy, Check, ExternalLink } from 'lucide-react'
 import BranchFormModal from './BranchFormModal'
 import { formatErrorForDisplay } from '../../utils/errorHandler'
 import { useCurrentUser } from '../../hooks/useCurrentUser'
@@ -25,6 +25,7 @@ export default function BranchManagement() {
   })
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [copiedBranchId, setCopiedBranchId] = useState(null)
 
   // Queries
   const branches = useQuery(api.services.branches.getAllBranches) || []
@@ -197,6 +198,14 @@ export default function BranchManagement() {
       month: 'short',
       day: 'numeric'
     })
+  }
+
+  const copyBranchLink = async (branch) => {
+    const slug = branch.slug || branch.name?.toLowerCase().trim().replace(/[^a-z0-9\s-]/g, '').replace(/\s+/g, '-').replace(/-+/g, '-')
+    const url = `${window.location.origin}/b/${slug}`
+    await navigator.clipboard.writeText(url)
+    setCopiedBranchId(branch._id)
+    setTimeout(() => setCopiedBranchId(null), 2000)
   }
 
 
@@ -386,6 +395,32 @@ export default function BranchManagement() {
                           <div className="text-sm font-mono text-gray-400">
                             #{branch.branch_code}
                           </div>
+                          {branch.slug && (
+                            <div className="flex items-center gap-1 mt-1">
+                              <Link className="h-2.5 w-2.5 text-gray-500" />
+                              <span className="text-[10px] text-gray-500 truncate max-w-[140px]">/b/{branch.slug}</span>
+                              <button
+                                onClick={(e) => { e.stopPropagation(); copyBranchLink(branch) }}
+                                className="p-0.5 hover:bg-[#3A3A3A] rounded transition-colors"
+                                title="Copy profile link"
+                              >
+                                {copiedBranchId === branch._id
+                                  ? <Check className="h-3 w-3 text-green-400" />
+                                  : <Copy className="h-3 w-3 text-gray-500 hover:text-white" />
+                                }
+                              </button>
+                              <a
+                                href={`/b/${branch.slug}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                onClick={(e) => e.stopPropagation()}
+                                className="p-0.5 hover:bg-[#3A3A3A] rounded transition-colors"
+                                title="Open profile"
+                              >
+                                <ExternalLink className="h-3 w-3 text-gray-500 hover:text-white" />
+                              </a>
+                            </div>
+                          )}
                         </div>
                       </div>
                     </td>
