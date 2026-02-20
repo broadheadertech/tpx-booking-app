@@ -89,7 +89,10 @@ export const getMyBookings = query({
           payment_method: booking.payment_method,
           payment_type: booking.payment_type,
           booking_fee: booking.booking_fee || 0,
-          service_price: service?.price || booking.price || 0,
+          discount_amount: booking.discount_amount || 0,
+          convenience_fee_paid: booking.convenience_fee_paid || 0,
+          amount_paid: booking.amount_paid || 0,
+          service_price: booking.price || service?.price || 0,
           serviceName: service?.name || "Unknown Service",
           serviceDuration: service?.duration_minutes || 30,
           barberName: barber?.full_name || "Any Available",
@@ -252,7 +255,7 @@ export const getAllBookings = query({
             customer_email: booking.customer_email || customer?.email || '',
             customer_phone: booking.customer_phone || customer?.mobile_number || '',
             service_name: service?.name || 'Unknown Service',
-            service_price: service?.price || 0,
+            service_price: booking.price || service?.price || 0,
             service_duration: service?.duration_minutes || 0,
             barber_name: barber?.full_name || 'Not assigned',
             branch_name: branch?.name || 'Unknown Branch',
@@ -293,7 +296,7 @@ export const getAllBookings = query({
             customer_email: booking.customer_email || '',
             customer_phone: booking.customer_phone || '',
             service_name: 'Unknown Service',
-            service_price: 0,
+            service_price: booking.price || 0,
             service_duration: 0,
             barber_name: 'Not assigned',
             branch_name: 'Unknown Branch',
@@ -372,8 +375,10 @@ export const getBookingsByBranch = query({
             customer_name: booking.customer_name || customer?.username || customer?.nickname || 'Unknown',
             customer_email: booking.customer_email || customer?.email || '',
             customer_phone: booking.customer_phone || customer?.mobile_number || '',
+            amount_paid: booking.amount_paid || 0,
             service_name: service?.name || 'Unknown Service',
-            service_price: service?.price || 0,
+            service_price: booking.price || service?.price || 0,
+            original_service_price: service?.price || 0,
             service_duration: service?.duration_minutes || 0,
             barber_name: barber?.full_name || 'Not assigned',
             formattedDate: new Date(booking.date).toLocaleDateString('en-US', {
@@ -413,7 +418,7 @@ export const getBookingsByBranch = query({
             customer_email: booking.customer_email || '',
             customer_phone: booking.customer_phone || '',
             service_name: 'Unknown Service',
-            service_price: 0,
+            service_price: booking.price || 0,
             service_duration: 0,
             barber_name: 'Not assigned',
             formattedDate: new Date(booking.date).toLocaleDateString('en-US', {
@@ -499,7 +504,7 @@ export const getBookingsByCustomer = query({
           notes: booking.notes,
           createdAt: booking._creationTime,
           service_name: service?.name || (isCustomBooking ? 'Custom Booking' : 'Unknown Service'),
-          service_price: service?.price || 0,
+          service_price: booking.price || service?.price || 0,
           service_duration: service?.duration_minutes || 0,
           barber_name: barber?.full_name || 'Not assigned',
           branch_name: branch?.name || 'Unknown Branch',
@@ -561,7 +566,7 @@ export const getBookingsByBarber = query({
           customer_email: booking.customer_email || customer?.email || '',
           customer_phone: booking.customer_phone || customer?.mobile_number || '',
           service_name: service?.name || 'Unknown Service',
-          service_price: service?.price || 0,
+          service_price: booking.price || service?.price || 0,
           service_duration: service?.duration_minutes || 0,
           formattedDate: new Date(booking.date).toLocaleDateString(),
           formattedTime: formatTime(booking.time),
@@ -610,7 +615,7 @@ export const getBookingById = query({
       customer_email: customer?.email || booking.customer_email || '',
       customer_phone: customer?.mobile_number || booking.customer_phone || '',
       service_name: service?.name || 'Unknown Service',
-      service_price: service?.price || 0,
+      service_price: booking.price || service?.price || 0,
       service_duration: service?.duration_minutes || 0,
       barber_name: barber?.full_name || 'Not assigned',
       branch_name: branch?.name || 'Unknown Branch',
@@ -643,7 +648,7 @@ export const getBookingByCode = query({
       customer_email: customer?.email || booking.customer_email || '',
       customer_phone: customer?.mobile_number || booking.customer_phone || '',
       service_name: service?.name || 'Unknown Service',
-      service_price: service?.price || 0,
+      service_price: booking.price || service?.price || 0,
       service_duration: service?.duration_minutes || 0,
       barber_name: barber?.full_name || 'Not assigned',
       formattedDate: new Date(booking.date).toLocaleDateString(),
@@ -702,6 +707,40 @@ export const createBooking = mutation({
 
     if (bookingDate < today) {
       throwUserError(ERROR_CODES.BOOKING_PAST_DATE);
+    }
+
+    // Validate branch is not closed
+    const bookingBranch = await ctx.db.get(args.branch_id);
+    if (bookingBranch) {
+      if (bookingBranch.is_manually_closed) {
+        throwUserError(
+          ERROR_CODES.OPERATION_FAILED,
+          "Branch is closed",
+          bookingBranch.manual_close_reason || "This branch is temporarily closed and not accepting bookings."
+        );
+      }
+      if (bookingBranch.closed_dates && bookingBranch.closed_dates.length > 0) {
+        const closedDate = bookingBranch.closed_dates.find((cd: { date: string; reason: string }) => cd.date === args.date);
+        if (closedDate) {
+          throwUserError(
+            ERROR_CODES.OPERATION_FAILED,
+            "Branch closed on this date",
+            closedDate.reason || `This branch is closed on ${args.date}.`
+          );
+        }
+      }
+      if (bookingBranch.weekly_schedule) {
+        const dayNames = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"] as const;
+        const bookingDayOfWeek = dayNames[bookingDate.getDay()];
+        const daySchedule = bookingBranch.weekly_schedule[bookingDayOfWeek];
+        if (daySchedule && !daySchedule.is_open) {
+          throwUserError(
+            ERROR_CODES.OPERATION_FAILED,
+            "Branch closed on this day",
+            `This branch is closed on ${bookingDayOfWeek.charAt(0).toUpperCase() + bookingDayOfWeek.slice(1)}s.`
+          );
+        }
+      }
     }
 
     // SERVER-SIDE DOUBLE-BOOKING PREVENTION
@@ -1348,7 +1387,7 @@ export const getBookingsByDateRange = query({
             customer_email: booking.customer_email || customer?.email || '',
             customer_phone: booking.customer_phone || customer?.mobile_number || '',
             service_name: service?.name || 'Unknown Service',
-            service_price: service?.price || 0,
+            service_price: booking.price || service?.price || 0,
             service_duration: service?.duration_minutes || 0,
             barber_name: barber?.full_name || 'Not assigned',
             branch_name: branch?.name || 'Unknown Branch',
@@ -1388,7 +1427,7 @@ export const getBookingsByDateRange = query({
             customer_email: booking.customer_email || '',
             customer_phone: booking.customer_phone || '',
             service_name: 'Unknown Service',
-            service_price: 0,
+            service_price: booking.price || 0,
             service_duration: 0,
             barber_name: 'Not assigned',
             branch_name: 'Unknown Branch',
@@ -1536,7 +1575,7 @@ export const validateBookingByCode = mutation({
       customer_email: customer?.email || booking.customer_email || '',
       customer_phone: customer?.mobile_number || booking.customer_phone || '',
       service_name: service?.name || 'Unknown Service',
-      service_price: service?.price || 0,
+      service_price: booking.price || service?.price || 0,
       service_duration: service?.duration_minutes || 0,
       barber_name: barber?.full_name || 'Not assigned',
       formattedDate: new Date(booking.date).toLocaleDateString(),
@@ -1554,12 +1593,26 @@ export const updatePaymentStatus = mutation({
       v.literal("paid"),
       v.literal("refunded")
     ),
+    // Optional: update price when service was changed at POS
+    price: v.optional(v.number()),
+    final_price: v.optional(v.number()),
+    notes: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    await ctx.db.patch(args.id, {
+    const updates: Record<string, any> = {
       payment_status: args.payment_status,
       updatedAt: Date.now(),
-    });
+    };
+    if (args.price !== undefined) {
+      updates.price = args.price;
+    }
+    if (args.final_price !== undefined) {
+      updates.final_price = args.final_price;
+    }
+    if (args.notes !== undefined) {
+      updates.notes = args.notes;
+    }
+    await ctx.db.patch(args.id, updates);
 
     return args.id;
   },
@@ -1590,15 +1643,25 @@ export const getBookingTransactions = query({
       return [];
     }
 
-    const transactions = await ctx.db
+    // First: find transactions linked by booking_id (POS booking payments)
+    const linkedTransactions = await ctx.db
       .query("transactions")
+      .withIndex("by_booking_id", (q) => q.eq("booking_id", args.bookingId!))
       .collect();
 
-    // Filter transactions that include services from this booking
+    if (linkedTransactions.length > 0) {
+      return linkedTransactions.sort((a, b) => b.createdAt - a.createdAt);
+    }
+
+    // Fallback: match by service_id for older transactions without booking_id
     const booking = await ctx.db.get(args.bookingId!);
     if (!booking) return [];
 
-    const bookingTransactions = transactions.filter(transaction => {
+    const allTransactions = await ctx.db
+      .query("transactions")
+      .collect();
+
+    const bookingTransactions = allTransactions.filter(transaction => {
       return transaction.services?.some(service =>
         service.service_id === booking.service
       );

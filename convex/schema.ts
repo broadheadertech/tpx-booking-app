@@ -38,6 +38,22 @@ export default defineSchema({
         website: v.optional(v.string()),
       })
     ),
+    // Branch Schedule & Manual Close
+    is_manually_closed: v.optional(v.boolean()),
+    manual_close_reason: v.optional(v.string()),
+    weekly_schedule: v.optional(v.object({
+      monday: v.optional(v.object({ is_open: v.boolean(), start_hour: v.number(), end_hour: v.number() })),
+      tuesday: v.optional(v.object({ is_open: v.boolean(), start_hour: v.number(), end_hour: v.number() })),
+      wednesday: v.optional(v.object({ is_open: v.boolean(), start_hour: v.number(), end_hour: v.number() })),
+      thursday: v.optional(v.object({ is_open: v.boolean(), start_hour: v.number(), end_hour: v.number() })),
+      friday: v.optional(v.object({ is_open: v.boolean(), start_hour: v.number(), end_hour: v.number() })),
+      saturday: v.optional(v.object({ is_open: v.boolean(), start_hour: v.number(), end_hour: v.number() })),
+      sunday: v.optional(v.object({ is_open: v.boolean(), start_hour: v.number(), end_hour: v.number() })),
+    })),
+    closed_dates: v.optional(v.array(v.object({
+      date: v.string(),   // "YYYY-MM-DD"
+      reason: v.string(),
+    }))),
     // IT Admin: Branch suspension fields
     is_suspended: v.optional(v.boolean()),
     suspension_reason: v.optional(v.string()),
@@ -538,6 +554,8 @@ export default defineSchema({
     customer_phone: v.optional(v.string()), // For walk-in customers
     customer_email: v.optional(v.string()), // For walk-in customers
     service: v.id("services"),
+    original_service: v.optional(v.id("services")), // Original service ID before POS change
+    original_service_name: v.optional(v.string()),  // Original service name before POS change
     barber: v.optional(v.id("barbers")),
     date: v.string(),
     time: v.string(),
@@ -883,6 +901,7 @@ export default defineSchema({
     estimated_delivery: v.optional(v.string()), // e.g., "30-45 mins" or timestamp
     receipt_number: v.string(),
     processed_by: v.id("users"), // Staff member who processed the transaction
+    booking_id: v.optional(v.id("bookings")), // Link to original booking (for POS booking payments)
     createdAt: v.number(),
     updatedAt: v.number(),
   })
@@ -892,6 +911,7 @@ export default defineSchema({
     .index("by_receipt_number", ["receipt_number"])
     .index("by_payment_status", ["payment_status"])
     .index("by_created_at", ["createdAt"])
+    .index("by_booking_id", ["booking_id"])
     .index("by_processed_by", ["processed_by"])
     .index("by_branch", ["branch_id"]),
 
@@ -1574,6 +1594,53 @@ export default defineSchema({
   })
     .index("by_key", ["config_key"])
     .index("by_changed_at", ["changed_at"]),
+
+  // Membership Cards (Virtual Card / Paid Membership System)
+  membership_cards: defineTable({
+    user_id: v.id("users"),
+    tier_name: v.union(v.literal("Silver"), v.literal("Gold"), v.literal("Platinum")),
+    status: v.union(
+      v.literal("active"),
+      v.literal("grace_period"),
+      v.literal("expired"),
+      v.literal("suspended"),
+      v.literal("cancelled")
+    ),
+    card_xp: v.number(),           // XP toward next tier (×100 format)
+    lifetime_xp: v.number(),       // Total XP ever earned (×100)
+    points_multiplier: v.number(), // 1.5, 2.0, or 3.0
+    acquired_via: v.union(
+      v.literal("purchase"),
+      v.literal("xp_upgrade"),
+      v.literal("topup_shortcut"),
+      v.literal("gifted")
+    ),
+    card_design: v.optional(v.string()),
+    // Dates
+    purchased_at: v.number(),
+    activated_at: v.number(),
+    expires_at: v.number(),
+    grace_period_ends_at: v.number(),
+    renewed_at: v.optional(v.number()),
+    renewal_count: v.optional(v.number()),
+    // Maintenance
+    last_visit_at: v.optional(v.number()),
+    maintenance_warning_sent: v.optional(v.boolean()),
+    // Birthday freebie
+    birthday_freebie_year: v.optional(v.number()),
+    birthday_voucher_id: v.optional(v.id("vouchers")),
+    // Payment
+    purchase_amount: v.optional(v.number()),
+    purchase_reference: v.optional(v.string()),
+    // Branch that sold/gifted
+    branch_id: v.optional(v.id("branches")),
+    created_at: v.number(),
+    updated_at: v.number(),
+  })
+    .index("by_user", ["user_id"])
+    .index("by_status", ["status"])
+    .index("by_user_status", ["user_id", "status"])
+    .index("by_expires_at", ["expires_at"]),
 
   // Barber portfolio for Instagram-like gallery posts
   barber_portfolio: defineTable({

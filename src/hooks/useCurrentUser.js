@@ -68,7 +68,8 @@ export function useCurrentUser() {
     authMethod,
     logout,
     // Session token from legacy auth (used for API calls)
-    sessionToken: legacySessionToken,
+    // Convert null to undefined for Convex v.optional(v.string()) compatibility
+    sessionToken: legacySessionToken ?? undefined,
     // Clerk-specific data if needed
     clerkUser: clerkSignedIn ? clerkUser : null,
     // Expose signOut separately if needed for Clerk-only logout

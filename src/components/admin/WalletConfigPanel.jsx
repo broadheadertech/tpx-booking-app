@@ -18,9 +18,6 @@ import {
   Calendar,
   Banknote,
   Gift,
-  Plus,
-  Trash2,
-  Sparkles,
   HelpCircle
 } from 'lucide-react'
 import WalkthroughOverlay from '../common/WalkthroughOverlay'
@@ -53,9 +50,8 @@ const WalletConfigPanel = () => {
   const [commissionError, setCommissionError] = useState('')
   const [showCommissionInfo, setShowCommissionInfo] = useState(false)
 
-  // Story 23.3: Bonus tiers state (empty until loaded from config)
+  // Bonus tiers loaded from config (managed in Loyalty Config)
   const [bonusTiers, setBonusTiers] = useState([])
-  const [bonusTierError, setBonusTierError] = useState('')
 
   // Fetch existing config
   const config = useQuery(api.services.walletConfig.getWalletConfig)
@@ -126,52 +122,6 @@ const WalletConfigPanel = () => {
     return { exampleAmount, commission, branchReceives }
   }
 
-  // Story 23.3: Bonus tier management functions
-  const addBonusTier = () => {
-    // Find a unique minAmount (next 500 increment)
-    const existingAmounts = bonusTiers.map(t => t.minAmount)
-    let newAmount = 500
-    while (existingAmounts.includes(newAmount)) {
-      newAmount += 500
-    }
-    // Add unique ID to track tiers properly (fixes input sync bug)
-    const newTier = { id: Date.now(), minAmount: newAmount, bonus: 0 }
-    setBonusTiers([...bonusTiers, newTier])
-    setBonusTierError('')
-  }
-
-  const updateBonusTier = (tierId, field, value) => {
-    // Update by ID instead of index to avoid sorted array issues
-    const updated = bonusTiers.map(tier =>
-      tier.id === tierId ? { ...tier, [field]: Number(value) } : tier
-    )
-    setBonusTiers(updated)
-    setBonusTierError('')
-  }
-
-  const removeBonusTier = (tierId) => {
-    const updated = bonusTiers.filter(tier => tier.id !== tierId)
-    setBonusTiers(updated)
-    setBonusTierError('')
-  }
-
-  const validateBonusTiers = () => {
-    const amounts = bonusTiers.map(t => t.minAmount)
-    const uniqueAmounts = new Set(amounts)
-    if (amounts.length !== uniqueAmounts.size) {
-      return 'Each tier must have a unique minimum amount'
-    }
-    for (const tier of bonusTiers) {
-      if (tier.minAmount <= 0) {
-        return 'Minimum amount must be greater than 0'
-      }
-      if (tier.bonus < 0) {
-        return 'Bonus amount cannot be negative'
-      }
-    }
-    return ''
-  }
-
   // Handle form value change
   const handleValueChange = (key, value) => {
     setFormValues(prev => ({ ...prev, [key]: value }))
@@ -213,14 +163,6 @@ const WalletConfigPanel = () => {
     if (commissionValidation) {
       setCommissionError(commissionValidation)
       setMessage({ type: 'error', text: commissionValidation })
-      return
-    }
-
-    // Story 23.3: Validate bonus tiers
-    const bonusTierValidation = validateBonusTiers()
-    if (bonusTierValidation) {
-      setBonusTierError(bonusTierValidation)
-      setMessage({ type: 'error', text: bonusTierValidation })
       return
     }
 
@@ -575,32 +517,22 @@ const WalletConfigPanel = () => {
         </div>
 
         {/* Story 23.3: Bonus Tiers Configuration Card */}
+        {/* Monthly Bonus Cap */}
         <div className="p-4 bg-[#0A0A0A] rounded-lg border border-[#2A2A2A]">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-[var(--color-primary)]/10 rounded-lg flex items-center justify-center">
-                <Gift className="w-5 h-5 text-[var(--color-primary)]" />
-              </div>
-              <div>
-                <p className="text-white font-medium">Top-up Bonus Tiers</p>
-                <p className="text-sm text-gray-400">Bonus amounts for wallet top-ups</p>
-              </div>
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-10 h-10 bg-[var(--color-primary)]/10 rounded-lg flex items-center justify-center">
+              <Gift className="w-5 h-5 text-[var(--color-primary)]" />
             </div>
-            <button
-              type="button"
-              onClick={addBonusTier}
-              className="flex items-center gap-1 px-3 py-1.5 bg-[var(--color-primary)]/10 hover:bg-[var(--color-primary)]/20 text-[var(--color-primary)] text-sm font-medium rounded-lg transition-colors"
-            >
-              <Plus className="w-4 h-4" />
-              Add Tier
-            </button>
+            <div>
+              <p className="text-white font-medium">Monthly Bonus Cap</p>
+              <p className="text-sm text-gray-400">Limit bonus eligibility per customer</p>
+            </div>
           </div>
 
-          {/* Story 23.4: Monthly Bonus Cap */}
-          <div className="mb-4 p-3 bg-[#1A1A1A] rounded-lg border border-[#2A2A2A]">
+          <div className="p-3 bg-[#1A1A1A] rounded-lg border border-[#2A2A2A]">
             <label className="text-sm text-gray-400 mb-2 flex items-center gap-2">
               <Calendar className="w-4 h-4" />
-              Monthly Bonus Cap
+              Monthly Cap Amount
             </label>
             <div className="flex items-center gap-2">
               <span className="text-xl font-bold text-[var(--color-primary)]">₱</span>
@@ -623,102 +555,6 @@ const WalletConfigPanel = () => {
               </p>
             )}
           </div>
-
-          {/* Bonus Tiers Error */}
-          {bonusTierError && (
-            <div className="mb-3 p-2 bg-red-500/10 border border-red-500/20 rounded-lg flex items-center gap-2 text-red-400 text-sm">
-              <AlertCircle className="w-4 h-4" />
-              {bonusTierError}
-            </div>
-          )}
-
-          {/* Tier List */}
-          <div className="space-y-3">
-            {bonusTiers.length === 0 ? (
-              <div className="text-center py-6 text-gray-500">
-                <Sparkles className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                <p className="text-sm">No bonus tiers configured</p>
-                <p className="text-xs text-gray-600 mt-1">Add tiers to reward larger top-ups</p>
-              </div>
-            ) : (
-              [...bonusTiers]
-                .sort((a, b) => a.minAmount - b.minAmount)
-                .map((tier) => (
-                  <div
-                    key={tier.id}
-                    className="flex items-center gap-3 p-3 bg-[#1A1A1A] rounded-lg border border-[#2A2A2A]"
-                  >
-                    <div className="flex-1 grid grid-cols-2 gap-3">
-                      {/* Min Amount */}
-                      <div>
-                        <label className="block text-xs text-gray-500 mb-1">Min Top-up</label>
-                        <div className="flex items-center gap-1">
-                          <span className="text-sm font-medium text-[var(--color-primary)]">₱</span>
-                          <input
-                            type="number"
-                            min="1"
-                            value={tier.minAmount}
-                            onChange={(e) => updateBonusTier(tier.id, 'minAmount', e.target.value)}
-                            className="w-full px-2 py-1.5 bg-[#0A0A0A] border border-[#2A2A2A] rounded text-white text-sm focus:border-[var(--color-primary)] focus:outline-none"
-                          />
-                        </div>
-                      </div>
-                      {/* Bonus Amount */}
-                      <div>
-                        <label className="block text-xs text-gray-500 mb-1">Bonus</label>
-                        <div className="flex items-center gap-1">
-                          <span className="text-sm font-medium text-green-400">+₱</span>
-                          <input
-                            type="number"
-                            min="0"
-                            value={tier.bonus}
-                            onChange={(e) => updateBonusTier(tier.id, 'bonus', e.target.value)}
-                            className="w-full px-2 py-1.5 bg-[#0A0A0A] border border-[#2A2A2A] rounded text-white text-sm focus:border-[var(--color-primary)] focus:outline-none"
-                          />
-                        </div>
-                      </div>
-                    </div>
-                    {/* Bonus Rate Badge */}
-                    <div className="text-center min-w-[60px]">
-                      <span className="text-xs text-gray-500 block">Rate</span>
-                      <span className="text-sm font-semibold text-green-400">
-                        {tier.minAmount > 0 ? Math.round((tier.bonus / tier.minAmount) * 100) : 0}%
-                      </span>
-                    </div>
-                    {/* Remove Button */}
-                    <button
-                      type="button"
-                      onClick={() => removeBonusTier(tier.id)}
-                      className="p-2 text-gray-400 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors"
-                      title="Remove tier"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </div>
-                ))
-            )}
-          </div>
-
-          {/* Preview Info */}
-          {bonusTiers.length > 0 && (
-            <div className="mt-4 p-3 bg-[#1A1A1A] rounded-lg border border-[#2A2A2A]">
-              <div className="flex items-center gap-2 mb-2 text-sm text-gray-400">
-                <Sparkles className="w-4 h-4" />
-                <span>Customer Preview</span>
-              </div>
-              <div className="space-y-1">
-                {bonusTiers
-                  .sort((a, b) => b.minAmount - a.minAmount)
-                  .map((tier, index) => (
-                    <p key={index} className="text-sm text-gray-300">
-                      Top-up <span className="text-white font-medium">₱{tier.minAmount.toLocaleString()}</span> or more →
-                      <span className="text-green-400 font-medium ml-1">+₱{tier.bonus.toLocaleString()} bonus</span>
-                    </p>
-                  ))
-                }
-              </div>
-            </div>
-          )}
         </div>
 
         {/* Save Button */}

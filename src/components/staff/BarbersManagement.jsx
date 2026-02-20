@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
-import { User, Star, Clock, Calendar, DollarSign, Search, Filter, UserCheck, UserX, Phone, Mail, Scissors, Plus, Edit, RotateCcw, Eye, BookOpen, X, Save, Camera, Upload, HelpCircle, Scan } from 'lucide-react'
+import { User, Star, Clock, Calendar, DollarSign, Search, Filter, UserCheck, UserX, Phone, Mail, Scissors, Plus, Edit, RotateCcw, Eye, BookOpen, X, Save, Camera, Upload, HelpCircle, Scan, Link, Copy, Check, ExternalLink } from 'lucide-react'
 import { useQuery, useMutation } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
 import CreateBarberModal from './CreateBarberModal'
@@ -55,6 +55,22 @@ const BarbersManagement = ({ barbers = [], onRefresh, user }) => {
   const [uploadingImage, setUploadingImage] = useState(false)
   const [showTutorial, setShowTutorial] = useState(false)
   const [enrollBarber, setEnrollBarber] = useState(null)
+  const [copiedBarberId, setCopiedBarberId] = useState(null)
+
+  // Helper to generate barber portfolio slug (matches backend slugify logic)
+  const slugify = (name) => name?.toLowerCase().trim().replace(/[^a-z0-9\s-]/g, '').replace(/\s+/g, '-').replace(/-+/g, '-') || ''
+
+  const copyPortfolioLink = async (barber) => {
+    const slug = slugify(barber.full_name)
+    const url = `${window.location.origin}/barbers/${slug}`
+    try {
+      await navigator.clipboard.writeText(url)
+      setCopiedBarberId(barber._id)
+      setTimeout(() => setCopiedBarberId(null), 2000)
+    } catch (err) {
+      console.error('Failed to copy:', err)
+    }
+  }
 
   // Convex queries - with pagination limits to avoid byte limit errors
   // Get services filtered by branch to avoid showing duplicates from other branches
@@ -471,6 +487,29 @@ const BarbersManagement = ({ barbers = [], onRefresh, user }) => {
                             <Star className="h-3 w-3 text-yellow-400 fill-current" />
                             <span className="text-xs text-gray-400">{barber.rating || 0}</span>
                           </div>
+                          <div className="flex items-center gap-1 mt-1.5">
+                            <span className="text-[10px] text-gray-500 truncate max-w-[140px]">/barbers/{slugify(barber.full_name)}</span>
+                            <button
+                              onClick={(e) => { e.stopPropagation(); copyPortfolioLink(barber) }}
+                              className="p-0.5 rounded hover:bg-[#2A2A2A] transition-colors"
+                              title="Copy portfolio link"
+                            >
+                              {copiedBarberId === barber._id
+                                ? <Check className="h-3 w-3 text-green-400" />
+                                : <Copy className="h-3 w-3 text-gray-500 hover:text-white" />
+                              }
+                            </button>
+                            <a
+                              href={`/barbers/${slugify(barber.full_name)}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              onClick={(e) => e.stopPropagation()}
+                              className="p-0.5 rounded hover:bg-[#2A2A2A] transition-colors"
+                              title="Open portfolio"
+                            >
+                              <ExternalLink className="h-3 w-3 text-gray-500 hover:text-[var(--color-primary)]" />
+                            </a>
+                          </div>
                         </div>
                       </div>
                     </td>
@@ -575,15 +614,16 @@ const BarbersManagement = ({ barbers = [], onRefresh, user }) => {
         />
       )}
 
-      {/* Face Enrollment Modal */}
-      {enrollBarber && (
+      {/* Face Enrollment Modal - portal to body to escape stacking context */}
+      {enrollBarber && createPortal(
         <FaceEnrollment
           isOpen={!!enrollBarber}
           onClose={() => setEnrollBarber(null)}
           barberId={enrollBarber._id}
           barberName={enrollBarber.full_name}
           branchId={user?.branch_id}
-        />
+        />,
+        document.body
       )}
 
       <WalkthroughOverlay steps={barbersManagementSteps} isVisible={showTutorial} onComplete={() => setShowTutorial(false)} onSkip={() => setShowTutorial(false)} />

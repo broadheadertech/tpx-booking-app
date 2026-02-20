@@ -660,6 +660,101 @@ export const deleteBranch = mutation({
   },
 });
 
+// ============================================================================
+// BRANCH SCHEDULE & MANUAL CLOSE
+// ============================================================================
+
+const dayScheduleValidator = v.optional(v.object({
+  is_open: v.boolean(),
+  start_hour: v.number(),
+  end_hour: v.number(),
+}));
+
+export const getBranchSchedule = query({
+  args: { branch_id: v.id("branches") },
+  handler: async (ctx, args) => {
+    const branch = await ctx.db.get(args.branch_id);
+    if (!branch) {
+      throwUserError(ERROR_CODES.RESOURCE_NOT_FOUND, "Branch not found", "The branch does not exist.");
+    }
+    return {
+      is_manually_closed: branch.is_manually_closed || false,
+      manual_close_reason: branch.manual_close_reason || "",
+      weekly_schedule: branch.weekly_schedule || null,
+      closed_dates: branch.closed_dates || [],
+      booking_start_hour: branch.booking_start_hour || 10,
+      booking_end_hour: branch.booking_end_hour || 20,
+    };
+  },
+});
+
+export const toggleBranchManualClose = mutation({
+  args: {
+    branch_id: v.id("branches"),
+    is_closed: v.boolean(),
+    reason: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const branch = await ctx.db.get(args.branch_id);
+    if (!branch) {
+      throwUserError(ERROR_CODES.RESOURCE_NOT_FOUND, "Branch not found", "The branch does not exist.");
+    }
+    await ctx.db.patch(args.branch_id, {
+      is_manually_closed: args.is_closed,
+      manual_close_reason: args.is_closed ? (args.reason || "") : "",
+      updatedAt: Date.now(),
+    });
+    return args.branch_id;
+  },
+});
+
+export const updateBranchWeeklySchedule = mutation({
+  args: {
+    branch_id: v.id("branches"),
+    weekly_schedule: v.object({
+      monday: dayScheduleValidator,
+      tuesday: dayScheduleValidator,
+      wednesday: dayScheduleValidator,
+      thursday: dayScheduleValidator,
+      friday: dayScheduleValidator,
+      saturday: dayScheduleValidator,
+      sunday: dayScheduleValidator,
+    }),
+  },
+  handler: async (ctx, args) => {
+    const branch = await ctx.db.get(args.branch_id);
+    if (!branch) {
+      throwUserError(ERROR_CODES.RESOURCE_NOT_FOUND, "Branch not found", "The branch does not exist.");
+    }
+    await ctx.db.patch(args.branch_id, {
+      weekly_schedule: args.weekly_schedule,
+      updatedAt: Date.now(),
+    });
+    return args.branch_id;
+  },
+});
+
+export const updateBranchClosedDates = mutation({
+  args: {
+    branch_id: v.id("branches"),
+    closed_dates: v.array(v.object({
+      date: v.string(),
+      reason: v.string(),
+    })),
+  },
+  handler: async (ctx, args) => {
+    const branch = await ctx.db.get(args.branch_id);
+    if (!branch) {
+      throwUserError(ERROR_CODES.RESOURCE_NOT_FOUND, "Branch not found", "The branch does not exist.");
+    }
+    await ctx.db.patch(args.branch_id, {
+      closed_dates: args.closed_dates,
+      updatedAt: Date.now(),
+    });
+    return args.branch_id;
+  },
+});
+
 export const toggleBranchStatus = mutation({
   args: { id: v.id("branches") },
   handler: async (ctx, args) => {

@@ -158,6 +158,13 @@ const POS = () => {
     user?.branch_id ? { branch_id: user.branch_id, limit: 20 } : "skip"
   ) || []
 
+  // Query wallet balance for registered customers (for wallet payment option at POS)
+  const customerIdForWallet = currentTransaction.customer?._id || currentBooking?.customer || null
+  const customerWalletBalance = useQuery(
+    api.services.wallet.getCustomerWalletBalance,
+    customerIdForWallet ? { user_id: customerIdForWallet } : "skip"
+  )
+
   // Filter active services and products
   const activeServices = services?.filter(service => service.is_active) || []
   const activeProducts = products?.filter(product => product.status === 'active') || []
@@ -334,26 +341,42 @@ const POS = () => {
         setShowCompleteConfirmModal(false)
         setUnpaidBalanceWarning(null)
 
+        // Update booking price if services were changed at POS
+        const originalServicePrice = currentBooking.service_price || currentBooking.price || 0
+        const bookingFee = currentBooking.convenience_fee_paid || 0
+        const currentTotal = currentTransaction.total_amount || (originalServicePrice + bookingFee)
+        if (currentTotal !== originalServicePrice) {
+          try {
+            await updateBookingPaymentStatus({
+              id: currentBooking._id,
+              payment_status: 'paid',
+              price: currentTotal,
+              final_price: currentTotal - (currentTransaction.discount_amount || 0)
+            })
+          } catch (err) {
+            console.error('Failed to update booking price:', err)
+          }
+        }
+
         // Generate receipt data for the completed booking
         const timestamp = Date.now()
         const receiptNumber = `RCP-${timestamp}`
-        const servicePrice = currentBooking.service_price || 0
-        const bookingFee = currentBooking.convenience_fee_paid || 0
-        const total = servicePrice + bookingFee
+        const total = currentTotal
 
         // Determine payment info based on booking payment status
         let paymentMethod = 'cash'
-        let amountPaid = total
-        let amountDue = 0
+        let amountPaid = 0
+        let amountDue = total
 
         if (currentBooking.payment_status === 'paid') {
+          const onlinePaid = originalServicePrice + bookingFee
           paymentMethod = 'online_payment'
-          amountPaid = total
-          amountDue = 0
+          amountPaid = onlinePaid
+          amountDue = Math.max(0, total - onlinePaid)
         } else if (currentBooking.payment_status === 'partial') {
           paymentMethod = 'partial_online'
           amountPaid = bookingFee
-          amountDue = servicePrice
+          amountDue = total - bookingFee
         }
 
         const receiptData = {
@@ -366,10 +389,10 @@ const POS = () => {
             service_name: currentBooking.service_name,
             name: currentBooking.service_name,
             quantity: 1,
-            price: servicePrice
+            price: originalServicePrice
           }],
           products: [],
-          subtotal: servicePrice,
+          subtotal: originalServicePrice,
           discount_amount: 0,
           tax_amount: 0,
           booking_fee: bookingFee,
@@ -446,17 +469,18 @@ const POS = () => {
 
     if (currentBooking) {
       if (currentBooking.payment_status === 'paid') {
+        const onlinePaid = (currentBooking.service_price || 0) + (currentBooking.convenience_fee_paid || 0)
         paymentMethod = 'online_payment'
-        amountPaid = currentBooking.service_price + (currentBooking.convenience_fee_paid || 0)
-        amountDue = 0
+        amountPaid = onlinePaid
+        amountDue = Math.max(0, total - onlinePaid)
       } else if (currentBooking.payment_status === 'partial') {
         paymentMethod = 'partial_online'
         amountPaid = currentBooking.convenience_fee_paid || 0
-        amountDue = currentBooking.service_price
+        amountDue = total - amountPaid
       } else {
         paymentMethod = 'pay_at_shop'
         amountPaid = 0
-        amountDue = currentBooking.service_price + bookingFee
+        amountDue = total
       }
     }
 
@@ -982,12 +1006,15 @@ const POS = () => {
         tax_amount: currentTransaction.tax_amount,
         booking_fee: currentTransaction.booking_fee,
         late_fee: currentTransaction.late_fee,
-        total_amount: currentTransaction.total_amount,
+        total_amount: paymentData.total_amount ?? currentTransaction.total_amount,
         payment_method: paymentData.payment_method,
         payment_status: 'completed',
         processed_by: user._id,
         cash_received: paymentData.cash_received,
-        change_amount: paymentData.change_amount
+        change_amount: paymentData.change_amount,
+        // Combo payment fields (wallet + cash/card)
+        wallet_used: paymentData.wallet_used,
+        cash_collected: paymentData.cash_collected
       }
 
       console.log('Final voucher_applied value:', voucherApplied)
@@ -1015,12 +1042,17 @@ const POS = () => {
         skip_booking_creation: shouldSkipBookingCreation
       })
 
+      // Parse booking ID for server-side price update
+      const parsedBookingId = isBookingPayment ? JSON.parse(posBooking)?._id : undefined
+
       const result = await createTransaction({
         ...transactionData,
-        skip_booking_creation: shouldSkipBookingCreation
+        skip_booking_creation: shouldSkipBookingCreation,
+        booking_id: parsedBookingId
       })
 
       console.log('[POS] Transaction created successfully:', result)
+      console.log('[POS] Booking update info:', { booking_updated: result.booking_updated, booking_id: result.booking_id, parsedBookingId })
 
       // Send email notification to the barber about the new POS transaction (only for service mode)
       console.log('📧 [POS] Attempting to send barber notification...');
@@ -1064,27 +1096,28 @@ const POS = () => {
 
       // Update the existing booking if this is a booking payment
       if (isBookingPayment) {
+        const booking = JSON.parse(posBooking)
+        const finalTotal = currentTransaction.total_amount
+
+        // ALWAYS update booking with final price — no conditional checks
+        console.log('[POS] Updating booking:', { bookingId: booking._id, finalTotal })
         try {
-          const booking = JSON.parse(posBooking)
-          // Update booking status to completed and payment status to paid
-          await updateBookingStatus({
-            id: booking._id,
-            notes: result.receipt_number,
-            status: 'completed'
-          })
           await updateBookingPaymentStatus({
             id: booking._id,
-            payment_status: 'paid'
+            payment_status: 'paid',
+            price: finalTotal,
+            final_price: finalTotal - (currentTransaction.discount_amount || 0),
+            notes: result.receipt_number,
           })
-          console.log('Booking status updated to completed and payment status updated to paid')
-
-          // Clear the session storage after successful processing
-          sessionStorage.removeItem('posBooking')
-          setCurrentBooking(null)
+          console.log('[POS] Booking price set to:', finalTotal)
         } catch (error) {
-          console.error('Error updating booking status:', error)
-          // Don't fail the entire transaction if booking update fails
+          console.error('[POS] FAILED to update booking:', error)
+          showAlert({ title: 'Price Update Issue', message: `Failed: ${error.message}`, type: 'warning' })
         }
+
+        // Clear the session storage after successful processing
+        sessionStorage.removeItem('posBooking')
+        setCurrentBooking(null)
       }
 
       // Show enhanced success message based on transaction type
@@ -1846,10 +1879,17 @@ const POS = () => {
               late_fee: currentTransaction.late_fee,
               total_amount: currentTransaction.total_amount,
               services: currentTransaction.services,
-              products: currentTransaction.products
+              products: currentTransaction.products,
+              online_payment_amount: currentBooking?.payment_status === 'paid'
+                ? (currentBooking.service_price || currentBooking.total_amount || 0)
+                : currentBooking?.payment_status === 'partial'
+                  ? (currentBooking.convenience_fee_paid || 0)
+                  : 0
             }}
             paymentMethod={paymentMethod}
             setPaymentMethod={setPaymentMethod}
+            walletBalance={customerWalletBalance}
+            customerId={customerIdForWallet}
           />
         )}
 
@@ -2844,7 +2884,18 @@ const POS = () => {
               <h3 className="text-lg font-bold text-white mb-4">Payment</h3>
 
               {/* Booking Payment Details (if booking attached) */}
-              {currentBooking && currentBooking.payment_status && (
+              {currentBooking && currentBooking.payment_status && (() => {
+                // Calculate what was already paid online
+                const onlinePaidAmount = currentBooking.payment_status === 'paid'
+                  ? (currentBooking.service_price || currentBooking.total_amount || 0) + (currentBooking.convenience_fee_paid || 0)
+                  : currentBooking.payment_status === 'partial'
+                    ? (currentBooking.convenience_fee_paid || 0)
+                    : 0
+                // Compare against current transaction total (which updates when services change)
+                const currentTotal = currentTransaction.total_amount || 0
+                const remainingBalance = Math.max(0, currentTotal - onlinePaidAmount)
+
+                return (
                 <div className="bg-[#1A1A1A] rounded-lg p-3 space-y-2 mb-4">
                   {/* Payment Type Label */}
                   <div className="flex justify-between items-center text-sm pb-2 border-b border-[#333333]">
@@ -2871,7 +2922,7 @@ const POS = () => {
                   <div className="flex justify-between items-center text-sm">
                     <span className="text-gray-400">Service Total:</span>
                     <span className="text-white font-semibold">
-                      ₱{(currentBooking.service_price || currentBooking.total_amount || 0).toLocaleString()}
+                      ₱{currentTotal.toLocaleString()}
                     </span>
                   </div>
 
@@ -2903,19 +2954,19 @@ const POS = () => {
                   )}
 
                   {/* Remaining Balance */}
-                  {/* Note: Convenience fee is a separate reservation payment, not deducted from service price */}
                   <div className="flex justify-between items-center text-sm pt-2 border-t border-[#333333]">
                     <span className="text-white font-semibold">Balance Due:</span>
-                    {currentBooking.payment_status === 'paid' ? (
+                    {remainingBalance <= 0 ? (
                       <span className="text-green-400 font-bold">₱0 (Paid)</span>
                     ) : (
                       <span className="text-yellow-400 font-bold">
-                        ₱{((currentBooking.service_price || currentBooking.total_amount || 0) - (currentBooking.cash_collected || 0)).toLocaleString()}
+                        ₱{remainingBalance.toLocaleString()} (Remaining)
                       </span>
                     )}
                   </div>
                 </div>
-              )}
+                )
+              })()}
 
               {/* Totals */}
               <div className="space-y-2 mb-4">
@@ -3008,30 +3059,43 @@ const POS = () => {
 
               {/* Action Buttons */}
               <div className="space-y-3">
-                {/* Show Complete button if booking is already paid, otherwise show Process Payment */}
-                {currentBooking?.payment_status === 'paid' ? (
-                  <button
-                    onClick={() => handleMarkComplete()}
-                    disabled={posMode === 'service' && !selectedBarber}
-                    className="w-full py-3 bg-gradient-to-r from-green-600 to-green-500 text-white font-bold rounded-xl hover:from-green-500 hover:to-green-400 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2 shadow-lg"
-                  >
-                    <CheckCircle className="w-5 h-5" />
-                    <span>Complete (Already Paid)</span>
-                  </button>
-                ) : (
-                  <button
-                    onClick={openPaymentModal}
-                    disabled={
-                      (posMode === 'service' && !selectedBarber) ||
-                      (posMode === 'service' && currentTransaction.services.length === 0) ||
-                      (posMode === 'retail' && currentTransaction.products.length === 0)
-                    }
-                    className="w-full py-3 bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-accent)] text-white font-bold rounded-xl hover:from-[var(--color-accent)] hover:to-[var(--color-accent)] transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2 shadow-lg"
-                  >
-                    <CreditCard className="w-5 h-5" />
-                    <span>Process Payment</span>
-                  </button>
-                )}
+                {/* Show Complete button only if booking is fully paid AND no remaining balance from service changes */}
+                {(() => {
+                  const onlinePaid = currentBooking?.payment_status === 'paid'
+                    ? (currentBooking.service_price || currentBooking.total_amount || 0) + (currentBooking.convenience_fee_paid || 0)
+                    : 0
+                  const hasRemainingBalance = currentBooking?.payment_status === 'paid' && currentTransaction.total_amount > onlinePaid
+                  const isFullyPaid = currentBooking?.payment_status === 'paid' && !hasRemainingBalance
+                  const remainingAmount = Math.max(0, currentTransaction.total_amount - onlinePaid)
+
+                  if (isFullyPaid) {
+                    return (
+                      <button
+                        onClick={() => handleMarkComplete()}
+                        disabled={posMode === 'service' && !selectedBarber}
+                        className="w-full py-3 bg-gradient-to-r from-green-600 to-green-500 text-white font-bold rounded-xl hover:from-green-500 hover:to-green-400 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2 shadow-lg"
+                      >
+                        <CheckCircle className="w-5 h-5" />
+                        <span>Complete (Already Paid)</span>
+                      </button>
+                    )
+                  }
+
+                  return (
+                    <button
+                      onClick={openPaymentModal}
+                      disabled={
+                        (posMode === 'service' && !selectedBarber) ||
+                        (posMode === 'service' && currentTransaction.services.length === 0) ||
+                        (posMode === 'retail' && currentTransaction.products.length === 0)
+                      }
+                      className="w-full py-3 bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-accent)] text-white font-bold rounded-xl hover:from-[var(--color-accent)] hover:to-[var(--color-accent)] transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2 shadow-lg"
+                    >
+                      <CreditCard className="w-5 h-5" />
+                      <span>{hasRemainingBalance ? `Process Payment (₱${remainingAmount.toLocaleString()} remaining)` : 'Process Payment'}</span>
+                    </button>
+                  )
+                })()}
 
                 <button
                   onClick={handleShowReceipt}
@@ -3103,10 +3167,17 @@ const POS = () => {
             late_fee: currentTransaction.late_fee,
             total_amount: currentTransaction.total_amount,
             services: currentTransaction.services,
-            products: currentTransaction.products
+            products: currentTransaction.products,
+            online_payment_amount: currentBooking?.payment_status === 'paid'
+              ? (currentBooking.service_price || currentBooking.total_amount || 0)
+              : currentBooking?.payment_status === 'partial'
+                ? (currentBooking.convenience_fee_paid || 0)
+                : 0
           }}
           paymentMethod={paymentMethod}
           setPaymentMethod={setPaymentMethod}
+          walletBalance={customerWalletBalance}
+          customerId={customerIdForWallet}
         />
       )}
 

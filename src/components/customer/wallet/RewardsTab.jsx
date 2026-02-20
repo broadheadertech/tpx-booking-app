@@ -1,8 +1,10 @@
+import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useQuery } from 'convex/react'
 import { api } from '../../../../convex/_generated/api'
 import { Star, Sparkles, Gift, Crown, TrendingUp, Award, ChevronRight, Ticket, Clock, QrCode } from 'lucide-react'
 import StarRewardsCard from '../../common/StarRewardsCard'
+import CardPurchaseFlow from '../CardPurchaseFlow'
 
 /**
  * RewardsTab - Loyalty rewards and tier progress
@@ -24,6 +26,7 @@ const TIERS = [
 
 function RewardsTab({ user }) {
   const navigate = useNavigate()
+  const [showCardPurchase, setShowCardPurchase] = useState(false)
 
   // Get tier progress data
   const tierProgress = useQuery(
@@ -75,7 +78,16 @@ function RewardsTab({ user }) {
     <div className="px-4 py-6 space-y-6">
       {/* Star Rewards Card - Existing Component */}
       {user?._id && (
-        <StarRewardsCard userId={user._id} />
+        <StarRewardsCard userId={user._id} onGetCard={() => setShowCardPurchase(true)} />
+      )}
+
+      {/* Card Purchase Flow Modal */}
+      {user?._id && (
+        <CardPurchaseFlow
+          userId={user._id}
+          isOpen={showCardPurchase}
+          onClose={() => setShowCardPurchase(false)}
+        />
       )}
 
       {/* Tier Progress Card */}

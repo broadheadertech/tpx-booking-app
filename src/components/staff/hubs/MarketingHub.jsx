@@ -13,7 +13,11 @@ import NotificationsManagement from '../NotificationsManagement'
 const PERM_MAP = { ai: 'email_marketing', posts: 'post_moderation' }
 
 const MarketingHub = ({ user, events = [], onRefresh }) => {
-  const [activeSection, setActiveSection] = useState('ai')
+  const [activeSection, setActiveSection] = useState(() => localStorage.getItem('staff_hub_marketing_section') || 'ai')
+
+  useEffect(() => {
+    localStorage.setItem('staff_hub_marketing_section', activeSection)
+  }, [activeSection])
 
   const allSections = [
     { id: 'ai', label: 'AI Email', icon: Brain },

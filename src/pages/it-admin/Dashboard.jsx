@@ -35,7 +35,8 @@ import LicenseManager from '../../components/it-admin/LicenseManager'
 import ErrorMonitorDashboard from '../../components/it-admin/ErrorMonitorDashboard'
 import SecurityMonitorDashboard from '../../components/it-admin/SecurityMonitorDashboard'
 import BanManager from '../../components/it-admin/BanManager'
-import { useQuery } from 'convex/react'
+import { Wrench, Clock } from 'lucide-react'
+import { useQuery, useMutation } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
 import { useCurrentUser } from '../../hooks/useCurrentUser'
 import { useNavigate } from 'react-router-dom'
@@ -63,6 +64,13 @@ function ITAdminDashboard() {
 
   // IT Admin stats
   const itStats = useQuery(api.services.itAdmin.getItAdminDashboardStats) || null
+
+  // Maintenance mode
+  const maintenanceStatus = useQuery(api.services.maintenanceConfig.getMaintenanceStatus)
+  const updateMaintenance = useMutation(api.services.maintenanceConfig.updateMaintenanceConfig)
+  const [maintenanceDuration, setMaintenanceDuration] = useState('2h')
+  const [maintenanceMessage, setMaintenanceMessage] = useState('')
+  const [maintenanceSaving, setMaintenanceSaving] = useState(false)
 
   const calculateStats = () => {
     if (!branches || !users || !bookings || !transactions) return null
@@ -232,6 +240,143 @@ function ITAdminDashboard() {
         return <SecurityMonitorDashboard />
       case 'bans':
         return <BanManager />
+      case 'maintenance':
+        return (
+          <div className="space-y-6">
+            <div className="flex items-center gap-3 mb-2">
+              <div className="w-10 h-10 bg-amber-500/10 rounded-lg flex items-center justify-center">
+                <Wrench className="w-5 h-5 text-amber-400" />
+              </div>
+              <div>
+                <h2 className="text-lg font-semibold text-white">Maintenance Mode</h2>
+                <p className="text-sm text-gray-400">Control app availability during maintenance</p>
+              </div>
+            </div>
+
+            {/* Current Status */}
+            <div className={`rounded-xl p-4 flex items-center justify-between ${
+              maintenanceStatus?.is_enabled
+                ? 'bg-amber-500/10 border border-amber-500/30'
+                : 'bg-[#1A1A1A] border border-[#2A2A2A]'
+            }`}>
+              <div>
+                <p className="text-white font-medium">
+                  {maintenanceStatus?.is_enabled ? 'Maintenance is ACTIVE' : 'Maintenance Mode'}
+                </p>
+                <p className="text-sm text-gray-400">
+                  {maintenanceStatus?.is_enabled
+                    ? 'Users cannot access the app right now'
+                    : 'Enable to block user access during maintenance'}
+                </p>
+                {maintenanceStatus?.is_enabled && maintenanceStatus?.end_time && (
+                  <p className="text-xs text-amber-400 mt-1 flex items-center gap-1">
+                    <Clock className="w-3 h-3" />
+                    Ends: {new Date(maintenanceStatus.end_time).toLocaleString('en-PH', {
+                      month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
+                    })}
+                  </p>
+                )}
+              </div>
+              <button
+                disabled={maintenanceSaving}
+                onClick={async () => {
+                  if (maintenanceStatus?.is_enabled) {
+                    setMaintenanceSaving(true)
+                    try {
+                      await updateMaintenance({ is_enabled: false })
+                    } catch (e) {
+                      console.error('Failed to disable maintenance:', e)
+                    } finally {
+                      setMaintenanceSaving(false)
+                    }
+                  }
+                }}
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                  maintenanceStatus?.is_enabled
+                    ? 'bg-gradient-to-r from-amber-500 to-amber-600'
+                    : 'bg-gray-600'
+                } ${maintenanceStatus?.is_enabled ? 'cursor-pointer' : 'cursor-default'}`}
+              >
+                <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                  maintenanceStatus?.is_enabled ? 'translate-x-6' : 'translate-x-1'
+                }`} />
+              </button>
+            </div>
+
+            {/* Enable Maintenance Controls (only show when OFF) */}
+            {!maintenanceStatus?.is_enabled && (
+              <div className="space-y-4 bg-[#1A1A1A] rounded-xl p-4 border border-[#2A2A2A]">
+                <div>
+                  <label className="text-sm text-gray-400 mb-2 block">Duration</label>
+                  <div className="flex flex-wrap gap-2">
+                    {[
+                      { value: '30m', label: '30 min' },
+                      { value: '1h', label: '1 hour' },
+                      { value: '2h', label: '2 hours' },
+                      { value: '4h', label: '4 hours' },
+                      { value: '8h', label: '8 hours' },
+                      { value: '24h', label: '24 hours' },
+                    ].map((opt) => (
+                      <button
+                        key={opt.value}
+                        onClick={() => setMaintenanceDuration(opt.value)}
+                        className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                          maintenanceDuration === opt.value
+                            ? 'bg-amber-500 text-white'
+                            : 'bg-[#2A2A2A] text-gray-400 hover:bg-[#3A3A3A]'
+                        }`}
+                      >
+                        {opt.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-sm text-gray-400 mb-2 block">Message (optional)</label>
+                  <textarea
+                    value={maintenanceMessage}
+                    onChange={(e) => setMaintenanceMessage(e.target.value)}
+                    placeholder="We're making improvements. Please check back soon."
+                    rows={2}
+                    className="w-full bg-[#2A2A2A] text-white rounded-lg p-3 text-sm border border-[#3A3A3A] focus:border-amber-500 focus:outline-none resize-none"
+                  />
+                </div>
+
+                <button
+                  disabled={maintenanceSaving}
+                  onClick={async () => {
+                    setMaintenanceSaving(true)
+                    try {
+                      const durationMap = {
+                        '30m': 30 * 60 * 1000,
+                        '1h': 60 * 60 * 1000,
+                        '2h': 2 * 60 * 60 * 1000,
+                        '4h': 4 * 60 * 60 * 1000,
+                        '8h': 8 * 60 * 60 * 1000,
+                        '24h': 24 * 60 * 60 * 1000,
+                      }
+                      const durationMs = durationMap[maintenanceDuration] || 2 * 60 * 60 * 1000
+                      await updateMaintenance({
+                        is_enabled: true,
+                        end_time: Date.now() + durationMs,
+                        message: maintenanceMessage || undefined,
+                      })
+                    } catch (e) {
+                      console.error('Failed to enable maintenance:', e)
+                    } finally {
+                      setMaintenanceSaving(false)
+                    }
+                  }}
+                  className="w-full py-3 bg-gradient-to-r from-amber-500 to-amber-600 text-white font-semibold rounded-xl hover:opacity-90 transition-opacity disabled:opacity-50 flex items-center justify-center gap-2"
+                >
+                  <Wrench className="w-4 h-4" />
+                  {maintenanceSaving ? 'Enabling...' : 'Enable Maintenance Mode'}
+                </button>
+              </div>
+            )}
+          </div>
+        )
       default:
         return renderOverview()
     }
@@ -246,7 +391,6 @@ function ITAdminDashboard() {
     { id: 'default_services', label: 'Services', icon: 'scissors', category: 'Commerce' },
     { id: 'catalog', label: 'Catalog', icon: 'package', category: 'Commerce' },
     { id: 'vouchers', label: 'Vouchers', icon: 'ticket', category: 'Commerce' },
-    { id: 'shop_config', label: 'Shop Config', icon: 'shopping-cart', category: 'Commerce' },
     { id: 'shop_banners', label: 'Banners', icon: 'image', category: 'Commerce' },
     { id: 'delivery_orders', label: 'Deliveries', icon: 'truck', category: 'Commerce' },
     { id: 'damage_claims', label: 'Damage Claims', icon: 'alert-triangle', category: 'Commerce' },
@@ -255,15 +399,17 @@ function ITAdminDashboard() {
     { id: 'balance_sheet', label: 'Balance Sheet', icon: 'scale', category: 'Finance' },
     { id: 'royalty', label: 'Royalty', icon: 'percent', category: 'Finance' },
     { id: 'settlements', label: 'Settlements', icon: 'banknote', category: 'Finance' },
-    { id: 'wallet', label: 'Wallet', icon: 'wallet', category: 'Finance' },
     { id: 'wallet_analytics', label: 'Wallet Analytics', icon: 'activity', category: 'Finance' },
     // Marketing category
-    { id: 'loyalty', label: 'Loyalty', icon: 'star', category: 'Marketing' },
     { id: 'promotions', label: 'Promos', icon: 'zap', category: 'Marketing' },
     { id: 'email_marketing', label: 'Email AI', icon: 'brain', category: 'Marketing' },
     { id: 'branding', label: 'Branding', icon: 'palette', category: 'Marketing' },
     { id: 'emails', label: 'Emails', icon: 'mail', category: 'Marketing' },
     { id: 'customer_analytics', label: 'Customers', icon: 'target', category: 'Marketing' },
+    // Configs category
+    { id: 'shop_config', label: 'Shop Config', icon: 'shopping-cart', category: 'Configs' },
+    { id: 'wallet', label: 'Wallet Config', icon: 'wallet', category: 'Configs' },
+    { id: 'loyalty', label: 'Loyalty Config', icon: 'star', category: 'Configs' },
     // Reports category
     { id: 'reports', label: 'Reports', icon: 'chart', category: 'Reports' },
     { id: 'audit_trail', label: 'Audit Trail', icon: 'history', category: 'Reports' },
@@ -273,6 +419,7 @@ function ITAdminDashboard() {
     { id: 'error_monitor', label: 'Errors', icon: 'bug', category: 'Platform' },
     { id: 'security_monitor', label: 'Security', icon: 'shield-alert', category: 'Platform' },
     { id: 'bans', label: 'Bans', icon: 'ban', category: 'Platform' },
+    { id: 'maintenance', label: 'Maintenance', icon: 'wrench', category: 'Platform' },
     // Simple tab
     { id: 'settings', label: 'Settings', icon: 'settings' },
   ]
