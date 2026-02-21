@@ -249,6 +249,50 @@ const POS = () => {
     }
   }, [services, customers, barbers])
 
+  // Check for walk-in data from WalkInSection (Proceed to POS)
+  useEffect(() => {
+    const posWalkIn = sessionStorage.getItem('posWalkIn')
+    if (posWalkIn && services !== undefined) {
+      try {
+        const walkIn = JSON.parse(posWalkIn)
+        sessionStorage.removeItem('posWalkIn')
+
+        // Set barber
+        if (walkIn.barber_id && barbers) {
+          const barber = barbers.find(b => b._id === walkIn.barber_id)
+          if (barber) {
+            setSelectedBarber(barber)
+          }
+        }
+
+        // Find service and build transaction
+        const service = walkIn.service_id ? services?.find(s => s._id === walkIn.service_id) : null
+
+        setCurrentTransaction(prev => ({
+          ...prev,
+          customer_name: walkIn.customer_name || 'Walk-in Customer',
+          customer_phone: walkIn.customer_phone || '',
+          customer_email: '',
+          customer_address: '',
+          services: service ? [{
+            service_id: service._id,
+            service_name: service.name,
+            price: service.price,
+            quantity: 1
+          }] : [],
+          subtotal: service ? service.price : 0,
+          discount_amount: 0,
+          booking_fee: 0,
+          late_fee: 0,
+          total_amount: service ? service.price : 0,
+        }))
+
+      } catch (error) {
+        console.error('Error parsing walk-in data:', error)
+      }
+    }
+  }, [services, barbers])
+
   // Ensure booking fee is 0 for walk-ins (no booking attached)
   // Booking fees only apply to online bookings
   useEffect(() => {

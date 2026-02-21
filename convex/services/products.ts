@@ -558,3 +558,321 @@ export const getBranchProductWithBatches = query({
     };
   },
 });
+
+/**
+ * Look up a branch product by SKU (used by barcode scanner).
+ * Returns { product, pendingOrder } if found, or null if SKU not in branch catalog.
+ * pendingOrder is null if the product has no approved/shipped order — indicating a ghost product.
+ */
+export const getProductBySku = query({
+  args: {
+    sku: v.string(),
+    branch_id: v.id("branches"),
+  },
+  handler: async (ctx, args) => {
+    const product = await ctx.db
+      .query("products")
+      .withIndex("by_sku", (q) => q.eq("sku", args.sku.trim()))
+      .filter((q) => q.eq(q.field("branch_id"), args.branch_id))
+      .first();
+
+    if (!product) return null;
+
+    // No catalog link means it was never ordered through the system
+    if (!product.catalog_product_id) {
+      return { product, pendingOrder: null };
+    }
+
+    // Find an approved or shipped order for this branch containing this product
+    const orders = await ctx.db
+      .query("productOrders")
+      .withIndex("by_branch", (q) => q.eq("branch_id", args.branch_id))
+      .filter((q) =>
+        q.or(
+          q.eq(q.field("status"), "approved"),
+          q.eq(q.field("status"), "shipped")
+        )
+      )
+      .collect();
+
+    const pendingOrder =
+      orders.find((order) =>
+        order.items.some(
+          (item) => item.catalog_product_id === product.catalog_product_id
+        )
+      ) || null;
+
+    if (!pendingOrder) return { product, pendingOrder: null, alreadyReceived: 0 };
+
+    // Sum how many units of this product have already been received against this order
+    const movements = await ctx.db
+      .query("stockMovements")
+      .withIndex("by_product", (q) => q.eq("product_id", product._id as string))
+      .filter((q) => q.eq(q.field("reference_id"), pendingOrder.order_number))
+      .collect();
+
+    const alreadyReceived = movements.reduce((sum, m) => sum + m.quantity_change, 0);
+
+    return { product, pendingOrder, alreadyReceived };
+  },
+});
+
+/**
+ * Receive branch stock — creates a new FIFO batch for a branch product
+ */
+export const receiveBranchStock = mutation({
+  args: {
+    product_id: v.id("products"),
+    quantity: v.number(),
+    cost_per_unit: v.optional(v.number()),
+    supplier: v.optional(v.string()),
+    expiry_date: v.optional(v.number()),
+    notes: v.optional(v.string()),
+    created_by: v.id("users"),
+    scanned_barcode: v.optional(v.string()),
+    order_number: v.optional(v.string()), // Links this receipt to a specific order
+  },
+  handler: async (ctx, args) => {
+    if (args.quantity <= 0) {
+      throw new Error("Quantity must be greater than 0");
+    }
+
+    const product = await ctx.db.get(args.product_id);
+    if (!product) throw new Error("Product not found");
+
+    const now = Date.now();
+    const year = new Date().getFullYear();
+    const randomPart = Math.floor(Math.random() * 100000).toString().padStart(5, "0");
+    const batchNumber = `BATCH-${year}-${randomPart}`;
+
+    const batchId = await ctx.db.insert("inventoryBatches", {
+      product_id: args.product_id,
+      product_type: "branch" as const,
+      branch_id: product.branch_id,
+      batch_number: batchNumber,
+      quantity: args.quantity,
+      initial_quantity: args.quantity,
+      received_at: now,
+      expiry_date: args.expiry_date,
+      cost_per_unit: args.cost_per_unit,
+      supplier: args.supplier?.trim(),
+      notes: args.notes?.trim() || (args.scanned_barcode ? `Scanned: ${args.scanned_barcode}` : ""),
+      created_by: args.created_by,
+      created_at: now,
+    });
+
+    const newStock = product.stock + args.quantity;
+    await ctx.db.patch(args.product_id, { stock: newStock });
+
+    // Audit log — use order_number as reference_id when provided so we can
+    // sum cumulative received quantities against that order
+    await ctx.db.insert("stockMovements", {
+      branch_id: product.branch_id,
+      product_id: args.product_id,
+      product_name: product.name,
+      type: "received",
+      quantity_change: args.quantity,
+      quantity_before: product.stock,
+      quantity_after: newStock,
+      reference_id: args.order_number ?? batchNumber,
+      notes: args.notes?.trim() || (args.scanned_barcode ? `Barcode: ${args.scanned_barcode}` : undefined),
+      created_by: args.created_by,
+      created_at: now,
+    });
+
+    // Auto-mark the order as received once every item has been fully received via barcode
+    if (args.order_number) {
+      const order = await ctx.db
+        .query("productOrders")
+        .withIndex("by_order_number", (q) => q.eq("order_number", args.order_number!))
+        .first();
+
+      if (order && (order.status === "shipped" || order.status === "approved")) {
+        let allFullyReceived = true;
+
+        for (const orderItem of order.items) {
+          const orderedQty = orderItem.quantity_approved ?? orderItem.quantity_requested;
+
+          const branchProduct = await ctx.db
+            .query("products")
+            .withIndex("by_branch_catalog", (q) =>
+              q.eq("branch_id", order.branch_id).eq("catalog_product_id", orderItem.catalog_product_id)
+            )
+            .first();
+
+          if (!branchProduct) {
+            allFullyReceived = false;
+            break;
+          }
+
+          const movements = await ctx.db
+            .query("stockMovements")
+            .withIndex("by_product", (q) => q.eq("product_id", branchProduct._id as string))
+            .filter((q) => q.eq(q.field("reference_id"), args.order_number!))
+            .collect();
+
+          const totalReceived = movements.reduce((sum, m) => sum + m.quantity_change, 0);
+
+          if (totalReceived < orderedQty) {
+            allFullyReceived = false;
+            break;
+          }
+        }
+
+        if (allFullyReceived) {
+          await ctx.db.patch(order._id, {
+            status: "received",
+            received_at: now,
+          });
+        }
+      }
+    }
+
+    return {
+      success: true,
+      batchId,
+      batchNumber,
+      previousStock: product.stock,
+      newStock,
+    };
+  },
+});
+
+// ============================================================
+// STOCK MOVEMENT QUERY
+// ============================================================
+
+/**
+ * Paginated stock movement audit log for a branch.
+ */
+export const getStockMovements = query({
+  args: {
+    branch_id: v.id("branches"),
+    limit: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    const movements = await ctx.db
+      .query("stockMovements")
+      .withIndex("by_branch", (q) => q.eq("branch_id", args.branch_id))
+      .order("desc")
+      .take(args.limit ?? 50);
+    return movements;
+  },
+});
+
+// ============================================================
+// EXPIRY ALERT QUERIES
+// ============================================================
+
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+/**
+ * Summary counts of expiring/expired batches for a branch (for badges/widgets).
+ */
+export const getExpiryAlertSummary = query({
+  args: { branch_id: v.id("branches") },
+  handler: async (ctx, args) => {
+    const now = Date.now();
+    const batches = await ctx.db
+      .query("inventoryBatches")
+      .withIndex("by_branch", (q) => q.eq("branch_id", args.branch_id))
+      .filter((q) => q.gt(q.field("quantity"), 0))
+      .collect();
+
+    const withExpiry = batches.filter((b) => b.expiry_date != null);
+    const expired = withExpiry.filter((b) => b.expiry_date! < now).length;
+    const critical = withExpiry.filter(
+      (b) => b.expiry_date! >= now && b.expiry_date! < now + 7 * DAY_MS
+    ).length;
+    const warning = withExpiry.filter(
+      (b) => b.expiry_date! >= now + 7 * DAY_MS && b.expiry_date! < now + 30 * DAY_MS
+    ).length;
+
+    return { expired, critical, warning, total: expired + critical + warning };
+  },
+});
+
+/**
+ * Products with batches expiring within 90 days (or already expired), sorted by urgency.
+ */
+export const getExpiringProducts = query({
+  args: { branch_id: v.id("branches") },
+  handler: async (ctx, args) => {
+    const now = Date.now();
+    const WINDOW = 90 * DAY_MS;
+
+    const batches = await ctx.db
+      .query("inventoryBatches")
+      .withIndex("by_branch", (q) => q.eq("branch_id", args.branch_id))
+      .filter((q) => q.gt(q.field("quantity"), 0))
+      .collect();
+
+    // Only batches that have an expiry date within the 90-day window (or expired)
+    const relevant = batches.filter(
+      (b) => b.expiry_date != null && b.expiry_date < now + WINDOW
+    );
+    if (relevant.length === 0) return [];
+
+    // Group by product_id
+    const byProduct = new Map<string, typeof relevant>();
+    for (const batch of relevant) {
+      const list = byProduct.get(batch.product_id) ?? [];
+      list.push(batch);
+      byProduct.set(batch.product_id, list);
+    }
+
+    const result: {
+      product_id: string;
+      product_name: string;
+      stock: number;
+      urgency: "expired" | "critical" | "warning" | "notice";
+      days_left: number;
+      batches: { batch_number: string; expiry_date: number; quantity: number }[];
+    }[] = [];
+
+    for (const [productId, productBatches] of byProduct) {
+      const product = await ctx.db.get(productId as any);
+      if (!product) continue;
+
+      const sortedBatches = [...productBatches].sort(
+        (a, b) => (a.expiry_date ?? 0) - (b.expiry_date ?? 0)
+      );
+      const minExpiry = sortedBatches[0].expiry_date!;
+      const daysLeft = Math.ceil((minExpiry - now) / DAY_MS);
+      const urgency =
+        daysLeft <= 0 ? "expired" :
+        daysLeft <= 7 ? "critical" :
+        daysLeft <= 30 ? "warning" : "notice";
+
+      result.push({
+        product_id: productId,
+        product_name: (product as any).name,
+        stock: (product as any).stock,
+        urgency,
+        days_left: daysLeft,
+        batches: sortedBatches.map((b) => ({
+          batch_number: b.batch_number,
+          expiry_date: b.expiry_date!,
+          quantity: b.quantity,
+        })),
+      });
+    }
+
+    return result.sort((a, b) => a.days_left - b.days_left);
+  },
+});
+
+/**
+ * Count of active branch products at or below minStock (for badge).
+ */
+export const getLowStockCount = query({
+  args: { branch_id: v.id("branches") },
+  handler: async (ctx, args) => {
+    const products = await ctx.db
+      .query("products")
+      .withIndex("by_branch", (q) => q.eq("branch_id", args.branch_id))
+      .filter((q) => q.eq(q.field("status"), "active"))
+      .collect();
+    return products.filter((p) => p.stock <= p.minStock).length;
+  },
+});

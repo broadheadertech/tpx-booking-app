@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { useQuery, useMutation } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
@@ -14,6 +14,19 @@ import {
   Users,
   RotateCcw,
 } from 'lucide-react'
+
+const formatSlotTime = (time) => {
+  if (!time) return ''
+  try {
+    return new Date(`1970-01-01T${time}`).toLocaleTimeString('en-US', {
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true,
+    })
+  } catch {
+    return time
+  }
+}
 
 function WalkInForm() {
   const { slug } = useParams()
@@ -42,6 +55,29 @@ function WalkInForm() {
     api.services.branchProfile.getBranchServices,
     branch?._id ? { branchId: branch._id } : 'skip'
   )
+
+  // Fetch available time slots for selected barber + service
+  const slotsData = useQuery(
+    api.services.walkIn.getAvailableSlots,
+    branch?._id && selectedBarber?._id && selectedService?._id
+      ? {
+          branch_id: branch._id,
+          barber_id: selectedBarber._id,
+          service_id: selectedService._id,
+        }
+      : 'skip'
+  )
+
+  // Auto-assign the first available time slot
+  const autoAssignedTime = useMemo(() => {
+    if (!slotsData?.slots?.length) return null
+    for (const bs of slotsData.slots) {
+      if (bs.slots.length > 0) {
+        return bs.slots[0]
+      }
+    }
+    return null
+  }, [slotsData])
 
   const createWalkIn = useMutation(api.services.walkIn.createWalkIn)
 
@@ -95,6 +131,7 @@ function WalkInForm() {
         number: phone.trim(),
         barberId: selectedBarber._id,
         service_id: selectedService?._id,
+        scheduled_time: autoAssignedTime || undefined,
       })
 
       if (res.success) {
@@ -296,7 +333,30 @@ function WalkInForm() {
                   <span className="text-white text-sm font-medium">{selectedService.name}</span>
                 </div>
               )}
+              <div className="flex items-center justify-between">
+                <span className="text-gray-400 text-xs">Scheduled Time</span>
+                {slotsData === undefined ? (
+                  <span className="text-gray-500 text-sm flex items-center gap-1">
+                    <Loader2 className="h-3 w-3 animate-spin" /> Finding slot...
+                  </span>
+                ) : autoAssignedTime ? (
+                  <span className="text-[var(--color-primary)] text-sm font-semibold flex items-center gap-1">
+                    <Clock className="h-3 w-3" />
+                    {formatSlotTime(autoAssignedTime)}
+                  </span>
+                ) : (
+                  <span className="text-amber-400 text-xs">No slots available</span>
+                )}
+              </div>
             </div>
+
+            {/* No slots warning */}
+            {slotsData !== undefined && !autoAssignedTime && (
+              <div className="p-3 bg-amber-500/10 border border-amber-500/30 rounded-lg flex items-start gap-2">
+                <AlertCircle className="h-4 w-4 text-amber-400 mt-0.5 flex-shrink-0" />
+                <p className="text-sm text-amber-300">No available time slots for this barber today. All slots are occupied or past.</p>
+              </div>
+            )}
 
             {/* Name */}
             <div>
@@ -333,7 +393,7 @@ function WalkInForm() {
             {/* Submit */}
             <button
               onClick={handleSubmit}
-              disabled={submitting || !name.trim() || !phone.trim()}
+              disabled={submitting || !name.trim() || !phone.trim() || !autoAssignedTime}
               className="w-full py-3.5 rounded-xl font-medium text-white bg-[var(--color-primary)] hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2 min-h-[48px]"
             >
               {submitting ? (
@@ -380,6 +440,12 @@ function WalkInForm() {
                 <div className="flex justify-between">
                   <span className="text-gray-400 text-sm">Service</span>
                   <span className="text-white text-sm font-medium">{selectedService.name}</span>
+                </div>
+              )}
+              {autoAssignedTime && (
+                <div className="flex justify-between">
+                  <span className="text-gray-400 text-sm">Time</span>
+                  <span className="text-[var(--color-primary)] text-sm font-medium">{formatSlotTime(autoAssignedTime)}</span>
                 </div>
               )}
             </div>

@@ -119,6 +119,7 @@ const BranchProductOrdering = ({ user, onRefresh }) => {
   const [orderStatusFilter, setOrderStatusFilter] = useState('all')
   const [showTopUpInfo, setShowTopUpInfo] = useState(false)
   const [damageReportOrder, setDamageReportOrder] = useState(null)
+  const [reconcileOrder, setReconcileOrder] = useState(null)
 
   // Queries
   const catalogProducts = useQuery(api.services.productCatalog.getCatalogProducts) || []
@@ -144,6 +145,7 @@ const BranchProductOrdering = ({ user, onRefresh }) => {
   const createOrder = useMutation(api.services.productOrders.createOrder)
   const cancelOrder = useMutation(api.services.productOrders.cancelOrder)
   const receiveOrder = useMutation(api.services.productOrders.receiveOrder)
+  const reconcileOrderReceipt = useMutation(api.services.productOrders.reconcileOrderReceipt)
 
   // Add a single suggestion to cart
   const addSuggestionToCart = (suggestion) => {
@@ -152,15 +154,16 @@ const BranchProductOrdering = ({ user, onRefresh }) => {
     const maxQty = product.availableStock ?? product.stock
     if (maxQty <= 0) return
     const qty = Math.min(suggestion.suggested_qty, maxQty)
-    const existing = cart.find(item => item.product_id === product._id)
-    if (existing) {
-      const newQty = Math.min(existing.quantity + qty, maxQty)
-      setCart(cart.map(item =>
-        item.product_id === product._id ? { ...item, quantity: newQty } : item
-      ))
-    } else {
-      setCart([...cart, { product_id: product._id, product, quantity: qty }])
-    }
+    setCart(prev => {
+      const existing = prev.find(item => item.product_id === product._id)
+      if (existing) {
+        const newQty = Math.min(existing.quantity + qty, maxQty)
+        return prev.map(item =>
+          item.product_id === product._id ? { ...item, quantity: newQty } : item
+        )
+      }
+      return [...prev, { product_id: product._id, product, quantity: qty }]
+    })
   }
 
   // Add all critical/low suggestions to cart at once
@@ -169,22 +172,24 @@ const BranchProductOrdering = ({ user, onRefresh }) => {
     const urgent = smartSuggestions.suggestions.filter(
       s => s.urgency === 'critical' || s.urgency === 'low' || s.urgency === 'reorder'
     )
-    let newCart = [...cart]
-    for (const suggestion of urgent) {
-      const product = catalogProducts.find(p => p._id === suggestion.catalog_product_id)
-      if (!product) continue
-      const maxQty = product.availableStock ?? product.stock
-      if (maxQty <= 0) continue
-      const qty = Math.min(suggestion.suggested_qty, maxQty)
-      const existingIdx = newCart.findIndex(item => item.product_id === product._id)
-      if (existingIdx >= 0) {
-        const newQty = Math.min(newCart[existingIdx].quantity + qty, maxQty)
-        newCart[existingIdx] = { ...newCart[existingIdx], quantity: newQty }
-      } else {
-        newCart.push({ product_id: product._id, product, quantity: qty })
+    setCart(prev => {
+      let newCart = [...prev]
+      for (const suggestion of urgent) {
+        const product = catalogProducts.find(p => p._id === suggestion.catalog_product_id)
+        if (!product) continue
+        const maxQty = product.availableStock ?? product.stock
+        if (maxQty <= 0) continue
+        const qty = Math.min(suggestion.suggested_qty, maxQty)
+        const existingIdx = newCart.findIndex(item => item.product_id === product._id)
+        if (existingIdx >= 0) {
+          const newQty = Math.min(newCart[existingIdx].quantity + qty, maxQty)
+          newCart[existingIdx] = { ...newCart[existingIdx], quantity: newQty }
+        } else {
+          newCart.push({ product_id: product._id, product, quantity: qty })
+        }
       }
-    }
-    setCart(newCart)
+      return newCart
+    })
     showAlert('Smart Cart', `Added ${urgent.length} suggested products to your cart.`)
   }
 
@@ -203,38 +208,37 @@ const BranchProductOrdering = ({ user, onRefresh }) => {
     return order.status === orderStatusFilter
   })
 
-  // Cart functions
+  // Cart functions (use functional setCart to avoid stale closures from Convex reactive re-renders)
   const addToCart = (product) => {
     const maxQty = product.availableStock ?? product.stock
-    const existing = cart.find(item => item.product_id === product._id)
-    if (existing) {
-      if (existing.quantity >= maxQty) return
-      setCart(cart.map(item =>
-        item.product_id === product._id
-          ? { ...item, quantity: item.quantity + 1 }
-          : item
-      ))
-    } else {
-      if (maxQty <= 0) return
-      setCart([...cart, { product_id: product._id, product, quantity: 1 }])
-    }
+    if (maxQty <= 0) return
+    setCart(prev => {
+      const existing = prev.find(item => item.product_id === product._id)
+      if (existing) {
+        if (existing.quantity >= maxQty) return prev
+        return prev.map(item =>
+          item.product_id === product._id
+            ? { ...item, quantity: item.quantity + 1 }
+            : item
+        )
+      }
+      return [...prev, { product_id: product._id, product, quantity: 1 }]
+    })
   }
 
   const removeFromCart = (productId) => {
-    setCart(cart.filter(item => item.product_id !== productId))
+    setCart(prev => prev.filter(item => item.product_id !== productId))
   }
 
   const updateQuantity = (productId, quantity) => {
     if (quantity <= 0) {
       removeFromCart(productId)
     } else {
-      const cartItem = cart.find(i => i.product_id === productId)
-      const maxQty = cartItem?.product?.availableStock ?? cartItem?.product?.stock ?? Infinity
-      setCart(cart.map(item =>
-        item.product_id === productId
-          ? { ...item, quantity: Math.min(quantity, maxQty) }
-          : item
-      ))
+      setCart(prev => prev.map(item => {
+        if (item.product_id !== productId) return item
+        const maxQty = item.product?.availableStock ?? item.product?.stock ?? Infinity
+        return { ...item, quantity: Math.min(quantity, maxQty) }
+      }))
     }
   }
 
@@ -1013,12 +1017,12 @@ const BranchProductOrdering = ({ user, onRefresh }) => {
                           <button
                             onClick={(e) => {
                               e.stopPropagation()
-                              handleReceiveOrder(order._id)
+                              setReconcileOrder(order)
                             }}
                             className="flex items-center space-x-2 px-4 py-2 bg-green-500/20 text-green-400 rounded-lg hover:bg-green-500/30 transition-colors text-sm"
                           >
                             <PackageCheck className="h-4 w-4" />
-                            <span>Confirm Receipt</span>
+                            <span>Receive & Log</span>
                           </button>
                         )}
 
@@ -1055,6 +1059,162 @@ const BranchProductOrdering = ({ user, onRefresh }) => {
           onClose={() => setDamageReportOrder(null)}
         />
       )}
+
+      {/* Reconcile Receipt Modal */}
+      {reconcileOrder && (
+        <ReconcileReceiptModal
+          order={reconcileOrder}
+          onClose={() => setReconcileOrder(null)}
+          onConfirm={async (receivedItems, notes) => {
+            try {
+              const result = await reconcileOrderReceipt({
+                order_id: reconcileOrder._id,
+                received_by: user._id,
+                received_items: receivedItems,
+                notes: notes || undefined,
+              })
+              setReconcileOrder(null)
+              onRefresh?.()
+              if (result.hasDiscrepancy) {
+                showAlert({ title: 'Discrepancy Reported', message: 'Receipt confirmed. A discrepancy report has been sent to HQ for review.', type: 'warning' })
+              }
+            } catch (error) {
+              showAlert({ title: 'Error', message: error.message || 'Failed to confirm receipt', type: 'error' })
+            }
+          }}
+        />
+      )}
+    </div>
+  )
+}
+
+/**
+ * ReconcileReceiptModal — branch staff confirms actual quantities received per item.
+ * Auto-flags discrepancies against HQ-shipped quantities.
+ */
+const ReconcileReceiptModal = ({ order, onClose, onConfirm }) => {
+  const [items, setItems] = useState(() =>
+    order.items.map((item) => ({
+      catalog_product_id: item.catalog_product_id,
+      product_name: item.product_name,
+      quantity_shipped: item.quantity_approved ?? item.quantity_requested,
+      quantity_received: item.quantity_approved ?? item.quantity_requested,
+      expiry_date: '',
+    }))
+  )
+  const [notes, setNotes] = useState('')
+  const [isSubmitting, setIsSubmitting] = useState(false)
+
+  const hasDiscrepancy = items.some(
+    (item) => Number(item.quantity_received) !== item.quantity_shipped
+  )
+
+  const handleSubmit = async () => {
+    setIsSubmitting(true)
+    const receivedItems = items.map((item) => ({
+      catalog_product_id: item.catalog_product_id,
+      quantity_received: Math.max(0, Number(item.quantity_received) || 0),
+      expiry_date: item.expiry_date ? new Date(item.expiry_date).getTime() : undefined,
+    }))
+    await onConfirm(receivedItems, notes)
+    setIsSubmitting(false)
+  }
+
+  return (
+    <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4">
+      <div className="bg-[#1A1A1A] border border-[#333333] rounded-2xl w-full max-w-lg max-h-[90vh] flex flex-col">
+        {/* Header */}
+        <div className="flex items-center justify-between p-5 border-b border-[#333333]">
+          <div>
+            <h3 className="text-white font-semibold text-lg">Receive Shipment</h3>
+            <p className="text-gray-500 text-sm">{order.order_number}</p>
+          </div>
+          <button onClick={onClose} className="text-gray-500 hover:text-white p-1">
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        {/* Items */}
+        <div className="flex-1 overflow-y-auto p-5 space-y-4">
+          {hasDiscrepancy && (
+            <div className="flex items-center gap-2 bg-orange-500/10 border border-orange-500/30 rounded-lg px-3 py-2">
+              <AlertCircle className="w-4 h-4 text-orange-400 flex-shrink-0" />
+              <p className="text-orange-400 text-xs">Quantities differ from what was shipped — a discrepancy report will be sent to HQ.</p>
+            </div>
+          )}
+
+          {items.map((item, index) => {
+            const received = Number(item.quantity_received) || 0
+            const diff = item.quantity_shipped - received
+            const diffColor = diff > 0 ? 'text-red-400' : diff < 0 ? 'text-yellow-400' : 'text-green-400'
+
+            return (
+              <div key={item.catalog_product_id} className="bg-[#111111] border border-[#2A2A2A] rounded-xl p-4 space-y-3">
+                <div className="flex items-start justify-between gap-2">
+                  <p className="text-white font-medium text-sm">{item.product_name}</p>
+                  {diff !== 0 && (
+                    <span className={`text-xs font-semibold ${diffColor} flex-shrink-0`}>
+                      {diff > 0 ? `−${diff} short` : `+${Math.abs(diff)} excess`}
+                    </span>
+                  )}
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-xs text-gray-500 mb-1 block">Expected (shipped)</label>
+                    <div className="bg-[#1A1A1A] border border-[#2A2A2A] text-gray-400 rounded-lg px-3 py-2 text-sm">{item.quantity_shipped}</div>
+                  </div>
+                  <div>
+                    <label className="text-xs text-gray-500 mb-1 block">Actually received <span className="text-red-400">*</span></label>
+                    <input
+                      type="number"
+                      min="0"
+                      value={item.quantity_received}
+                      onChange={(e) => setItems((prev) => prev.map((it, i) => i === index ? { ...it, quantity_received: e.target.value } : it))}
+                      className="w-full bg-[#111111] border border-[#333333] text-white rounded-lg px-3 py-2 text-sm focus:border-[var(--color-primary)] outline-none"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-xs text-gray-500 mb-1 block">Expiry Date <span className="text-gray-600">(Optional)</span></label>
+                  <input
+                    type="date"
+                    value={item.expiry_date}
+                    onChange={(e) => setItems((prev) => prev.map((it, i) => i === index ? { ...it, expiry_date: e.target.value } : it))}
+                    className="w-full bg-[#111111] border border-[#333333] text-white rounded-lg px-3 py-2 text-sm focus:border-[var(--color-primary)] outline-none"
+                  />
+                </div>
+              </div>
+            )
+          })}
+
+          <div>
+            <label className="text-xs text-gray-500 mb-1 block">Notes <span className="text-gray-600">(Optional)</span></label>
+            <textarea
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              rows={2}
+              placeholder="Any notes about this receipt..."
+              className="w-full bg-[#111111] border border-[#333333] text-white rounded-lg px-3 py-2 text-sm resize-none focus:border-[var(--color-primary)] outline-none"
+            />
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div className="flex gap-3 p-5 border-t border-[#333333]">
+          <button onClick={onClose} className="flex-1 py-2.5 text-gray-400 hover:text-white bg-[#111111] rounded-xl text-sm">
+            Cancel
+          </button>
+          <button
+            onClick={handleSubmit}
+            disabled={isSubmitting}
+            className="flex-1 py-2.5 bg-green-600 hover:bg-green-500 text-white rounded-xl text-sm font-medium disabled:opacity-50 flex items-center justify-center gap-2"
+          >
+            {isSubmitting ? <><RefreshCw className="w-4 h-4 animate-spin" /> Confirming...</> : <><PackageCheck className="w-4 h-4" /> Confirm Receipt</>}
+          </button>
+        </div>
+      </div>
     </div>
   )
 }

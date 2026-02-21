@@ -650,11 +650,14 @@ const GuestServiceBooking = ({ onBack }) => {
         reason = "booked";
       }
 
-      // Check if time slot is in the past (for today only)
-      // Block the slot if: the hour has passed, OR it's the current hour (since the slot time has technically started)
-      if (isToday && hour <= currentHour) {
-        available = false;
-        reason = "past";
+      // Block slots less than 2 hours from now (minimum advance booking)
+      if (isToday) {
+        const nowMinutes = currentHour * 60 + currentMinute;
+        const slotMinutes = hour * 60;
+        if (slotMinutes < nowMinutes + 120) {
+          available = false;
+          reason = "too_soon";
+        }
       }
 
       // Check blocked periods (Time Off)

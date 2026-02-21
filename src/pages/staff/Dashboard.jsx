@@ -125,6 +125,12 @@ function StaffDashboard() {
   // Get walk-ins data for queue badge
   const allWalkInsData = useQuery(api.services.walkIn.getAllWalkIns, {}) || [];
 
+  // Expiry alerts for branch users
+  const expiryAlerts = useQuery(
+    api.services.products.getExpiryAlertSummary,
+    user?.branch_id ? { branch_id: user.branch_id } : "skip"
+  );
+
   // Get pending cash advances count for badge (branch admins only)
   const pendingAdvancesCount = useQuery(
     api.services.cashAdvance.getPendingAdvancesCount,
@@ -197,6 +203,34 @@ function StaffDashboard() {
     return (
       <div className="space-y-6">
         <MorningBriefing user={user} />
+        {expiryAlerts && expiryAlerts.total > 0 && (
+          <div
+            className={`rounded-xl border px-4 py-3 flex items-center justify-between gap-4 cursor-pointer hover:brightness-110 transition-all ${
+              expiryAlerts.expired > 0
+                ? "bg-red-500/10 border-red-500/30"
+                : expiryAlerts.critical > 0
+                ? "bg-orange-500/10 border-orange-500/30"
+                : "bg-yellow-500/10 border-yellow-500/30"
+            }`}
+            onClick={() => setActiveTab("products")}
+            title="Go to Products to review expiring stock"
+          >
+            <div className="flex items-center gap-3">
+              <span className="text-xl">⚠️</span>
+              <div>
+                <p className="text-white text-sm font-semibold">Expiring Stock Alert</p>
+                <p className="text-gray-400 text-xs">
+                  {[
+                    expiryAlerts.expired > 0 && `${expiryAlerts.expired} expired`,
+                    expiryAlerts.critical > 0 && `${expiryAlerts.critical} critical (<7d)`,
+                    expiryAlerts.warning > 0 && `${expiryAlerts.warning} expiring (<30d)`,
+                  ].filter(Boolean).join(" · ")}
+                </p>
+              </div>
+            </div>
+            <span className="text-gray-500 text-xs whitespace-nowrap">View Products →</span>
+          </div>
+        )}
         <StatsCards
           stats={[
             {

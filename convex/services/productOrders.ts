@@ -606,10 +606,11 @@ export const receiveOrder = mutation({
       let productId: string;
 
       if (existingProduct) {
-        // Restock: Update existing product stock
+        // Restock: Update existing product stock and refresh buying price from this order
         const newStock = existingProduct.stock + quantityReceived;
         await ctx.db.patch(existingProduct._id, {
           stock: newStock,
+          cost: item.unit_price, // Update to the price branch paid in this order
           status: newStock > 0 ? "active" : existingProduct.status,
           updatedAt: now,
         });
@@ -662,7 +663,7 @@ export const receiveOrder = mutation({
         initial_quantity: quantityReceived,
         received_at: now,
         expiry_date: undefined,
-        cost_per_unit: catalogProduct?.cost,
+        cost_per_unit: item.unit_price, // Branch buying price, not HQ's supplier cost
         supplier: "Central Warehouse",
         notes: `From order ${order.order_number}`,
         created_by: args.received_by,
@@ -1259,5 +1260,312 @@ export const createManualOrder = mutation({
       orderNumber,
       totalAmount,
     };
+  },
+});
+
+// ============================================================
+// TWO-SIDED RECONCILIATION
+// ============================================================
+
+/**
+ * Receive an order with per-item actual quantities for reconciliation.
+ * Creates a discrepancy report if any item quantity doesn't match what was shipped.
+ */
+export const reconcileOrderReceipt = mutation({
+  args: {
+    order_id: v.id("productOrders"),
+    received_by: v.id("users"),
+    received_items: v.array(
+      v.object({
+        catalog_product_id: v.id("productCatalog"),
+        quantity_received: v.number(),
+        expiry_date: v.optional(v.number()),
+      })
+    ),
+    notes: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const order = await ctx.db.get(args.order_id);
+    if (!order) {
+      throw new ConvexError({ code: "ORDER_NOT_FOUND", message: "Order not found" });
+    }
+    if (order.status !== "shipped") {
+      throw new ConvexError({ code: "INVALID_STATUS", message: `Cannot receive order with status: ${order.status}` });
+    }
+
+    const now = Date.now();
+    const receivedMap = new Map(
+      args.received_items.map((i) => [i.catalog_product_id, i])
+    );
+    const discrepancyItems: {
+      catalog_product_id: string;
+      product_name: string;
+      quantity_shipped: number;
+      quantity_received: number;
+      discrepancy: number;
+      unit_price: number;
+    }[] = [];
+
+    for (const item of order.items) {
+      const quantityShipped = item.quantity_approved ?? item.quantity_requested;
+      const received = receivedMap.get(item.catalog_product_id);
+      const quantityReceived = received?.quantity_received ?? quantityShipped;
+      const expiryDate = received?.expiry_date;
+
+      // Record discrepancy if quantities differ
+      const discrepancy = quantityShipped - quantityReceived;
+      if (discrepancy !== 0) {
+        discrepancyItems.push({
+          catalog_product_id: item.catalog_product_id,
+          product_name: item.product_name,
+          quantity_shipped: quantityShipped,
+          quantity_received: quantityReceived,
+          discrepancy,
+          unit_price: item.unit_price,
+        });
+      }
+
+      if (quantityReceived <= 0) continue;
+
+      const catalogProduct = await ctx.db.get(item.catalog_product_id);
+      const branchProducts = await ctx.db
+        .query("products")
+        .withIndex("by_branch", (q) => q.eq("branch_id", order.branch_id))
+        .collect();
+
+      let existingProduct = branchProducts.find(
+        (p) => p.catalog_product_id === item.catalog_product_id
+      );
+      if (!existingProduct) {
+        existingProduct = branchProducts.find((p) => p.name === item.product_name);
+      }
+
+      let productId: string;
+      let effectiveQtyToAdd = quantityReceived; // may be reduced if already barcode-received
+      let stockBefore = 0;
+
+      if (existingProduct) {
+        // Deduct any units already received via barcode scan for this order
+        const barcodeMovements = await ctx.db
+          .query("stockMovements")
+          .withIndex("by_product", (q) => q.eq("product_id", existingProduct._id as string))
+          .filter((q) =>
+            q.and(
+              q.eq(q.field("reference_id"), order.order_number),
+              q.eq(q.field("type"), "received")
+            )
+          )
+          .collect();
+        const alreadyBarcodeReceived = barcodeMovements.reduce((sum, m) => sum + m.quantity_change, 0);
+
+        effectiveQtyToAdd = Math.max(0, quantityReceived - alreadyBarcodeReceived);
+        stockBefore = existingProduct.stock;
+
+        if (effectiveQtyToAdd > 0) {
+          const newStock = existingProduct.stock + effectiveQtyToAdd;
+          await ctx.db.patch(existingProduct._id, {
+            stock: newStock,
+            cost: item.unit_price,
+            status: newStock > 0 ? "active" : existingProduct.status,
+            updatedAt: now,
+          });
+        } else {
+          // All units already received via barcode — just refresh the cost
+          await ctx.db.patch(existingProduct._id, { cost: item.unit_price, updatedAt: now });
+        }
+        productId = existingProduct._id;
+      } else {
+        const VALID_CATEGORIES = ["hair-care", "beard-care", "shaving", "tools", "accessories"] as const;
+        type ProductCategory = (typeof VALID_CATEGORIES)[number];
+        const cat = (catalogProduct?.category ?? "accessories") as string;
+        const category = VALID_CATEGORIES.includes(cat as ProductCategory)
+          ? (cat as ProductCategory)
+          : ("accessories" as ProductCategory);
+        const buyingPrice = item.unit_price;
+        const defaultSellingPrice = Math.ceil(buyingPrice * 1.1);
+        productId = await ctx.db.insert("products", {
+          branch_id: order.branch_id,
+          catalog_product_id: item.catalog_product_id,
+          name: item.product_name,
+          description: catalogProduct?.description || "",
+          price: defaultSellingPrice,
+          cost: buyingPrice,
+          category,
+          brand: catalogProduct?.brand || "",
+          sku: catalogProduct?.sku || "",
+          stock: effectiveQtyToAdd,
+          minStock: catalogProduct?.minStock ?? 10,
+          imageUrl: catalogProduct?.image_url,
+          imageStorageId: catalogProduct?.image_storage_id,
+          status: "active",
+          soldThisMonth: 0,
+          createdAt: now,
+          updatedAt: now,
+        });
+      }
+
+      // Only create batch and audit log if there's effective quantity to add
+      if (effectiveQtyToAdd > 0) {
+        const batchNumber = `BATCH-${new Date().getFullYear()}-${Math.floor(Math.random() * 100000).toString().padStart(5, "0")}`;
+        await ctx.db.insert("inventoryBatches", {
+          product_id: productId,
+          product_type: "branch",
+          branch_id: order.branch_id,
+          batch_number: batchNumber,
+          quantity: effectiveQtyToAdd,
+          initial_quantity: effectiveQtyToAdd,
+          received_at: now,
+          expiry_date: expiryDate,
+          cost_per_unit: item.unit_price,
+          supplier: "Central Warehouse",
+          notes: `From order ${order.order_number}`,
+          created_by: args.received_by,
+          created_at: now,
+        });
+
+        await ctx.db.insert("stockMovements", {
+          branch_id: order.branch_id,
+          product_id: productId,
+          product_name: item.product_name,
+          type: "received_from_order",
+          quantity_change: effectiveQtyToAdd,
+          quantity_before: stockBefore,
+          quantity_after: stockBefore + effectiveQtyToAdd,
+          reference_id: order.order_number,
+          notes: `Received from order ${order.order_number}`,
+          created_by: args.received_by,
+          created_at: now,
+        });
+      }
+    }
+
+    // Auto-create discrepancy report if any item mismatched
+    if (discrepancyItems.length > 0) {
+      const totalUnits = discrepancyItems.reduce((s, i) => s + Math.abs(i.discrepancy), 0);
+      const totalAmount = discrepancyItems.reduce((s, i) => s + Math.abs(i.discrepancy) * i.unit_price, 0);
+      await ctx.db.insert("shipmentDiscrepancies", {
+        order_id: args.order_id,
+        order_number: order.order_number,
+        branch_id: order.branch_id,
+        items: discrepancyItems,
+        total_discrepancy_units: totalUnits,
+        total_discrepancy_amount: totalAmount,
+        status: "pending",
+        notes: args.notes,
+        submitted_by: args.received_by,
+        submitted_at: now,
+      });
+    }
+
+    // Auto-deduct wallet payment (same as receiveOrder)
+    if (order.wallet_hold_amount) {
+      const wallet = await ctx.db
+        .query("branch_wallets")
+        .withIndex("by_branch", (q) => q.eq("branch_id", order.branch_id))
+        .first();
+      if (wallet) {
+        const deductAmount = order.wallet_hold_amount;
+        await ctx.db.patch(wallet._id, {
+          held_balance: wallet.held_balance - deductAmount,
+          total_spent: wallet.total_spent + deductAmount,
+          updatedAt: now,
+        });
+        await ctx.db.insert("branch_wallet_transactions", {
+          branch_id: order.branch_id,
+          wallet_id: wallet._id,
+          type: "payment",
+          amount: -deductAmount,
+          balance_after: wallet.balance,
+          held_balance_after: wallet.held_balance - deductAmount,
+          reference_type: "product_order",
+          reference_id: order.order_number,
+          description: `Payment for order ${order.order_number} (received & reconciled)`,
+          created_by: args.received_by,
+          createdAt: now,
+        });
+      }
+    }
+
+    await ctx.db.patch(args.order_id, {
+      status: "received",
+      received_at: now,
+      ...(order.wallet_hold_amount
+        ? {
+            is_paid: true,
+            paid_at: now,
+            paid_by: args.received_by,
+            payment_method: "branch_wallet" as const,
+            payment_notes: "Auto-paid from branch wallet on receipt confirmation",
+          }
+        : {}),
+    });
+
+    try {
+      await ctx.scheduler.runAfter(0, api.services.emailNotifications.sendNotificationToRole, {
+        notification_type: "order_delivered",
+        role: "branch_admin",
+        branch_id: order.branch_id,
+        variables: { order_number: order.order_number },
+      });
+    } catch (e) {
+      console.error("[PRODUCT_ORDERS] Delivery email failed:", e);
+    }
+
+    return { success: true, hasDiscrepancy: discrepancyItems.length > 0 };
+  },
+});
+
+/**
+ * Get all discrepancy reports (for HQ super admin view)
+ */
+export const getPendingDiscrepancies = query({
+  args: {},
+  handler: async (ctx) => {
+    const discrepancies = await ctx.db
+      .query("shipmentDiscrepancies")
+      .withIndex("by_submitted_at")
+      .order("desc")
+      .collect();
+    return await Promise.all(
+      discrepancies.map(async (d) => {
+        const branch = await ctx.db.get(d.branch_id);
+        return { ...d, branch_name: branch?.name || "Unknown Branch" };
+      })
+    );
+  },
+});
+
+/**
+ * Count of pending discrepancies (for badge on HQ tab)
+ */
+export const getPendingDiscrepanciesCount = query({
+  args: {},
+  handler: async (ctx) => {
+    const items = await ctx.db
+      .query("shipmentDiscrepancies")
+      .withIndex("by_status", (q) => q.eq("status", "pending"))
+      .collect();
+    return items.length;
+  },
+});
+
+/**
+ * Resolve or waive a discrepancy report (super admin only)
+ */
+export const resolveDiscrepancy = mutation({
+  args: {
+    discrepancy_id: v.id("shipmentDiscrepancies"),
+    resolution: v.union(v.literal("resolved"), v.literal("waived")),
+    resolution_notes: v.optional(v.string()),
+    resolved_by: v.id("users"),
+  },
+  handler: async (ctx, args) => {
+    await ctx.db.patch(args.discrepancy_id, {
+      status: args.resolution,
+      resolved_by: args.resolved_by,
+      resolved_at: Date.now(),
+      resolution_notes: args.resolution_notes,
+    });
+    return { success: true };
   },
 });

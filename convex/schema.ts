@@ -2023,6 +2023,40 @@ export default defineSchema({
     .index("by_status", ["status"])
     .index("by_submitted_at", ["submitted_at"]),
 
+  // Shipment discrepancy reports (branch-received qty ≠ HQ-shipped qty)
+  shipmentDiscrepancies: defineTable({
+    order_id: v.id("productOrders"),
+    order_number: v.string(),
+    branch_id: v.id("branches"),
+    items: v.array(
+      v.object({
+        catalog_product_id: v.id("productCatalog"),
+        product_name: v.string(),
+        quantity_shipped: v.number(),
+        quantity_received: v.number(),
+        discrepancy: v.number(), // shipped - received (positive = shortage, negative = excess)
+        unit_price: v.number(),
+      })
+    ),
+    total_discrepancy_units: v.number(),
+    total_discrepancy_amount: v.number(),
+    status: v.union(
+      v.literal("pending"),
+      v.literal("resolved"),
+      v.literal("waived")
+    ),
+    notes: v.optional(v.string()),
+    submitted_by: v.id("users"),
+    submitted_at: v.number(),
+    resolved_by: v.optional(v.id("users")),
+    resolved_at: v.optional(v.number()),
+    resolution_notes: v.optional(v.string()),
+  })
+    .index("by_order", ["order_id"])
+    .index("by_branch", ["branch_id"])
+    .index("by_status", ["status"])
+    .index("by_submitted_at", ["submitted_at"]),
+
   // Branch expenses for P&L tracking
   expenses: defineTable({
     branch_id: v.id("branches"),
@@ -3711,6 +3745,30 @@ export default defineSchema({
     .index("by_resolved", ["is_resolved"]),
 
   // Booking Edit Requests — Staff edits require branch_admin approval
+  // Unified stock movement audit log (receives, sales deductions, adjustments)
+  stockMovements: defineTable({
+    branch_id: v.id("branches"),
+    product_id: v.string(),
+    product_name: v.string(),
+    type: v.union(
+      v.literal("received"),           // manual/barcode receive
+      v.literal("received_from_order"),// from HQ shipment reconciliation
+      v.literal("sold"),               // deducted by POS sale
+      v.literal("adjusted"),           // manual stock adjustment
+      v.literal("written_off"),        // expired/damaged write-off
+    ),
+    quantity_change: v.number(),      // positive = stock in, negative = stock out
+    quantity_before: v.number(),
+    quantity_after: v.number(),
+    reference_id: v.optional(v.string()),  // order number, transaction id, batch number
+    notes: v.optional(v.string()),
+    created_by: v.id("users"),
+    created_at: v.number(),
+  })
+    .index("by_branch", ["branch_id"])
+    .index("by_product", ["product_id"])
+    .index("by_branch_created_at", ["branch_id", "created_at"]),
+
   booking_edit_requests: defineTable({
     booking_id: v.id("bookings"),
     booking_code: v.string(),

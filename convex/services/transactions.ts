@@ -581,11 +581,46 @@ export const createTransaction = mutation({
 
           if (isBranchProduct) {
             // Branch products have soldThisMonth and updatedAt
+            const stockBefore = productDoc.stock as number;
+            const newStock = Math.max(0, stockBefore - product.quantity);
             await ctx.db.patch(product.product_id, {
-              stock: Math.max(0, (productDoc.stock as number) - product.quantity),
+              stock: newStock,
               soldThisMonth: ((productDoc.soldThisMonth as number) || 0) + product.quantity,
               updatedAt: timestamp
             });
+
+            // Audit log — stock movement for this sale
+            await ctx.db.insert("stockMovements", {
+              branch_id: productDoc.branch_id as any,
+              product_id: product.product_id,
+              product_name: product.product_name,
+              type: "sold",
+              quantity_change: -product.quantity,
+              quantity_before: stockBefore,
+              quantity_after: newStock,
+              notes: "POS sale",
+              created_by: args.processed_by,
+              created_at: timestamp,
+            });
+
+            // Low-stock alert if stock just hit or crossed minStock
+            const minStock = (productDoc.minStock as number) ?? 0;
+            if (minStock > 0 && newStock <= minStock) {
+              await ctx.db.insert("notifications", {
+                title: "Low Stock Alert",
+                message: `${product.product_name} is running low — ${newStock} remaining (min: ${minStock}). Consider reordering.`,
+                type: "alert",
+                priority: newStock === 0 ? "urgent" : "high",
+                recipient_type: "admin",
+                branch_id: productDoc.branch_id as any,
+                is_read: false,
+                is_archived: false,
+                action_label: "Reorder Now",
+                metadata: { product_name: product.product_name, current_stock: newStock, min_stock: minStock },
+                createdAt: timestamp,
+                updatedAt: timestamp,
+              });
+            }
           } else {
             // Catalog products only have stock field
             await ctx.db.patch(product.product_id, {

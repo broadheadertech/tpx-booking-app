@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react'
-import { Package, DollarSign, TrendingUp, TrendingDown, Plus, Edit, Trash2, Search, Filter, RefreshCw, Save, X, AlertCircle, Image, ShoppingCart, BarChart3, Upload, Camera, History, Clock, ChevronUp, ChevronDown, HelpCircle } from 'lucide-react'
+import { Package, DollarSign, TrendingUp, TrendingDown, Plus, Edit, Trash2, Search, Filter, RefreshCw, Save, X, AlertCircle, Image, ShoppingCart, BarChart3, Upload, Camera, History, Clock, ChevronUp, ChevronDown, HelpCircle, ScanLine } from 'lucide-react'
 import WalkthroughOverlay from '../common/WalkthroughOverlay'
 import { productsManagementSteps } from '../../config/walkthroughSteps'
 import { useQuery, useMutation } from 'convex/react'
@@ -7,6 +7,7 @@ import { api } from '../../../convex/_generated/api'
 import { useAppModal } from '../../context/AppModalContext'
 import Modal from '../common/Modal'
 import Button from '../common/Button'
+import BarcodeReceiveModal from './BarcodeReceiveModal'
 
 // Component to handle product image display from Convex storage or URL
 const ProductImage = ({ imageUrl, imageStorageId, productName, className }) => {
@@ -48,6 +49,7 @@ const ProductsManagement = ({ onRefresh, user }) => {
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [editingProduct, setEditingProduct] = useState(null)
   const [batchViewProduct, setBatchViewProduct] = useState(null) // FIFO batch viewer
+  const [showScanReceive, setShowScanReceive] = useState(false)
   const [formData, setFormData] = useState({
     name: '',
     description: '',
@@ -78,11 +80,29 @@ const ProductsManagement = ({ onRefresh, user }) => {
   const generateUploadUrl = useMutation(api.services.products.generateUploadUrl)
   const deleteImage = useMutation(api.services.products.deleteImage)
 
+  // Expiry alert queries
+  const [showExpiryDetail, setShowExpiryDetail] = useState(false)
+  const expiryAlerts = useQuery(
+    api.services.products.getExpiryAlertSummary,
+    user?.branch_id ? { branch_id: user.branch_id } : 'skip'
+  )
+  const expiringProducts = useQuery(
+    api.services.products.getExpiringProducts,
+    showExpiryDetail && user?.branch_id ? { branch_id: user.branch_id } : 'skip'
+  )
+
   // FIFO batch data for selected product
   const batchData = useQuery(
     api.services.products.getBranchProductWithBatches,
     batchViewProduct ? { product_id: batchViewProduct._id } : 'skip'
   )
+
+  // Stock movement audit log
+  const [showStockActivity, setShowStockActivity] = useState(false)
+  const stockMovements = useQuery(
+    api.services.products.getStockMovements,
+    showStockActivity && user?.branch_id ? { branch_id: user.branch_id, limit: 50 } : 'skip'
+  ) || []
 
   // Product transaction history
   const productTransactionHistory = useQuery(
@@ -392,6 +412,48 @@ const ProductsManagement = ({ onRefresh, user }) => {
 
   return (
     <div className="space-y-6">
+      {/* Expiry Alert Banner */}
+      {expiryAlerts && expiryAlerts.total > 0 && (
+        <div className={`rounded-xl border overflow-hidden ${expiryAlerts.expired > 0 ? 'border-red-500/40 bg-red-500/10' : expiryAlerts.critical > 0 ? 'border-orange-500/40 bg-orange-500/10' : 'border-yellow-500/40 bg-yellow-500/10'}`}>
+          <button
+            onClick={() => setShowExpiryDetail(!showExpiryDetail)}
+            className="w-full flex items-center justify-between px-4 py-3 text-left"
+          >
+            <div className="flex items-center gap-3">
+              <AlertCircle className={`w-5 h-5 flex-shrink-0 ${expiryAlerts.expired > 0 ? 'text-red-400' : expiryAlerts.critical > 0 ? 'text-orange-400' : 'text-yellow-400'}`} />
+              <span className="text-white text-sm font-medium">
+                {expiryAlerts.expired > 0 && <span className="text-red-400">{expiryAlerts.expired} expired</span>}
+                {expiryAlerts.expired > 0 && (expiryAlerts.critical > 0 || expiryAlerts.warning > 0) && <span className="text-gray-500"> · </span>}
+                {expiryAlerts.critical > 0 && <span className="text-orange-400">{expiryAlerts.critical} critical (&lt;7d)</span>}
+                {expiryAlerts.critical > 0 && expiryAlerts.warning > 0 && <span className="text-gray-500"> · </span>}
+                {expiryAlerts.warning > 0 && <span className="text-yellow-400">{expiryAlerts.warning} expiring (&lt;30d)</span>}
+              </span>
+            </div>
+            {showExpiryDetail ? <ChevronUp className="w-4 h-4 text-gray-400" /> : <ChevronDown className="w-4 h-4 text-gray-400" />}
+          </button>
+
+          {showExpiryDetail && (
+            <div className="border-t border-white/10 px-4 py-3 space-y-2">
+              {!expiringProducts ? (
+                <p className="text-gray-500 text-sm">Loading...</p>
+              ) : expiringProducts.map((item) => {
+                const urgencyColor = item.urgency === 'expired' ? 'text-red-400' : item.urgency === 'critical' ? 'text-orange-400' : item.urgency === 'warning' ? 'text-yellow-400' : 'text-green-400'
+                const label = item.urgency === 'expired' ? 'EXPIRED' : item.days_left === 0 ? 'Today' : `${item.days_left}d left`
+                return (
+                  <div key={item.product_id} className="flex items-center justify-between bg-black/20 rounded-lg px-3 py-2">
+                    <div>
+                      <p className="text-white text-sm font-medium">{item.product_name}</p>
+                      <p className="text-gray-500 text-xs">{item.stock} in stock · {item.batches.length} batch{item.batches.length !== 1 ? 'es' : ''} affected</p>
+                    </div>
+                    <span className={`text-xs font-bold ${urgencyColor}`}>{label}</span>
+                  </div>
+                )
+              })}
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Header */}
       <div data-tour="prod-header" className="flex flex-col lg:flex-row lg:items-center lg:justify-between space-y-4 lg:space-y-0">
         <div>
@@ -406,6 +468,13 @@ const ProductsManagement = ({ onRefresh, user }) => {
           >
             <RefreshCw className="h-4 w-4" />
             <span>Refresh</span>
+          </button>
+          <button
+            onClick={() => setShowScanReceive(true)}
+            className="flex items-center space-x-2 px-4 py-2 bg-[#2A2A2A] text-gray-200 rounded-lg hover:bg-[#3A3A3A] transition-colors text-sm border border-[#3A3A3A]"
+          >
+            <ScanLine className="h-4 w-4" />
+            <span>Scan & Receive</span>
           </button>
           <button
             onClick={() => setShowCreateModal(true)}
@@ -481,6 +550,64 @@ const ProductsManagement = ({ onRefresh, user }) => {
             <ShoppingCart className="h-8 w-8 text-[var(--color-primary)] opacity-50" />
           </div>
         </div>
+      </div>
+
+      {/* Stock Activity Log */}
+      <div className="bg-[#1A1A1A] rounded-lg border border-[#2A2A2A]/50 shadow-sm overflow-hidden">
+        <button
+          onClick={() => setShowStockActivity(!showStockActivity)}
+          className="w-full flex items-center justify-between p-4 hover:bg-[#222222] transition-colors"
+        >
+          <div className="flex items-center space-x-3">
+            <div className="p-2 bg-green-500/20 rounded-lg">
+              <TrendingUp className="h-5 w-5 text-green-400" />
+            </div>
+            <div className="text-left">
+              <h3 className="text-white font-semibold">Stock Activity Log</h3>
+              <p className="text-sm text-gray-400">All stock receives and movements</p>
+            </div>
+          </div>
+          {showStockActivity ? <ChevronUp className="h-5 w-5 text-gray-400" /> : <ChevronDown className="h-5 w-5 text-gray-400" />}
+        </button>
+
+        {showStockActivity && (
+          <div className="border-t border-[#2A2A2A]/50 p-4">
+            {stockMovements.length === 0 ? (
+              <div className="text-center py-8">
+                <TrendingUp className="h-12 w-12 text-gray-600 mx-auto mb-3" />
+                <p className="text-gray-400">No stock movements yet</p>
+                <p className="text-sm text-gray-500 mt-1">Receiving stock will appear here</p>
+              </div>
+            ) : (
+              <div className="space-y-2 max-h-96 overflow-y-auto">
+                {stockMovements.map((m) => {
+                  const isIn = m.quantity_change > 0
+                  const typeLabel = m.type === 'received' ? 'Received' : m.type === 'received_from_order' ? 'From Order' : m.type === 'sold' ? 'Sold' : m.type === 'written_off' ? 'Write-off' : 'Adjusted'
+                  const typeColor = isIn ? 'text-green-400 bg-green-500/10 border-green-500/20' : 'text-red-400 bg-red-500/10 border-red-500/20'
+                  return (
+                    <div key={m._id} className={`flex items-center justify-between p-3 rounded-lg border ${typeColor}`}>
+                      <div className="flex items-center gap-3 min-w-0">
+                        <span className={`text-lg font-bold flex-shrink-0 ${isIn ? 'text-green-400' : 'text-red-400'}`}>
+                          {isIn ? '+' : ''}{m.quantity_change}
+                        </span>
+                        <div className="min-w-0">
+                          <p className="text-white text-sm font-medium truncate">{m.product_name}</p>
+                          <p className="text-gray-500 text-xs">
+                            {typeLabel}{m.reference_id ? ` · ${m.reference_id}` : ''}
+                            {' · '}{m.quantity_before} → {m.quantity_after}
+                          </p>
+                        </div>
+                      </div>
+                      <span className="text-gray-600 text-xs flex-shrink-0 ml-2">
+                        {new Date(m.created_at).toLocaleDateString('en-PH', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                      </span>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Product Sales History */}
@@ -1341,6 +1468,13 @@ const ProductsManagement = ({ onRefresh, user }) => {
       </Modal>
 
       <WalkthroughOverlay steps={productsManagementSteps} isVisible={showTutorial} onComplete={() => setShowTutorial(false)} onSkip={() => setShowTutorial(false)} />
+
+      <BarcodeReceiveModal
+        isOpen={showScanReceive}
+        onClose={() => setShowScanReceive(false)}
+        branchId={user?.branch_id}
+        userId={user?._id}
+      />
     </div>
   )
 }

@@ -880,14 +880,15 @@ export const getAvailableSlots = query({
 
     if (barbers.length === 0) return { slots: [] };
 
-    // 3. Today's date info
-    const todayDate = new Date().toISOString().split("T")[0];
-    const dayIndex = new Date().getDay(); // 0=Sun
+    // 3. Today's date info — Philippines timezone (UTC+8)
+    const nowUtc = new Date();
+    const nowPHT = new Date(nowUtc.getTime() + 8 * 60 * 60 * 1000);
+    const todayDate = nowPHT.toISOString().split("T")[0]; // YYYY-MM-DD in PHT
+    const dayIndex = nowPHT.getUTCDay(); // 0=Sun in PHT
     const dayKey = DOW_KEYS[dayIndex];
 
-    // Current time in minutes (local, approximate — clients handle TZ)
-    const nowMinutes =
-      new Date().getHours() * 60 + new Date().getMinutes();
+    // Current time in minutes — Philippines timezone (UTC+8)
+    const nowMinutes = nowPHT.getUTCHours() * 60 + nowPHT.getUTCMinutes();
 
     // 4. Fetch today's bookings
     let allBookings: any[] = [];
@@ -942,11 +943,10 @@ export const getAvailableSlots = query({
       // Collect occupied ranges for this barber
       const occupied: Array<{ start: number; end: number }> = [];
 
-      // From bookings
+      // From bookings — block only the actual booking time range
       for (const bk of todaysBookings) {
         if (String(bk.barber) !== String(barber._id)) continue;
         const bkStart = timeToMinutes(bk.time?.substring(0, 5) || "00:00");
-        // Use service duration if available, default 30
         let bkDuration = 30;
         if (bk.service) {
           try {
