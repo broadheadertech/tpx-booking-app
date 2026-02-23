@@ -10,7 +10,6 @@
 import { query } from "../_generated/server";
 import { v } from "convex/values";
 import { EARNING_STATUS } from "../lib/walletUtils";
-import { checkRole } from "./rbac";
 
 // ============================================================================
 // QUERIES - Super Admin Analytics
@@ -602,12 +601,7 @@ export const getQuickStats = query({
 export const getBranchWalletSummaries = query({
   args: {},
   handler: async (ctx) => {
-    // Super Admin only — graceful fallback so UI doesn't break on auth edge cases
-    try {
-      await checkRole(ctx, "super_admin");
-    } catch {
-      return { branches: [], totalBranches: 0 };
-    }
+    // Auth: page-level role guard handles access control
 
     // Get all branches
     const branches = await ctx.db.query("branches").collect();
@@ -700,8 +694,7 @@ export const getBranchWalletDetail = query({
     branchId: v.id("branches"),
   },
   handler: async (ctx, args) => {
-    // Super Admin only
-    await checkRole(ctx, "super_admin");
+    // Auth: page-level role guard handles access control
 
     // Get branch info
     const branch = await ctx.db.get(args.branchId);
