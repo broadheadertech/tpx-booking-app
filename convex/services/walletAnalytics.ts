@@ -674,17 +674,12 @@ export const getBranchWalletSummaries = query({
       };
     });
 
-    // Filter out branches with no wallet activity AND no prepaid wallet
-    const activeBranches = summaries.filter(
-      (s) => s.transactionCount > 0 || s.walletTotalToppedUp > 0
-    );
-
     // Sort by total earnings descending by default
-    activeBranches.sort((a, b) => b.totalEarnings - a.totalEarnings);
+    summaries.sort((a, b) => b.totalEarnings - a.totalEarnings);
 
     return {
-      branches: activeBranches,
-      totalBranches: activeBranches.length,
+      branches: summaries,
+      totalBranches: summaries.length,
     };
   },
 });
