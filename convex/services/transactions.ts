@@ -4,6 +4,7 @@ import { Id } from "../_generated/dataModel";
 import { api } from "../_generated/api";
 import { throwUserError, ERROR_CODES, validateInput } from "../utils/errors";
 import { toStorageFormat } from "../lib/points";
+import { logAudit } from "./auditLogs";
 // Helper function to get or create a walk-in customer
 async function getOrCreateWalkInCustomer(ctx: any, branch_id: Id<"branches">, customerName?: string, customerPhone?: string): Promise<Id<"users"> | undefined> {
   // Retry mechanism for walk-in customer creation
@@ -186,6 +187,49 @@ export const createTransaction = mutation({
         if (productDoc.stock < product.quantity) {
           throwUserError(ERROR_CODES.PRODUCT_OUT_OF_STOCK, `Insufficient stock for ${product.product_name}`, `Only ${productDoc.stock} items available.`);
         }
+      }
+    }
+
+    // Validate voucher if applied (defense-in-depth)
+    if (args.voucher_applied) {
+      const voucher = await ctx.db.get(args.voucher_applied);
+      if (!voucher) {
+        throwUserError(ERROR_CODES.VOUCHER_NOT_FOUND, "Voucher not found", "The applied voucher does not exist.");
+      }
+      if (voucher.expires_at < Date.now()) {
+        throwUserError(ERROR_CODES.VOUCHER_EXPIRED, "Voucher expired", "The applied voucher has expired.");
+      }
+      if (voucher.status && voucher.status !== "active") {
+        throwUserError(ERROR_CODES.VOUCHER_NOT_FOUND, "Voucher not active", "The applied voucher is not active.");
+      }
+
+      let customerIdForVoucher = args.customer as Id<"users"> | undefined;
+      if (!customerIdForVoucher && args.customer_email) {
+        const userByEmail = await ctx.db.query("users").withIndex("by_email", (q) => q.eq("email", args.customer_email!)).first();
+        if (userByEmail) customerIdForVoucher = userByEmail._id as Id<"users">;
+      }
+
+      if (customerIdForVoucher) {
+        const assignment = await ctx.db
+          .query("user_vouchers")
+          .withIndex("by_voucher_user", (q) =>
+            q.eq("voucher_id", args.voucher_applied!).eq("user_id", customerIdForVoucher!)
+          )
+          .first();
+
+        if (assignment && assignment.status === "redeemed") {
+          throwUserError(ERROR_CODES.VOUCHER_ALREADY_USED, "Voucher already redeemed", "This voucher has already been used.");
+        }
+      }
+
+      // Universal guard: check total redeemed count against max_uses
+      const allVoucherAssignments = await ctx.db
+        .query("user_vouchers")
+        .withIndex("by_voucher", (q) => q.eq("voucher_id", args.voucher_applied!))
+        .collect();
+      const totalRedeemed = allVoucherAssignments.filter((a) => a.status === "redeemed").length;
+      if (totalRedeemed >= voucher.max_uses) {
+        throwUserError(ERROR_CODES.VOUCHER_ALREADY_USED, "Voucher fully used", "This voucher has reached its maximum number of uses.");
       }
     }
 
@@ -631,7 +675,7 @@ export const createTransaction = mutation({
       }
     }
 
-    // Mark voucher as redeemed if applied (only for the attached customer)
+    // Mark voucher as redeemed if applied
     if (args.voucher_applied) {
       const voucherId = args.voucher_applied;
       console.log("[VOUCHER REDEMPTION] Starting voucher redemption process", {
@@ -645,7 +689,6 @@ export const createTransaction = mutation({
       // Resolve customer ID for redemption
       let customerIdForVoucher = args.customer as Id<"users"> | undefined;
       if (!customerIdForVoucher && args.customer_email) {
-        // Try resolving by email if provided
         console.log("[VOUCHER REDEMPTION] Attempting to resolve customer by email:", args.customer_email);
         const userByEmail = await ctx.db
           .query("users")
@@ -654,55 +697,67 @@ export const createTransaction = mutation({
         if (userByEmail) {
           customerIdForVoucher = userByEmail._id as Id<"users">;
           console.log("[VOUCHER REDEMPTION] Customer resolved by email:", customerIdForVoucher);
-        } else {
-          console.log("[VOUCHER REDEMPTION] No customer found with email:", args.customer_email);
         }
       }
 
-      if (customerIdForVoucher) {
-        console.log("[VOUCHER REDEMPTION] Looking for voucher assignment", {
-          voucherId,
-          customerIdForVoucher
-        });
+      let redeemed = false;
 
-        // Find the specific user's assignment for this voucher
+      // Case 1: Registered customer — try to find their specific assignment
+      if (customerIdForVoucher) {
         const userAssignment = await ctx.db
           .query("user_vouchers")
           .withIndex("by_voucher_user", (q) => q.eq("voucher_id", voucherId).eq("user_id", customerIdForVoucher!))
           .first();
-
-        console.log("[VOUCHER REDEMPTION] Voucher assignment found:", {
-          assignmentId: userAssignment?._id,
-          status: userAssignment?.status,
-          assigned_at: userAssignment?.assigned_at
-        });
 
         if (userAssignment && userAssignment.status === "assigned") {
           await ctx.db.patch(userAssignment._id, {
             status: "redeemed",
             redeemed_at: timestamp,
           });
-          console.log("[VOUCHER REDEMPTION] Voucher successfully redeemed", {
-            assignmentId: userAssignment._id,
-            voucherId,
-            customerIdForVoucher
+          redeemed = true;
+          console.log("[VOUCHER REDEMPTION] Redeemed via user assignment", { assignmentId: userAssignment._id });
+        } else if (!userAssignment) {
+          // Registered user but no assignment — create one as redeemed (staff applied voucher directly)
+          await ctx.db.insert("user_vouchers", {
+            voucher_id: voucherId,
+            user_id: customerIdForVoucher,
+            status: "redeemed",
+            assigned_at: timestamp,
+            redeemed_at: timestamp,
           });
-        } else {
-          console.warn(
-            "[VOUCHER REDEMPTION] Voucher assignment not found or not assignable for this customer",
-            JSON.stringify({ voucherId, customerIdForVoucher, status: userAssignment?.status, assignmentExists: !!userAssignment })
-          );
+          redeemed = true;
+          console.log("[VOUCHER REDEMPTION] Created redeemed assignment for registered user");
         }
-      } else {
-        console.warn(
-          "[VOUCHER REDEMPTION] Skipping voucher redemption because no customer is attached to the transaction",
-          JSON.stringify({
-            voucherId,
-            providedCustomer: args.customer,
-            providedEmail: args.customer_email,
-            providedName: args.customer_name
-          })
-        );
+      }
+
+      // Case 2: Walk-in OR registered user had no assignment — find any unredeemed assignment
+      if (!redeemed) {
+        const allAssignments = await ctx.db
+          .query("user_vouchers")
+          .withIndex("by_voucher", (q) => q.eq("voucher_id", voucherId))
+          .collect();
+
+        const unredeemed = allAssignments.find((a) => a.status === "assigned");
+        if (unredeemed) {
+          await ctx.db.patch(unredeemed._id, {
+            status: "redeemed",
+            redeemed_at: timestamp,
+          });
+          redeemed = true;
+          console.log("[VOUCHER REDEMPTION] Redeemed first available assignment", { assignmentId: unredeemed._id });
+        }
+      }
+
+      // Case 3: No assignments at all (flier/unclaimed voucher) — create a walk-in redemption record
+      if (!redeemed) {
+        await ctx.db.insert("user_vouchers", {
+          voucher_id: voucherId,
+          user_id: customerIdForVoucher, // may be undefined for walk-ins
+          status: "redeemed",
+          assigned_at: timestamp,
+          redeemed_at: timestamp,
+        });
+        console.log("[VOUCHER REDEMPTION] Created walk-in redemption for flier/unclaimed voucher");
       }
     }
 
@@ -956,6 +1011,31 @@ export const createTransaction = mutation({
       }
     }
 
+    await logAudit(ctx, {
+      user_id: args.processed_by as string,
+      branch_id: args.branch_id as string,
+      category: "transaction",
+      action: "transaction.created",
+      description: `Created ${txType} transaction ${transactionId} (${receiptNumber}) for ₱${args.total_amount} via ${args.payment_method}`,
+      target_type: "transaction",
+      target_id: transactionDocId as string,
+      metadata: {
+        transaction_id: transactionId,
+        receipt_number: receiptNumber,
+        transaction_type: txType,
+        total_amount: args.total_amount,
+        subtotal: args.subtotal,
+        discount_amount: args.discount_amount,
+        tax_amount: args.tax_amount,
+        payment_method: args.payment_method,
+        payment_status: args.payment_status,
+        services_count: args.services?.length || 0,
+        products_count: args.products?.length || 0,
+        customer_name: args.customer_name || "Registered Customer",
+        voucher_applied: args.voucher_applied ? true : false,
+      },
+    });
+
     return {
       transactionId: transactionDocId,
       transaction_id: transactionId,
@@ -1189,6 +1269,23 @@ export const updateTransactionStatus = mutation({
       updatedAt: timestamp
     });
 
+    await logAudit(ctx, {
+      user_id: transaction.processed_by as string,
+      branch_id: transaction.branch_id as string,
+      category: "transaction",
+      action: "transaction.status_updated",
+      description: `Updated transaction ${transaction.transaction_id} status to "${args.payment_status}"`,
+      target_type: "transaction",
+      target_id: args.transactionId as string,
+      metadata: {
+        transaction_id: transaction.transaction_id,
+        receipt_number: transaction.receipt_number,
+        previous_status: transaction.payment_status,
+        new_status: args.payment_status,
+        notes: args.notes,
+      },
+    });
+
     return { success: true };
   },
 });
@@ -1312,6 +1409,25 @@ export const refundTransaction = mutation({
         updatedAt: timestamp
       });
     }
+
+    await logAudit(ctx, {
+      user_id: args.processedBy as string,
+      branch_id: transaction.branch_id as string,
+      category: "transaction",
+      action: "transaction.refunded",
+      description: `Refunded transaction ${transaction.transaction_id} (₱${transaction.total_amount}) — Reason: ${args.refundReason}`,
+      target_type: "transaction",
+      target_id: args.transactionId as string,
+      metadata: {
+        transaction_id: transaction.transaction_id,
+        receipt_number: transaction.receipt_number,
+        refund_amount: transaction.total_amount,
+        refund_reason: args.refundReason,
+        payment_method: transaction.payment_method,
+        products_restored: transaction.products?.length || 0,
+        voucher_restored: transaction.voucher_applied ? true : false,
+      },
+    });
 
     return { success: true };
   },
@@ -1550,6 +1666,24 @@ export const updateDeliveryStatus = mutation({
     }
 
     await ctx.db.patch(args.transactionId, updates);
+
+    await logAudit(ctx, {
+      user_id: transaction.processed_by as string,
+      branch_id: transaction.branch_id as string,
+      category: "transaction",
+      action: "transaction.delivery_status_updated",
+      description: `Updated delivery status of ${transaction.transaction_id} from "${transaction.delivery_status || "pending"}" to "${args.delivery_status}"`,
+      target_type: "transaction",
+      target_id: args.transactionId as string,
+      metadata: {
+        transaction_id: transaction.transaction_id,
+        receipt_number: transaction.receipt_number,
+        previous_delivery_status: transaction.delivery_status || "pending",
+        new_delivery_status: args.delivery_status,
+        estimated_delivery: args.estimated_delivery,
+        notes: args.notes,
+      },
+    });
 
     return { success: true, delivery_status: args.delivery_status };
   },

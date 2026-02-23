@@ -396,8 +396,36 @@ const PaymentSuccess = () => {
           <p className="text-gray-400 mb-6">
             {displayBooking
               ? 'Your appointment has been successfully booked.'
-              : 'Your booking payment has been processed successfully.'}
+              : 'Your payment has been processed successfully.'}
           </p>
+
+          {/* Guidance when no booking details available */}
+          {!displayBooking && !paymentDetails && (
+            <div className="bg-[#1A1A1A] rounded-xl p-5 mb-6 text-left space-y-4">
+              <div className="flex items-start gap-3">
+                <div className="w-8 h-8 rounded-full bg-green-500/20 flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <CheckCircle className="w-4 h-4 text-green-400" />
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-white">Your booking is being processed</p>
+                  <p className="text-xs text-gray-400 mt-1">
+                    Your payment was received. Please check your bookings to confirm everything went through.
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-start gap-3">
+                <div className="w-8 h-8 rounded-full bg-blue-500/20 flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <Calendar className="w-4 h-4 text-blue-400" />
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-white">Check your booking</p>
+                  <p className="text-xs text-gray-400 mt-1">
+                    Go to <span className="text-[var(--color-primary)] font-medium">My Bookings</span> to view your appointment details and QR code.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* PayMongo Booking Details (Story 7.6) */}
           {displayBooking && (
@@ -545,11 +573,18 @@ const PaymentSuccess = () => {
             </button>
 
             <button
-              onClick={handleBackToHome}
+              onClick={() => navigate('/guest/booking')}
               className="w-full py-3 border border-[#555555] text-gray-300 font-semibold rounded-xl hover:bg-[#444444] transition-all duration-200 flex items-center justify-center space-x-2"
             >
               <ArrowLeft className="w-5 h-5" />
-              <span>Back to Home</span>
+              <span>Book Again</span>
+            </button>
+
+            <button
+              onClick={handleBackToHome}
+              className="w-full py-3 text-gray-500 font-medium rounded-xl hover:text-gray-300 transition-all duration-200 text-sm"
+            >
+              Back to Home
             </button>
           </div>
         </div>
@@ -557,7 +592,9 @@ const PaymentSuccess = () => {
         {/* Additional Info */}
         <div className="text-center mt-6">
           <p className="text-gray-500 text-sm">
-            You will receive a confirmation email shortly.
+            {displayBooking
+              ? 'You will receive a confirmation email shortly.'
+              : 'If your booking doesn\'t appear, please wait a moment and refresh.'}
           </p>
         </div>
       </div>

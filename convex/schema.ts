@@ -658,6 +658,7 @@ export default defineSchema({
     approved_by: v.optional(v.id("users")),
     approved_at: v.optional(v.number()),
     rejection_reason: v.optional(v.string()),
+    batch_id: v.optional(v.string()), // Groups batch-created flier vouchers
     createdAt: v.number(),
     updatedAt: v.number(),
     // Legacy fields for backward compatibility
@@ -668,12 +669,14 @@ export default defineSchema({
     .index("by_code", ["code"])
     .index("by_created_by", ["created_by"])
     .index("by_branch", ["branch_id"])
-    .index("by_branch_status", ["branch_id", "status"]),
+    .index("by_branch_status", ["branch_id", "status"])
+    .index("by_batch", ["batch_id"]),
 
   // User vouchers relationship table
   user_vouchers: defineTable({
     voucher_id: v.id("vouchers"),
     user_id: v.optional(v.id("users")), // Optional for staff redemptions
+    assignment_code: v.optional(v.string()), // Unique per-user redemption code (e.g., "ABC123-X7K9")
     status: v.union(v.literal("assigned"), v.literal("redeemed")),
     assigned_at: v.number(),
     redeemed_at: v.optional(v.number()),
@@ -682,7 +685,23 @@ export default defineSchema({
     .index("by_voucher", ["voucher_id"])
     .index("by_user", ["user_id"])
     .index("by_status", ["status"])
-    .index("by_voucher_user", ["voucher_id", "user_id"]),
+    .index("by_voucher_user", ["voucher_id", "user_id"])
+    .index("by_assignment_code", ["assignment_code"]),
+
+  // Voucher send requests — staff submits, branch_admin approves
+  voucher_send_requests: defineTable({
+    voucher_id: v.id("vouchers"),
+    recipient_ids: v.array(v.id("users")),
+    requested_by: v.id("users"),
+    branch_id: v.id("branches"),
+    status: v.union(v.literal("pending"), v.literal("approved"), v.literal("rejected")),
+    rejection_reason: v.optional(v.string()),
+    approved_by: v.optional(v.id("users")),
+    approved_at: v.optional(v.number()),
+    createdAt: v.number(),
+  })
+    .index("by_branch_status", ["branch_id", "status"])
+    .index("by_voucher", ["voucher_id"]),
 
   // Sessions table for authentication
   sessions: defineTable({
@@ -3796,4 +3815,40 @@ export default defineSchema({
     .index("by_branch", ["branch_id"])
     .index("by_branch_status", ["branch_id", "status"])
     .index("by_requested_by", ["requested_by"]),
+
+  // ============================================================================
+  // SYSTEM AUDIT LOGS — Comprehensive action tracking
+  // ============================================================================
+  // Tracks every user action for backtracking, compliance, and debugging.
+  // SA sees all logs; BA sees only their branch logs.
+  // ============================================================================
+
+  audit_logs: defineTable({
+    // Who performed the action
+    user_id: v.optional(v.id("users")),
+    user_name: v.optional(v.string()),   // Denormalized for fast display
+    user_role: v.optional(v.string()),   // Role at time of action
+
+    // Where it happened
+    branch_id: v.optional(v.id("branches")),
+    branch_name: v.optional(v.string()), // Denormalized
+
+    // What happened
+    category: v.string(),  // auth, booking, transaction, payment, product, inventory, voucher, user, settings, finance
+    action: v.string(),    // e.g. "booking.created", "transaction.completed", "user.role_changed"
+    description: v.string(), // Human-readable summary: "John created booking #1234"
+
+    // Context
+    target_type: v.optional(v.string()),  // "booking", "transaction", "user", "product", etc.
+    target_id: v.optional(v.string()),    // The ID of the affected record
+    metadata: v.optional(v.any()),        // Additional JSON payload (old/new values, amounts, etc.)
+
+    // Timestamp
+    created_at: v.number(),
+  })
+    .index("by_created_at", ["created_at"])
+    .index("by_branch", ["branch_id", "created_at"])
+    .index("by_category", ["category", "created_at"])
+    .index("by_user", ["user_id", "created_at"])
+    .index("by_action", ["action", "created_at"]),
 });

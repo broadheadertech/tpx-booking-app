@@ -44,6 +44,9 @@ const SendVoucherModal = ({ isOpen, onClose, voucher }) => {
   const [sentCount, setSentCount] = useState(0);
   const [qrCodeUrl, setQrCodeUrl] = useState("");
   const dropdownRef = useRef(null);
+  const createSendRequestMutation = useMutation(api.services.vouchers.createSendRequest);
+
+  const isBranchAdminOrHigher = user?.role === "branch_admin" || user?.role === "super_admin" || user?.role === "admin_staff" || user?.role === "it_admin";
 
   // Using centralized email service for voucher emails
 
@@ -159,6 +162,31 @@ const SendVoucherModal = ({ isOpen, onClose, voucher }) => {
     setSelectedUsers([]);
   };
 
+  // Staff: submit send request for branch_admin approval
+  const submitForApproval = async () => {
+    if (selectedUsers.length === 0) {
+      setErrorModal({ title: "No Users Selected", message: "Please select at least one user." });
+      return;
+    }
+    setIsSending(true);
+    try {
+      const recipientIds = selectedUsers.map((u) => u._id || u.id);
+      await createSendRequestMutation({
+        voucher_id: voucher._id,
+        recipient_ids: recipientIds,
+        requested_by: user._id || user.id,
+        branch_id: user.branch_id,
+      });
+      setSuccessDetails(selectedUsers.map((u) => `${u.username} (${u.email})`));
+      setShowSuccessModal(true);
+    } catch (error) {
+      console.error("Failed to submit send request:", error);
+      setErrorModal({ title: "Submission Failed", message: error.message || "Failed to submit send request." });
+    } finally {
+      setIsSending(false);
+    }
+  };
+
   const sendVoucherEmails = async () => {
     if (selectedUsers.length === 0) {
       setErrorModal({
@@ -197,7 +225,7 @@ const SendVoucherModal = ({ isOpen, onClose, voucher }) => {
           if (!staffId)
             throw new Error("Invalid staff ID (you must be logged in)");
 
-          // Step 1: Assign voucher to user via Convex
+          // Step 1: Assign voucher to user via Convex (returns unique assignment code)
           const assignData = {
             code: voucher.code,
             user_id: userId,
@@ -205,16 +233,17 @@ const SendVoucherModal = ({ isOpen, onClose, voucher }) => {
           };
 
           console.log("Assigning voucher to user:", assignData);
-          await assignVoucherMutation(assignData);
+          const assignResult = await assignVoucherMutation(assignData);
+          const assignmentCode = assignResult.assignmentCode || voucher.code;
           console.log(
-            `Voucher ${voucher.code} assigned to ${selectedUser.username}`
+            `Voucher ${voucher.code} assigned to ${selectedUser.username} with code: ${assignmentCode}`
           );
 
-          // Step 2: Generate personalized QR code for this user
+          // Step 2: Generate personalized QR code with unique assignment code
           const personalizedQrData = {
             voucherId: voucher.id,
             username: selectedUser.username,
-            code: voucher.code,
+            code: assignmentCode, // Unique per-user assignment code
             value: voucher.value,
             expires_at: voucher.expires_at,
             type: "voucher",
@@ -259,7 +288,7 @@ const SendVoucherModal = ({ isOpen, onClose, voucher }) => {
           const voucherEmailData = {
             email: selectedUser.email,
             recipientName: selectedUser.nickname || selectedUser.username,
-            voucherCode: voucher.code,
+            voucherCode: assignmentCode, // Send unique assignment code, not generic voucher code
             voucherValue: `₱${parseFloat(voucher.value).toFixed(2)}`,
             pointsRequired: voucher.points_required || 0,
             expiresAt: new Date(voucher.expires_at).toLocaleDateString(),
@@ -527,19 +556,23 @@ const SendVoucherModal = ({ isOpen, onClose, voucher }) => {
             </button>
             <button
               type="button"
-              onClick={sendVoucherEmails}
+              onClick={isBranchAdminOrHigher ? sendVoucherEmails : submitForApproval}
               disabled={selectedUsers.length === 0 || isSending}
-              className="flex-1 h-9 bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-accent)] text-white rounded-lg font-medium hover:shadow-lg disabled:opacity-50 transition-all text-sm flex items-center justify-center gap-1.5"
+              className={`flex-1 h-9 text-white rounded-lg font-medium hover:shadow-lg disabled:opacity-50 transition-all text-sm flex items-center justify-center gap-1.5 ${
+                isBranchAdminOrHigher
+                  ? "bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-accent)]"
+                  : "bg-gradient-to-r from-yellow-600 to-yellow-500"
+              }`}
             >
               {isSending ? (
                 <>
                   <div className="animate-spin rounded-full h-3 w-3 border-2 border-transparent border-t-white"></div>
-                  Sending...
+                  {isBranchAdminOrHigher ? "Sending..." : "Submitting..."}
                 </>
               ) : (
                 <>
                   <Mail className="w-3.5 h-3.5" />
-                  Send to {selectedUsers.length}
+                  {isBranchAdminOrHigher ? `Send to ${selectedUsers.length}` : `Submit for Approval (${selectedUsers.length})`}
                 </>
               )}
             </button>
@@ -550,8 +583,10 @@ const SendVoucherModal = ({ isOpen, onClose, voucher }) => {
       <SuccessModal
         isOpen={showSuccessModal}
         onClose={handleSuccessModalClose}
-        title="Vouchers Sent Successfully!"
-        message={`Successfully assigned vouchers and sent ${successDetails.length} emails.`}
+        title={isBranchAdminOrHigher ? "Vouchers Sent Successfully!" : "Send Request Submitted!"}
+        message={isBranchAdminOrHigher
+          ? `Successfully assigned vouchers and sent ${successDetails.length} emails.`
+          : `Send request for ${successDetails.length} recipient(s) has been submitted for approval. Your branch admin will review and approve.`}
         details={successDetails}
       />
 

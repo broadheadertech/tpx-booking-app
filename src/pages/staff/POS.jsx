@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react'
-import { ArrowLeft, User, UserPlus, QrCode, CreditCard, Receipt, Trash2, Plus, Minus, Search, Scissors, Package, Gift, Calculator, CheckCircle, Grid3X3, List, ChevronLeft, ChevronRight, X, AlertCircle, Banknote, Store, Calendar, Clock, ChevronDown, ChevronUp, Filter, ShoppingBag, History, HelpCircle } from 'lucide-react'
+import { ArrowLeft, User, UserPlus, QrCode, CreditCard, Receipt, Trash2, Plus, Minus, Search, Scissors, Package, Gift, Calculator, CheckCircle, Grid3X3, List, ChevronLeft, ChevronRight, X, AlertCircle, Banknote, Store, Calendar, Clock, ChevronDown, ChevronUp, Filter, ShoppingBag, History, HelpCircle, Ticket } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { useQuery, useMutation } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
@@ -93,6 +93,11 @@ const POS = () => {
   const [expandedSection, setExpandedSection] = useState('catalog') // 'barber', 'customer', 'catalog'
   const [isMobile, setIsMobile] = useState(window.innerWidth < 1024)
 
+  // Voucher picker states
+  const [showVoucherPicker, setShowVoucherPicker] = useState(false)
+  const [voucherCodeInput, setVoucherCodeInput] = useState('')
+  const [applyingVoucher, setApplyingVoucher] = useState(false)
+
   const itemsPerPage = 9 // For card view
   const tableItemsPerPage = 15 // For table view
 
@@ -139,6 +144,7 @@ const POS = () => {
   const updateBookingStatus = useMutation(api.services.bookings.updateBooking)
   const createUser = useMutation(api.services.auth.createUser)
   const markBookingComplete = useMutation(api.services.bookings.markBookingComplete) // Story 8.3
+  const validateVoucherForPOS = useMutation(api.services.vouchers.validateVoucherForPOS)
 
   // Query for today's bookings with payment status (Story 8.4 - FR17)
   const todaysBookings = useQuery(
@@ -150,6 +156,17 @@ const POS = () => {
     currentTransaction.voucher_applied && typeof currentTransaction.voucher_applied === 'string' && /[A-Z]/.test(currentTransaction.voucher_applied) && !/[a-z]/.test(currentTransaction.voucher_applied)
       ? { code: currentTransaction.voucher_applied }
       : "skip"
+  )
+
+  // Available branch vouchers for manual selection
+  const branchVouchers = useQuery(
+    api.services.vouchers.getVouchersByBranch,
+    user?.branch_id ? { branch_id: user.branch_id } : "skip"
+  ) || []
+  // Filter to only active, not expired, with remaining uses
+  const availableVouchers = branchVouchers.filter(v =>
+    v.status === 'active' && !v.isExpired && !v.isFullyRedeemed && v.availableCount > 0
+    && !v.hasPreAssignedUsers // Pre-assigned vouchers require unique code, not base code
   )
 
   // Query for product transaction history
@@ -1003,15 +1020,8 @@ const POS = () => {
       console.log('Current transaction voucher_applied:', currentTransaction.voucher_applied)
       console.log('Current transaction voucher_applied type:', typeof currentTransaction.voucher_applied)
 
-      // Handle voucher ID conversion if needed
-      let voucherApplied = currentTransaction.voucher_applied
-      if (typeof voucherApplied === 'string') {
-        const looksLikeConvexId = voucherApplied.includes(':')
-        if (!looksLikeConvexId && getVoucherByCode?._id) {
-          console.log('Converting voucher code to ID via query:', voucherApplied)
-          voucherApplied = getVoucherByCode._id
-        }
-      }
+      // voucher_applied is already a Convex ID (set by handleApplyVoucherByCode/handleVoucherScanned)
+      const voucherApplied = currentTransaction.voucher_applied || undefined
 
       // Validate all required fields before creating transaction
       if (!resolvedBranchId) {
@@ -1044,9 +1054,7 @@ const POS = () => {
         products: currentTransaction.products.length > 0 ? currentTransaction.products : undefined,
         subtotal: currentTransaction.subtotal,
         discount_amount: currentTransaction.discount_amount,
-        voucher_applied: (typeof voucherApplied === 'string' && !voucherApplied.includes(':'))
-          ? undefined
-          : voucherApplied || undefined,
+        voucher_applied: voucherApplied,
         tax_amount: currentTransaction.tax_amount,
         booking_fee: currentTransaction.booking_fee,
         late_fee: currentTransaction.late_fee,
@@ -1254,35 +1262,112 @@ const POS = () => {
     }))
   }
 
-  // Handle voucher scanning with discount application
-  const handleVoucherScanned = (voucher) => {
-    console.log('Voucher scanned:', voucher) // Debug log
+  // Handle voucher scanning with discount application (backend-validated)
+  const handleVoucherScanned = async (voucher) => {
+    console.log('Voucher scanned:', voucher)
 
-    // Ensure we have a valid voucher ID
-    const voucherId = voucher._id || voucher.id
-    if (!voucherId) {
+    // One voucher per transaction guard
+    if (currentTransaction.voucher_applied) {
       setAlertModal({
         show: true,
-        title: 'Invalid Voucher',
-        message: 'Invalid voucher: No ID found',
-        type: 'error'
+        title: 'Voucher Already Applied',
+        message: currentBooking
+          ? 'This booking already has a voucher applied from online booking. Only one voucher per transaction.'
+          : 'A voucher is already applied to this transaction. Only one voucher per transaction.',
+        type: 'warning'
       })
       return
     }
 
-    // Apply voucher discount
-    setCurrentTransaction(prev => ({
-      ...prev,
-      voucher_applied: voucherId,
-      discount_amount: voucher.value || 0
-    }))
-    setActiveModal(null)
-    setAlertModal({
-      show: true,
-      title: 'Voucher Applied',
-      message: `Voucher applied successfully! Discount: ₱${voucher.value || 0}`,
-      type: 'success'
-    })
+    const voucherCode = voucher.code
+    if (!voucherCode) {
+      setAlertModal({ show: true, title: 'Invalid Voucher', message: 'No voucher code found.', type: 'error' })
+      return
+    }
+
+    try {
+      // Backend validation before applying
+      const customerId = currentTransaction.customer?._id || currentTransaction.customer || currentBooking?.customer || null
+      const result = await validateVoucherForPOS({
+        code: voucherCode,
+        user_id: customerId || undefined,
+      })
+
+      if (!result.valid) {
+        setAlertModal({
+          show: true,
+          title: 'Voucher Invalid',
+          message: result.reason || 'This voucher cannot be applied.',
+          type: 'error'
+        })
+        return
+      }
+
+      // Apply validated voucher
+      setCurrentTransaction(prev => ({
+        ...prev,
+        voucher_applied: result.voucher._id,
+        discount_amount: result.voucher.value || 0
+      }))
+      setActiveModal(null)
+      setAlertModal({
+        show: true,
+        title: 'Voucher Applied',
+        message: `Voucher applied! Discount: ₱${result.voucher.value || 0}`,
+        type: 'success'
+      })
+    } catch (error) {
+      console.error('Voucher validation failed:', error)
+      setAlertModal({
+        show: true,
+        title: 'Voucher Error',
+        message: error.message || 'Failed to validate voucher.',
+        type: 'error'
+      })
+    }
+  }
+
+  // Apply voucher by code (manual input or selection from list)
+  const handleApplyVoucherByCode = async (code) => {
+    if (!code?.trim()) return
+    if (currentTransaction.voucher_applied) {
+      setAlertModal({ show: true, title: 'Voucher Already Applied', message: 'A voucher is already applied to this transaction.', type: 'warning' })
+      return
+    }
+    setApplyingVoucher(true)
+    try {
+      const customerId = currentTransaction.customer?._id || currentTransaction.customer || currentBooking?.customer || null
+      const result = await validateVoucherForPOS({
+        code: code.trim(),
+        user_id: customerId || undefined,
+      })
+      if (!result.valid) {
+        setAlertModal({ show: true, title: 'Voucher Invalid', message: result.reason || 'This voucher cannot be applied.', type: 'error' })
+        return
+      }
+      setCurrentTransaction(prev => ({
+        ...prev,
+        voucher_applied: result.voucher._id,
+        discount_amount: result.voucher.value || 0
+      }))
+      setVoucherCodeInput('')
+      setShowVoucherPicker(false)
+      setAlertModal({ show: true, title: 'Voucher Applied', message: `Voucher applied! Discount: ₱${result.voucher.value || 0}`, type: 'success' })
+    } catch (error) {
+      console.error('Voucher apply failed:', error)
+      setAlertModal({ show: true, title: 'Voucher Error', message: error.message || 'Failed to apply voucher.', type: 'error' })
+    } finally {
+      setApplyingVoucher(false)
+    }
+  }
+
+  // Remove applied voucher
+  const handleRemoveVoucher = () => {
+    if (currentBooking && currentTransaction.voucher_applied) {
+      setAlertModal({ show: true, title: 'Cannot Remove', message: 'This voucher was applied from an online booking and cannot be removed.', type: 'warning' })
+      return
+    }
+    setCurrentTransaction(prev => ({ ...prev, voucher_applied: null, discount_amount: 0 }))
   }
 
   // Show loading if user is not loaded yet
@@ -1424,19 +1509,24 @@ const POS = () => {
                 <div
                   onClick={(e) => {
                     e.stopPropagation()
+                    if (currentTransaction.voucher_applied) {
+                      setAlertModal({ show: true, title: 'Voucher Already Applied', message: currentBooking ? 'This booking already has a voucher applied.' : 'A voucher is already applied to this transaction.', type: 'warning' })
+                      return
+                    }
                     setActiveModal('scanner')
                   }}
-                  className="p-2 bg-[var(--color-primary)]/20 rounded-lg border border-[var(--color-primary)]/30 cursor-pointer hover:bg-[var(--color-primary)]/30 transition-colors"
+                  className={`p-2 rounded-lg border cursor-pointer transition-colors ${currentTransaction.voucher_applied ? 'bg-gray-500/20 border-gray-500/30 opacity-50' : 'bg-[var(--color-primary)]/20 border-[var(--color-primary)]/30 hover:bg-[var(--color-primary)]/30'}`}
                   role="button"
                   tabIndex={0}
                   onKeyPress={(e) => {
                     if (e.key === 'Enter' || e.key === ' ') {
                       e.stopPropagation()
+                      if (currentTransaction.voucher_applied) return
                       setActiveModal('scanner')
                     }
                   }}
                 >
-                  <QrCode className="w-4 h-4 text-[var(--color-primary)]" />
+                  <QrCode className={`w-4 h-4 ${currentTransaction.voucher_applied ? 'text-gray-500' : 'text-[var(--color-primary)]'}`} />
                 </div>
                 <ChevronRight className="w-5 h-5 text-gray-400" />
               </div>
@@ -1832,8 +1922,25 @@ const POS = () => {
             <div>
               <p className="text-xs text-gray-400">Total Amount</p>
               <p className="text-2xl font-bold text-white">₱{currentTransaction.total_amount.toFixed(2)}</p>
-              {currentTransaction.discount_amount > 0 && (
-                <p className="text-xs text-green-400">-₱{currentTransaction.discount_amount.toFixed(2)} discount</p>
+              {currentTransaction.discount_amount > 0 ? (
+                <div className="flex items-center text-xs text-green-400">
+                  <span>-₱{currentTransaction.discount_amount.toFixed(2)} discount</span>
+                  {currentBooking && currentTransaction.voucher_applied && (
+                    <span className="text-blue-400 ml-1">(from booking)</span>
+                  )}
+                  {currentTransaction.voucher_applied && !currentBooking && (
+                    <button onClick={handleRemoveVoucher} className="ml-1.5 text-red-400 hover:text-red-300">
+                      <X className="w-3 h-3" />
+                    </button>
+                  )}
+                </div>
+              ) : !currentTransaction.voucher_applied && (
+                <button
+                  onClick={() => setShowVoucherPicker(!showVoucherPicker)}
+                  className="text-[10px] text-[var(--color-primary)] flex items-center gap-1"
+                >
+                  <Ticket className="w-3 h-3" /> Apply Voucher
+                </button>
               )}
               {currentTransaction.booking_fee > 0 && (
                 <p className="text-xs text-orange-400">+₱{currentTransaction.booking_fee.toFixed(2)} booking fee</p>
@@ -1851,6 +1958,47 @@ const POS = () => {
               {totalItems} {totalItems === 1 ? 'item' : 'items'}
             </button>
           </div>
+
+          {/* Mobile Voucher Picker */}
+          {showVoucherPicker && !currentTransaction.voucher_applied && (
+            <div className="px-3 space-y-2 p-2.5 bg-[#1A1A1A] rounded-lg border border-[#444444]">
+              <div className="flex gap-1.5">
+                <input
+                  type="text"
+                  placeholder="Enter voucher code..."
+                  value={voucherCodeInput}
+                  onChange={(e) => setVoucherCodeInput(e.target.value.toUpperCase())}
+                  onKeyDown={(e) => e.key === 'Enter' && handleApplyVoucherByCode(voucherCodeInput)}
+                  className="flex-1 h-8 px-2.5 text-xs bg-[#0F0F0F] border border-[#555555] rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-[var(--color-primary)] font-mono"
+                />
+                <button
+                  onClick={() => handleApplyVoucherByCode(voucherCodeInput)}
+                  disabled={!voucherCodeInput.trim() || applyingVoucher}
+                  className="px-3 h-8 bg-[var(--color-primary)] text-white text-xs rounded-lg hover:bg-[var(--color-accent)] disabled:opacity-50 transition-colors font-medium"
+                >
+                  {applyingVoucher ? '...' : 'Apply'}
+                </button>
+              </div>
+              {availableVouchers.length > 0 && (
+                <div className="max-h-32 overflow-y-auto space-y-1">
+                  {availableVouchers.map(v => (
+                    <button
+                      key={v._id}
+                      onClick={() => handleApplyVoucherByCode(v.code)}
+                      disabled={applyingVoucher}
+                      className="w-full flex items-center justify-between p-2 bg-[#222222] hover:bg-[var(--color-primary)]/10 rounded-lg border border-[#333333] hover:border-[var(--color-primary)]/30 transition-colors text-left disabled:opacity-50"
+                    >
+                      <div>
+                        <span className="text-xs font-mono text-[var(--color-primary)] font-bold">{v.code}</span>
+                        <span className="text-[10px] text-gray-500 ml-1.5">{v.availableCount} left</span>
+                      </div>
+                      <span className="text-xs font-bold text-green-400">{v.formattedValue}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Action Buttons Row */}
           <div className="grid grid-cols-2 gap-2">
@@ -2555,9 +2703,15 @@ const POS = () => {
                 <h3 className="text-lg font-bold text-white">Customer</h3>
                 <div className="flex space-x-2">
                   <button
-                    onClick={() => setActiveModal('scanner')}
-                    className="p-2 bg-[var(--color-primary)]/20 text-[var(--color-primary)] rounded-lg hover:bg-[var(--color-primary)]/30 transition-colors border border-[var(--color-primary)]/30"
-                    title="Scan QR"
+                    onClick={() => {
+                      if (currentTransaction.voucher_applied) {
+                        setAlertModal({ show: true, title: 'Voucher Already Applied', message: currentBooking ? 'This booking already has a voucher applied.' : 'A voucher is already applied to this transaction.', type: 'warning' })
+                        return
+                      }
+                      setActiveModal('scanner')
+                    }}
+                    className={`p-2 rounded-lg transition-colors border ${currentTransaction.voucher_applied ? 'bg-gray-500/20 text-gray-500 border-gray-500/30 opacity-50 cursor-not-allowed' : 'bg-[var(--color-primary)]/20 text-[var(--color-primary)] hover:bg-[var(--color-primary)]/30 border-[var(--color-primary)]/30'}`}
+                    title={currentTransaction.voucher_applied ? "Voucher already applied" : "Scan QR"}
                   >
                     <QrCode className="w-4 h-4" />
                   </button>
@@ -3053,10 +3207,89 @@ const POS = () => {
                   <span>Subtotal:</span>
                   <span className="text-white">₱{currentTransaction.subtotal.toFixed(2)}</span>
                 </div>
-                {currentTransaction.discount_amount > 0 && (
+                {/* Voucher / Discount */}
+                {currentTransaction.discount_amount > 0 ? (
                   <div className="flex justify-between text-green-400">
-                    <span>Discount:</span>
+                    <div className="flex items-center">
+                      <span>
+                        Discount
+                        {currentBooking && currentTransaction.voucher_applied && (
+                          <span className="text-blue-400 text-xs ml-1">(from booking)</span>
+                        )}
+                        :
+                      </span>
+                      {currentTransaction.voucher_applied && !currentBooking && (
+                        <button
+                          onClick={handleRemoveVoucher}
+                          className="ml-2 bg-red-500/10 hover:bg-red-500/20 text-red-400 p-0.5 rounded transition-colors"
+                          title="Remove Voucher"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      )}
+                    </div>
                     <span>-₱{currentTransaction.discount_amount.toFixed(2)}</span>
+                  </div>
+                ) : (
+                  <div>
+                    {!currentTransaction.voucher_applied && (
+                      <div className="space-y-1.5">
+                        <button
+                          onClick={() => setShowVoucherPicker(!showVoucherPicker)}
+                          className="flex items-center gap-1.5 text-xs text-[var(--color-primary)] hover:text-[var(--color-accent)] transition-colors"
+                        >
+                          <Ticket className="w-3.5 h-3.5" />
+                          {showVoucherPicker ? 'Hide Vouchers' : 'Apply Voucher'}
+                        </button>
+                        {showVoucherPicker && (
+                          <div className="space-y-2 p-2.5 bg-[#1A1A1A] rounded-lg border border-[#444444]">
+                            {/* Manual code input */}
+                            <div className="flex gap-1.5">
+                              <input
+                                type="text"
+                                placeholder="Enter code..."
+                                value={voucherCodeInput}
+                                onChange={(e) => setVoucherCodeInput(e.target.value.toUpperCase())}
+                                onKeyDown={(e) => e.key === 'Enter' && handleApplyVoucherByCode(voucherCodeInput)}
+                                className="flex-1 h-7 px-2 text-xs bg-[#0F0F0F] border border-[#555555] rounded text-white placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-[var(--color-primary)] font-mono"
+                              />
+                              <button
+                                onClick={() => handleApplyVoucherByCode(voucherCodeInput)}
+                                disabled={!voucherCodeInput.trim() || applyingVoucher}
+                                className="px-2.5 h-7 bg-[var(--color-primary)] text-white text-xs rounded hover:bg-[var(--color-accent)] disabled:opacity-50 transition-colors font-medium"
+                              >
+                                {applyingVoucher ? '...' : 'Apply'}
+                              </button>
+                            </div>
+                            {/* Available vouchers list */}
+                            {availableVouchers.length > 0 && (
+                              <div>
+                                <p className="text-[10px] text-gray-500 mb-1">Available vouchers:</p>
+                                <div className="max-h-28 overflow-y-auto space-y-1">
+                                  {availableVouchers.map(v => (
+                                    <button
+                                      key={v._id}
+                                      onClick={() => handleApplyVoucherByCode(v.code)}
+                                      disabled={applyingVoucher}
+                                      className="w-full flex items-center justify-between p-1.5 bg-[#222222] hover:bg-[var(--color-primary)]/10 rounded border border-[#333333] hover:border-[var(--color-primary)]/30 transition-colors text-left disabled:opacity-50"
+                                    >
+                                      <div>
+                                        <span className="text-xs font-mono text-[var(--color-primary)] font-bold">{v.code}</span>
+                                        <span className="text-[10px] text-gray-500 ml-1.5">{v.availableCount} left</span>
+                                      </div>
+                                      <span className="text-xs font-bold text-green-400">{v.formattedValue}</span>
+                                    </button>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                            {availableVouchers.length === 0 && (
+                              <p className="text-[10px] text-gray-500 text-center py-1">No vouchers available for this branch</p>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 )}
                 {currentTransaction.booking_fee > 0 && (

@@ -785,7 +785,7 @@ const AICampaignGenerator = ({ customers, brandName, brandColor }) => {
         greeting: generatedCampaign.greeting.replace('{firstName}', 'Test User'),
         body: generatedCampaign.body.replace('{firstName}', 'Test User'),
         ctaText: generatedCampaign.cta,
-        ctaUrl: 'https://tipunox.broadheader.com/customer/booking',
+        ctaUrl: 'https://tipunoxph.com/customer/booking',
         footer: generatedCampaign.footer,
       })
 
@@ -829,7 +829,7 @@ const AICampaignGenerator = ({ customers, brandName, brandColor }) => {
           greeting: generatedCampaign.greeting.replace('{firstName}', firstName),
           body: generatedCampaign.body.replace(/{firstName}/g, firstName),
           ctaText: generatedCampaign.cta,
-          ctaUrl: 'https://tipunox.broadheader.com/customer/booking',
+          ctaUrl: 'https://tipunoxph.com/customer/booking',
           footer: generatedCampaign.footer,
         })
 

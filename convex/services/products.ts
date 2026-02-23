@@ -2,6 +2,7 @@ import { v } from "convex/values";
 import { mutation, query } from "../_generated/server";
 import { throwUserError, ERROR_CODES, validateInput } from "../utils/errors";
 import { Id } from "../_generated/dataModel";
+import { logAudit } from "./auditLogs";
 
 // Get all products
 export const getAllProducts = query({
@@ -154,7 +155,17 @@ export const createProduct = mutation({
     }
     
     const productId = await ctx.db.insert("products", productData);
-    
+
+    await logAudit(ctx, {
+      branch_id: args.branch_id as string,
+      category: "product",
+      action: "product.created",
+      description: `Created product "${args.name}" (SKU: ${args.sku}) with stock ${args.stock}`,
+      target_type: "product",
+      target_id: productId as string,
+      metadata: { sku: args.sku, price: args.price, cost: args.cost, stock: args.stock, category: args.category },
+    });
+
     return productId;
   },
 });
@@ -238,7 +249,17 @@ export const updateProduct = mutation({
     });
     
     await ctx.db.patch(id, patchData);
-    
+
+    await logAudit(ctx, {
+      branch_id: existingProduct.branch_id as string,
+      category: "product",
+      action: "product.updated",
+      description: `Updated product "${existingProduct.name}" (ID: ${id})`,
+      target_type: "product",
+      target_id: id as string,
+      metadata: { updates: patchData },
+    });
+
     return { success: true };
   },
 });
@@ -256,7 +277,17 @@ export const deleteProduct = mutation({
     }
     
     await ctx.db.delete(args.id);
-    
+
+    await logAudit(ctx, {
+      branch_id: product.branch_id as string,
+      category: "product",
+      action: "product.deleted",
+      description: `Deleted product "${product.name}" (SKU: ${product.sku})`,
+      target_type: "product",
+      target_id: args.id as string,
+      metadata: { name: product.name, sku: product.sku },
+    });
+
     return { success: true };
   },
 });
@@ -294,7 +325,17 @@ export const updateProductStock = mutation({
     }
     
     await ctx.db.patch(args.id, updates);
-    
+
+    await logAudit(ctx, {
+      branch_id: product.branch_id as string,
+      category: "product",
+      action: "product.stock_updated",
+      description: `Stock updated for "${product.name}": ${product.stock} -> ${newStock} (change: ${args.stockChange > 0 ? "+" : ""}${args.stockChange})`,
+      target_type: "product",
+      target_id: args.id as string,
+      metadata: { previousStock: product.stock, newStock, stockChange: args.stockChange },
+    });
+
     return { success: true, newStock };
   },
 });
@@ -751,6 +792,17 @@ export const receiveBranchStock = mutation({
         }
       }
     }
+
+    await logAudit(ctx, {
+      user_id: args.created_by as string,
+      branch_id: product.branch_id as string,
+      category: "product",
+      action: "product.branch_stock_received",
+      description: `Received ${args.quantity} units of "${product.name}" (batch: ${batchNumber}), stock ${product.stock} -> ${newStock}`,
+      target_type: "product",
+      target_id: args.product_id as string,
+      metadata: { batchId, batchNumber, quantity: args.quantity, previousStock: product.stock, newStock, order_number: args.order_number },
+    });
 
     return {
       success: true,

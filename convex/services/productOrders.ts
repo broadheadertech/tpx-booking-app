@@ -1,6 +1,7 @@
 import { v, ConvexError } from "convex/values";
 import { query, mutation } from "../_generated/server";
 import { api } from "../_generated/api";
+import { logAudit } from "./auditLogs";
 
 /**
  * Generate order number: PO-YYYY-XXXXX
@@ -197,6 +198,18 @@ export const createOrder = mutation({
       });
     } catch (e) { console.error("[PRODUCT_ORDERS] In-app notification failed:", e); }
 
+    await logAudit(ctx, {
+      user_id: args.requested_by as string,
+      branch_id: args.branch_id as string,
+      branch_name: branch.name,
+      category: "inventory",
+      action: "inventory.order_created",
+      description: `Created order #${orderNumber} with ${orderItems.length} items, total ₱${totalAmount.toLocaleString()}`,
+      target_type: "productOrder",
+      target_id: orderId as string,
+      metadata: { order_number: orderNumber, totalAmount, itemCount: orderItems.length },
+    });
+
     return {
       success: true,
       orderId,
@@ -383,6 +396,17 @@ export const approveOrder = mutation({
       });
     } catch (e) { console.error("[PRODUCT_ORDERS] Approval email failed:", e); }
 
+    await logAudit(ctx, {
+      user_id: args.approved_by as string,
+      branch_id: order.branch_id as string,
+      category: "inventory",
+      action: "inventory.order_approved",
+      description: `Approved order #${order.order_number}, total ₱${newTotal.toLocaleString()}`,
+      target_type: "productOrder",
+      target_id: args.order_id as string,
+      metadata: { order_number: order.order_number, newTotal, itemCount: updatedItems.length },
+    });
+
     return { success: true };
   },
 });
@@ -462,6 +486,17 @@ export const rejectOrder = mutation({
         },
       });
     } catch (e) { console.error("[PRODUCT_ORDERS] Rejection email failed:", e); }
+
+    await logAudit(ctx, {
+      user_id: args.rejected_by as string,
+      branch_id: order.branch_id as string,
+      category: "inventory",
+      action: "inventory.order_rejected",
+      description: `Rejected order #${order.order_number}: ${args.rejection_reason.trim()}`,
+      target_type: "productOrder",
+      target_id: args.order_id as string,
+      metadata: { order_number: order.order_number, rejection_reason: args.rejection_reason.trim() },
+    });
 
     return { success: true };
   },
@@ -570,6 +605,17 @@ export const shipOrder = mutation({
         },
       });
     } catch (e) { console.error("[PRODUCT_ORDERS] Shipment email failed:", e); }
+
+    await logAudit(ctx, {
+      user_id: args.shipped_by as string,
+      branch_id: order.branch_id as string,
+      category: "inventory",
+      action: "inventory.order_shipped",
+      description: `Shipped order #${order.order_number}`,
+      target_type: "productOrder",
+      target_id: args.order_id as string,
+      metadata: { order_number: order.order_number },
+    });
 
     return { success: true };
   },
@@ -748,6 +794,17 @@ export const receiveOrder = mutation({
       });
     } catch (e) { console.error("[PRODUCT_ORDERS] Delivery email failed:", e); }
 
+    await logAudit(ctx, {
+      user_id: args.received_by as string,
+      branch_id: order.branch_id as string,
+      category: "inventory",
+      action: "inventory.order_received",
+      description: `Received order #${order.order_number}`,
+      target_type: "productOrder",
+      target_id: args.order_id as string,
+      metadata: { order_number: order.order_number },
+    });
+
     return { success: true };
   },
 });
@@ -825,6 +882,17 @@ export const cancelOrder = mutation({
     await ctx.db.patch(args.order_id, {
       status: "cancelled",
       rejection_reason: args.reason?.trim() || "Cancelled by user",
+    });
+
+    await logAudit(ctx, {
+      user_id: args.cancelled_by as string,
+      branch_id: order.branch_id as string,
+      category: "inventory",
+      action: "inventory.order_cancelled",
+      description: `Cancelled order #${order.order_number}${args.reason ? `: ${args.reason.trim()}` : ""}`,
+      target_type: "productOrder",
+      target_id: args.order_id as string,
+      metadata: { order_number: order.order_number, reason: args.reason?.trim(), previous_status: order.status },
     });
 
     return { success: true };
@@ -1214,6 +1282,17 @@ export const markOrderAsPaid = mutation({
       payment_notes: args.payment_notes?.trim(),
     });
 
+    await logAudit(ctx, {
+      user_id: args.paid_by as string,
+      branch_id: order.branch_id as string,
+      category: "inventory",
+      action: "inventory.order_paid",
+      description: `Marked order #${order.order_number} as paid (₱${order.total_amount.toLocaleString()})`,
+      target_type: "productOrder",
+      target_id: args.order_id as string,
+      metadata: { order_number: order.order_number, total_amount: order.total_amount, payment_method: args.payment_method },
+    });
+
     return { success: true };
   },
 });
@@ -1582,6 +1661,17 @@ export const reconcileOrderReceipt = mutation({
       console.error("[PRODUCT_ORDERS] Delivery email failed:", e);
     }
 
+    await logAudit(ctx, {
+      user_id: args.received_by as string,
+      branch_id: order.branch_id as string,
+      category: "inventory",
+      action: "inventory.order_reconciled",
+      description: `Reconciled order #${order.order_number}${discrepancyItems.length > 0 ? ` with ${discrepancyItems.length} discrepancies` : ""}`,
+      target_type: "productOrder",
+      target_id: args.order_id as string,
+      metadata: { order_number: order.order_number, hasDiscrepancy: discrepancyItems.length > 0, discrepancyCount: discrepancyItems.length },
+    });
+
     return { success: true, hasDiscrepancy: discrepancyItems.length > 0 };
   },
 });
@@ -1637,6 +1727,17 @@ export const resolveDiscrepancy = mutation({
       resolved_at: Date.now(),
       resolution_notes: args.resolution_notes,
     });
+
+    await logAudit(ctx, {
+      user_id: args.resolved_by as string,
+      category: "inventory",
+      action: "inventory.discrepancy_resolved",
+      description: `Discrepancy ${args.resolution}: ${args.resolution_notes || "No notes"}`,
+      target_type: "shipmentDiscrepancy",
+      target_id: args.discrepancy_id as string,
+      metadata: { resolution: args.resolution, resolution_notes: args.resolution_notes },
+    });
+
     return { success: true };
   },
 });

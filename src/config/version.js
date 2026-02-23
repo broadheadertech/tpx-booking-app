@@ -15,8 +15,8 @@
  *   "breaking" — Breaking/major change (bumps MAJOR)
  */
 
-export const APP_VERSION = '1.1.0';
-export const LAST_DEPLOY = '2026-02-21';
+export const APP_VERSION = '2.0.0';
+export const LAST_DEPLOY = '2026-02-23';
 export const VERSION_INFO = {
   version: APP_VERSION,
   lastDeploy: LAST_DEPLOY,
@@ -28,6 +28,22 @@ export const VERSION_INFO = {
  * Each entry: { version, date, changes: [{ tag, text }] }
  */
 export const CHANGELOG = [
+  {
+    version: '2.0.0',
+    date: '2026-02-23',
+    changes: [
+      { tag: 'feature', text: 'Voucher system overhaul — backend validation, POS hardening, one-per-transaction enforcement' },
+      { tag: 'feature', text: 'Flier/batch voucher creation with custom name prefix (e.g., PROMO-XXXXXXXX)' },
+      { tag: 'feature', text: 'POS voucher picker — manual code entry + available vouchers list' },
+      { tag: 'feature', text: 'Create-then-Send voucher flow with email distribution' },
+      { tag: 'feature', text: 'Unique per-user assignment codes for digital voucher distribution' },
+      { tag: 'feature', text: 'Payment success page with booking guidance for guests and logged-in users' },
+      { tag: 'fix', text: 'Voucher reuse prevention — vouchers now properly marked as redeemed after payment' },
+      { tag: 'fix', text: 'Voucher infinite loop — walk-in can no longer claim pre-assigned voucher slots' },
+      { tag: 'fix', text: 'Email sending — fixed invalid "from" field causing Resend API errors' },
+      { tag: 'fix', text: 'Clerk auth — fixed factor-two redirect loop during sign-up/sign-in verification' },
+    ],
+  },
   {
     version: '1.1.0',
     date: '2026-02-21',

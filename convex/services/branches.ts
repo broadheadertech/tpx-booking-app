@@ -3,6 +3,7 @@ import { action, internalMutation, mutation, query } from "../_generated/server"
 import { Doc, Id } from "../_generated/dataModel";
 import { throwUserError, ERROR_CODES } from "../utils/errors";
 import { api, internal } from "../_generated/api";
+import { logAudit } from "./auditLogs";
 
 // Generate a unique branch code
 function generateBranchCode(name: string): string {
@@ -193,6 +194,15 @@ export const createBranch = mutation({
           updatedAt: Date.now(),
         });
       }
+
+      await logAudit(ctx, {
+        category: "settings",
+        action: "settings.branch_created",
+        description: `Created branch "${args.name.trim()}" (code: ${branch_code})`,
+        target_type: "branch",
+        target_id: branchId as string,
+        metadata: { branch_code, name: args.name.trim(), email: args.email.trim().toLowerCase() },
+      });
 
       return branchId;
     } catch (error: any) {
@@ -524,6 +534,17 @@ export const linkBranchToClerkOrg = mutation({
       clerk_org_id: args.clerk_org_id,
     });
 
+    await logAudit(ctx, {
+      branch_id: args.branchId as string,
+      branch_name: branch.name,
+      category: "settings",
+      action: "settings.branch_updated",
+      description: `Linked branch "${branch.name}" to Clerk org ${args.clerk_org_id}`,
+      target_type: "branch",
+      target_id: args.branchId as string,
+      metadata: { clerk_org_id: args.clerk_org_id },
+    });
+
     return args.branchId;
   },
 });
@@ -585,6 +606,18 @@ export const updateBranch = mutation({
     );
 
     await ctx.db.patch(id, updateData);
+
+    await logAudit(ctx, {
+      branch_id: id as string,
+      branch_name: branch.name,
+      category: "settings",
+      action: "settings.branch_updated",
+      description: `Updated branch "${branch.name}"`,
+      target_type: "branch",
+      target_id: id as string,
+      metadata: { updates: Object.keys(updateData).filter(k => k !== "updatedAt") },
+    });
+
     return id;
   },
 });
@@ -656,6 +689,17 @@ export const deleteBranch = mutation({
     }
 
     await ctx.db.delete(args.id);
+
+    await logAudit(ctx, {
+      branch_id: args.id as string,
+      branch_name: branch.name,
+      category: "settings",
+      action: "settings.branch_deleted",
+      description: `Deleted branch "${branch.name}"`,
+      target_type: "branch",
+      target_id: args.id as string,
+    });
+
     return args.id;
   },
 });
@@ -704,6 +748,18 @@ export const toggleBranchManualClose = mutation({
       manual_close_reason: args.is_closed ? (args.reason || "") : "",
       updatedAt: Date.now(),
     });
+
+    await logAudit(ctx, {
+      branch_id: args.branch_id as string,
+      branch_name: branch.name,
+      category: "settings",
+      action: args.is_closed ? "settings.branch_suspended" : "settings.branch_unsuspended",
+      description: `${args.is_closed ? "Manually closed" : "Reopened"} branch "${branch.name}"${args.reason ? `: ${args.reason}` : ""}`,
+      target_type: "branch",
+      target_id: args.branch_id as string,
+      metadata: { is_closed: args.is_closed, reason: args.reason },
+    });
+
     return args.branch_id;
   },
 });
@@ -730,6 +786,18 @@ export const updateBranchWeeklySchedule = mutation({
       weekly_schedule: args.weekly_schedule,
       updatedAt: Date.now(),
     });
+
+    await logAudit(ctx, {
+      branch_id: args.branch_id as string,
+      branch_name: branch.name,
+      category: "settings",
+      action: "settings.branch_updated",
+      description: `Updated weekly schedule for branch "${branch.name}"`,
+      target_type: "branch",
+      target_id: args.branch_id as string,
+      metadata: { weekly_schedule: args.weekly_schedule },
+    });
+
     return args.branch_id;
   },
 });
@@ -751,6 +819,18 @@ export const updateBranchClosedDates = mutation({
       closed_dates: args.closed_dates,
       updatedAt: Date.now(),
     });
+
+    await logAudit(ctx, {
+      branch_id: args.branch_id as string,
+      branch_name: branch.name,
+      category: "settings",
+      action: "settings.branch_updated",
+      description: `Updated closed dates for branch "${branch.name}" (${args.closed_dates.length} dates)`,
+      target_type: "branch",
+      target_id: args.branch_id as string,
+      metadata: { closed_dates_count: args.closed_dates.length },
+    });
+
     return args.branch_id;
   },
 });
@@ -801,6 +881,17 @@ export const toggleBranchStatus = mutation({
         });
       } catch (e) { console.error("[BRANCHES] In-app notification failed:", e); }
     }
+
+    await logAudit(ctx, {
+      branch_id: args.id as string,
+      branch_name: branch.name,
+      category: "settings",
+      action: goingOffline ? "settings.branch_suspended" : "settings.branch_unsuspended",
+      description: `${goingOffline ? "Suspended" : "Unsuspended"} branch "${branch.name}"`,
+      target_type: "branch",
+      target_id: args.id as string,
+      metadata: { is_active: !branch.is_active },
+    });
 
     return args.id;
   },

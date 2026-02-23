@@ -84,6 +84,7 @@ const TabNavigation = ({ tabs, activeTab, onTabChange }) => {
       wallet: Wallet,
       settlements: Banknote,
       audit_trail: History,
+      system_logs: Activity,
       wallet_analytics: Activity,
       customer_analytics: Target,
       default_services: Scissors,

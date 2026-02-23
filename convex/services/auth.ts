@@ -4,6 +4,7 @@ import { mutation, query, action, internalMutation } from "../_generated/server"
 import { throwUserError, ERROR_CODES, validateInput } from "../utils/errors";
 import { hashPassword, verifyPassword } from "../utils/password";
 import { requireAuthenticatedUser, getAuthenticatedUser } from "../lib/unifiedAuth";
+import { logAudit } from "./auditLogs";
 
 import { Resend } from 'resend';
 
@@ -86,6 +87,17 @@ export const registerUser = mutation({
     // Get the created user
     const user = await ctx.db.get(userId);
 
+    await logAudit(ctx, {
+      user_id: userId as string,
+      user_name: args.username,
+      category: "auth",
+      action: "auth.registered",
+      description: `New user registered: ${args.username} (${args.email}) with role ${args.role}`,
+      target_type: "user",
+      target_id: userId as string,
+      metadata: { email: args.email, role: args.role, branch_id: args.branch_id },
+    });
+
     return {
       userId,
       sessionToken,
@@ -135,6 +147,18 @@ export const loginUser = mutation({
       token: sessionToken,
       expiresAt: Date.now() + (30 * 24 * 60 * 60 * 1000),
       createdAt: Date.now(),
+    });
+
+    await logAudit(ctx, {
+      user_id: user._id as string,
+      user_name: user.username,
+      branch_id: user.branch_id as string | undefined,
+      category: "auth",
+      action: "auth.login",
+      description: `User logged in: ${user.username} (${user.email})`,
+      target_type: "user",
+      target_id: user._id as string,
+      metadata: { email: user.email, role: user.role },
     });
 
     return {
@@ -217,6 +241,16 @@ export const logoutUser = mutation({
     if (session) {
       await ctx.db.delete(session._id);
     }
+
+    await logAudit(ctx, {
+      user_id: session?.userId as string | undefined,
+      category: "auth",
+      action: "auth.logout",
+      description: `User logged out${session ? ` (session ${session._id})` : ""}`,
+      target_type: "user",
+      target_id: session?.userId as string | undefined,
+      metadata: { session_id: session?._id },
+    });
 
     return { success: true };
   },
@@ -419,6 +453,21 @@ export const updateUserProfile = mutation({
 
     // Return updated user
     const user = await ctx.db.get(currentUser._id);
+
+    await logAudit(ctx, {
+      user_id: currentUser._id as string,
+      user_name: currentUser.username,
+      branch_id: currentUser.branch_id as string | undefined,
+      category: "auth",
+      action: "user.updated",
+      description: `User profile updated: ${currentUser.username}`,
+      target_type: "user",
+      target_id: currentUser._id as string,
+      metadata: {
+        updated_fields: Object.keys(args).filter(k => k !== "sessionToken" && args[k as keyof typeof args] !== undefined),
+      },
+    });
+
     return {
       _id: user?._id,
       id: user?._id,
@@ -504,6 +553,18 @@ export const createUser = mutation({
 
     // Get the created user
     const user = await ctx.db.get(userId);
+
+    await logAudit(ctx, {
+      user_id: userId as string,
+      user_name: args.username,
+      branch_id: args.branch_id as string | undefined,
+      category: "auth",
+      action: "user.created",
+      description: `New user created: ${args.username} (${args.email}) with role ${args.role}`,
+      target_type: "user",
+      target_id: userId as string,
+      metadata: { email: args.email, role: args.role, branch_id: args.branch_id },
+    });
 
     return {
       _id: userId,
@@ -637,6 +698,16 @@ export const linkClerkToUser = mutation({
       clerk_user_id: args.clerk_user_id,
       migration_status: "completed",
       updatedAt: Date.now(),
+    });
+
+    await logAudit(ctx, {
+      user_id: args.userId as string,
+      category: "auth",
+      action: "auth.clerk_linked",
+      description: `Clerk account linked to user ${args.userId}`,
+      target_type: "user",
+      target_id: args.userId as string,
+      metadata: { clerk_user_id: args.clerk_user_id },
     });
   },
 });
@@ -937,6 +1008,17 @@ export const convertGuestToAccount = mutation({
       createdAt: now,
     });
 
+    await logAudit(ctx, {
+      user_id: existingUser._id as string,
+      user_name: args.username,
+      category: "auth",
+      action: "auth.guest_converted",
+      description: `Guest account converted to full account: ${args.email} (${existingUser.username} -> ${args.username})`,
+      target_type: "user",
+      target_id: existingUser._id as string,
+      metadata: { email: args.email, previous_username: existingUser.username, new_username: args.username },
+    });
+
     return {
       success: true,
       userId: existingUser._id,
@@ -1060,6 +1142,22 @@ export const updateUser = mutation({
 
     // Get and return updated user
     const user = await ctx.db.get(userId);
+
+    await logAudit(ctx, {
+      user_id: userId as string,
+      user_name: existingUser.username,
+      branch_id: (updateData.branch_id || existingUser.branch_id) as string | undefined,
+      category: "auth",
+      action: "user.updated",
+      description: `User updated by admin: ${existingUser.username} (${existingUser.email})`,
+      target_type: "user",
+      target_id: userId as string,
+      metadata: {
+        updated_fields: Object.keys(updateData).filter(k => (updateData as any)[k] !== undefined),
+        role_changed: updateData.role !== undefined ? { from: existingUser.role, to: updateData.role } : undefined,
+      },
+    });
+
     return {
       _id: user?._id,
       username: user?.username,
@@ -1098,6 +1196,18 @@ export const deleteUser = mutation({
 
     // Delete the user
     await ctx.db.delete(args.userId);
+
+    await logAudit(ctx, {
+      user_id: args.userId as string,
+      user_name: existingUser.username,
+      branch_id: existingUser.branch_id as string | undefined,
+      category: "auth",
+      action: "user.deleted",
+      description: `User deleted: ${existingUser.username} (${existingUser.email})`,
+      target_type: "user",
+      target_id: args.userId as string,
+      metadata: { email: existingUser.email, role: existingUser.role, username: existingUser.username },
+    });
 
     return { success: true };
   },
@@ -1242,7 +1352,7 @@ export const sendPasswordResetEmail = action({
     const primaryColor = branding?.primary_color || '#000000';
     const accentColor = branding?.accent_color || '#000000';
     const bgColor = branding?.bg_color || '#0A0A0A';
-    const brandName = branding?.display_name || '';
+    const brandName = branding?.display_name || 'TipunoX';
 
     // Email template content
     const subject = (template?.subject || 'Reset your {{brand_name}} password').replace(/\{\{brand_name\}\}/g, brandName);
@@ -1252,10 +1362,10 @@ export const sendPasswordResetEmail = action({
     const ctaText = template?.cta_text || 'Reset Password';
     const footerText = template?.footer_text || 'This link will expire in 15 minutes for your security. If you didn\'t request a password reset, you can safely ignore this email.';
 
-    const resetUrl = `https://tipunox.broadheader.com/auth/reset-password?token=${token}`;
+    const resetUrl = `https://tipunoxph.com/auth/reset-password?token=${token}`;
 
     const emailData = {
-      from: `${brandName} <no-reply@tipunox.broadheader.com>`,
+      from: `${brandName} <no-reply@tipunoxph.com>`,
       to: args.email,
       subject: subject,
       html: `
@@ -1568,6 +1678,19 @@ export const ensureUserFromClerk = mutation({
 
     if (existingByClerkId) {
       console.log("[EnsureUser] User already exists with clerk_user_id:", existingByClerkId._id);
+
+      await logAudit(ctx, {
+        user_id: existingByClerkId._id as string,
+        user_name: existingByClerkId.username,
+        branch_id: existingByClerkId.branch_id as string | undefined,
+        category: "auth",
+        action: "auth.clerk_sync",
+        description: `Clerk sync: existing user found for ${clerk_user_id}`,
+        target_type: "user",
+        target_id: existingByClerkId._id as string,
+        metadata: { clerk_user_id, email, sync_result: "exists" },
+      });
+
       return {
         _id: existingByClerkId._id,
         id: existingByClerkId._id,
@@ -1608,6 +1731,18 @@ export const ensureUserFromClerk = mutation({
         nickname: fullName, // Update with Clerk name if available
         avatar: image_url || existingByEmail.avatar, // Update avatar from Clerk
         updatedAt: Date.now(),
+      });
+
+      await logAudit(ctx, {
+        user_id: existingByEmail._id as string,
+        user_name: existingByEmail.username,
+        branch_id: existingByEmail.branch_id as string | undefined,
+        category: "auth",
+        action: "auth.clerk_sync",
+        description: `Clerk sync: ${wasGuest ? "guest converted" : "existing user linked"} for ${email}`,
+        target_type: "user",
+        target_id: existingByEmail._id as string,
+        metadata: { clerk_user_id, email, sync_result: wasGuest ? "guest_converted" : "linked", was_guest: wasGuest },
       });
 
       return {
@@ -1687,6 +1822,18 @@ export const ensureUserFromClerk = mutation({
     });
 
     const user = await ctx.db.get(userId);
+
+    await logAudit(ctx, {
+      user_id: userId as string,
+      user_name: uniqueUsername,
+      category: "auth",
+      action: "auth.clerk_sync",
+      description: `Clerk sync: new user created for ${email} (${clerk_user_id})`,
+      target_type: "user",
+      target_id: userId as string,
+      metadata: { clerk_user_id, email, sync_result: "created", nickname: fullName },
+    });
+
     return {
       _id: userId,
       id: userId,
@@ -1779,6 +1926,18 @@ export const adminSetUserRole = mutation({
       updatedAt: Date.now(),
     });
 
+    await logAudit(ctx, {
+      user_id: args.user_id as string,
+      user_name: user.username,
+      branch_id: user.branch_id as string | undefined,
+      category: "auth",
+      action: "user.role_changed",
+      description: `User role changed: ${user.username} from ${user.role} to ${args.role}`,
+      target_type: "user",
+      target_id: args.user_id as string,
+      metadata: { previous_role: user.role, new_role: args.role },
+    });
+
     return { success: true, userId: args.user_id, newRole: args.role };
   },
 });
@@ -1843,7 +2002,7 @@ export const sendVoucherEmailWithQR = action({
     // Extract branding colors (fallback to defaults)
     const primaryColor = branding?.primary_color || '#000000';
     const accentColor = branding?.accent_color || '#000000';
-    const brandName = branding?.display_name || '';
+    const brandName = branding?.display_name || 'TipunoX';
 
     // Lighter versions of primary color for backgrounds
     const primaryLight = `${primaryColor}1a`;
@@ -1877,7 +2036,7 @@ export const sendVoucherEmailWithQR = action({
     const qrImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(qrPayload)}`;
 
     const emailData = {
-      from: `${brandName} <no-reply@tipunox.broadheader.com>`,
+      from: `${brandName} <no-reply@tipunoxph.com>`,
       to: args.email,
       subject: subject,
       html: `
@@ -2113,11 +2272,12 @@ export const sendVoucherEmailWithQR = action({
       }
 
       // Production: Use Resend SDK
+      console.log('📧 Sending voucher email to:', args.email, 'from:', emailData.from);
       const result = await resend.emails.send(emailData as any);
 
       if (result.error) {
-        console.error('Voucher email service error:', result.error);
-        throwUserError(ERROR_CODES.OPERATION_FAILED, "Failed to send voucher email", "We encountered an issue sending the email. Please try again later.");
+        console.error('Voucher email service error:', JSON.stringify(result.error));
+        throwUserError(ERROR_CODES.OPERATION_FAILED, "Failed to send voucher email", `Email send failed: ${result.error.message || JSON.stringify(result.error)}`);
       }
 
       console.log('Voucher email sent successfully:', result);
@@ -2159,7 +2319,7 @@ export const sendBookingConfirmationEmail = action({
     const primaryColor = branding?.primary_color || '#000000';
     const accentColor = branding?.accent_color || '#000000';
     const bgColor = branding?.bg_color || '#0A0A0A';
-    const brandName = branding?.display_name || '';
+    const brandName = branding?.display_name || 'TipunoX';
 
     // Lighter versions of primary color for backgrounds
     const primaryLight = `${primaryColor}1a`;
@@ -2200,7 +2360,7 @@ export const sendBookingConfirmationEmail = action({
     const qrImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(qrPayload)}`;
 
     const emailData = {
-      from: `${brandName} <no-reply@tipunox.broadheader.com>`,
+      from: `${brandName} <no-reply@tipunoxph.com>`,
       to: args.email,
       subject: subject,
       html: `
@@ -2466,7 +2626,7 @@ export const sendBarberBookingNotificationEmail = action({
 
     const primaryColor = branding?.primary_color || '#000000';
     const accentColor = branding?.accent_color || '#000000';
-    const brandName = branding?.display_name || '';
+    const brandName = branding?.display_name || 'TipunoX';
     const primaryLight = `${primaryColor}1a`;
     const primaryBorder = `${primaryColor}40`;
 
@@ -2480,7 +2640,7 @@ export const sendBarberBookingNotificationEmail = action({
     const resend = new Resend(process.env.RESEND_API_KEY);
 
     const emailData = {
-      from: `${brandName} <no-reply@tipunox.broadheader.com>`,
+      from: `${brandName} <no-reply@tipunoxph.com>`,
       to: args.email,
       subject: `New Appointment - ${args.customerName} on ${formattedDate}`,
       html: `
