@@ -19,8 +19,10 @@ import {
   ChevronRight,
   AlertCircle,
   Wallet,
+  Plus,
 } from "lucide-react";
 import BranchWalletDetailModal from "./BranchWalletDetailModal";
+import HQWalletTopupModal from "./HQWalletTopupModal";
 
 /**
  * Format currency as Philippine Peso
@@ -105,6 +107,7 @@ export function BranchBreakdownTable() {
   const [sortDirection, setSortDirection] = useState("desc");
   const [selectedBranchId, setSelectedBranchId] = useState(null);
   const [isExporting, setIsExporting] = useState(false);
+  const [topupBranch, setTopupBranch] = useState(null); // { id, name, balance }
 
   // Query branch summaries
   const branchData = useQuery(api.services.walletAnalytics.getBranchWalletSummaries);
@@ -497,7 +500,24 @@ export function BranchBreakdownTable() {
                     </span>
                   </td>
                   <td className="px-4 py-3">
-                    <ChevronRight className="w-4 h-4 text-gray-500" />
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setTopupBranch({
+                            id: branch.branchId,
+                            name: branch.branchName,
+                            balance: branch.walletBalance || 0,
+                          });
+                        }}
+                        className="p-1.5 bg-[var(--color-primary)]/15 hover:bg-[var(--color-primary)]/30 text-[var(--color-primary)] rounded-lg transition-colors"
+                        aria-label={`Top up ${branch.branchName} wallet`}
+                        title="Add Balance"
+                      >
+                        <Plus className="w-3.5 h-3.5" />
+                      </button>
+                      <ChevronRight className="w-4 h-4 text-gray-500" />
+                    </div>
                   </td>
                 </tr>
               ))
@@ -556,6 +576,15 @@ export function BranchBreakdownTable() {
         branchId={selectedBranchId}
         isOpen={!!selectedBranchId}
         onClose={() => setSelectedBranchId(null)}
+      />
+
+      {/* HQ Wallet Top-Up Modal */}
+      <HQWalletTopupModal
+        isOpen={!!topupBranch}
+        onClose={() => setTopupBranch(null)}
+        branchId={topupBranch?.id}
+        branchName={topupBranch?.name}
+        currentBalance={topupBranch?.balance}
       />
     </div>
   );

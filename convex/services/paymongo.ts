@@ -2035,9 +2035,11 @@ export const getBookingByPaymongoLink = query({
     paymongo_link_id: v.string(),
   },
   handler: async (ctx, args) => {
-    // Query bookings table for matching paymongo_link_id
-    const bookings = await ctx.db.query("bookings").collect();
-    return bookings.find((b) => b.paymongo_link_id === args.paymongo_link_id) || null;
+    const booking = await ctx.db
+      .query("bookings")
+      .withIndex("by_paymongo_link", (q) => q.eq("paymongo_link_id", args.paymongo_link_id))
+      .first();
+    return booking || null;
   },
 });
 

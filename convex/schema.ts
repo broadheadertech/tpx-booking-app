@@ -3933,4 +3933,21 @@ export default defineSchema({
     .index("by_user", ["user_id", "createdAt"])
     .index("by_hairstyle", ["hairstyle_id"])
     .index("by_user_favorite", ["user_id", "is_favorite"]),
+
+  // ========================================================================
+  // WALLET OTP TOKENS — Secure verification for HQ branch wallet top-ups
+  // ========================================================================
+  wallet_otp_tokens: defineTable({
+    user_id: v.id("users"),
+    code_hash: v.string(),
+    branch_id: v.id("branches"),
+    amount: v.number(),
+    description: v.optional(v.string()),
+    expires_at: v.number(),
+    attempts: v.number(),
+    used: v.boolean(),
+    created_at: v.number(),
+  })
+    .index("by_user", ["user_id"])
+    .index("by_user_unused", ["user_id", "used"]),
 });

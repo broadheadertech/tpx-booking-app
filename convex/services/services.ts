@@ -1,6 +1,35 @@
 import { v } from "convex/values";
 import { mutation, query } from "../_generated/server";
-import { throwUserError, ERROR_CODES, validateInput } from "../utils/errors";
+import { throwUserError, ERROR_CODES } from "../utils/errors";
+
+// Valid service categories
+const VALID_CATEGORIES = [
+  "haircut",
+  "beard-care",
+  "hair-treatment",
+  "hair-styling",
+  "premium-package",
+];
+
+// Determine category from service name/description
+function inferCategory(name: string, description: string): string {
+  const n = name.toLowerCase();
+  const d = description.toLowerCase();
+
+  if (n.includes("beard") || n.includes("mustache") || d.includes("shav")) {
+    return "beard-care";
+  }
+  if (n.includes("hair spa") || n.includes("treatment") || n.includes("scalp")) {
+    return "hair-treatment";
+  }
+  if (n.includes("color") || n.includes("perm") || n.includes("tattoo")) {
+    return "hair-styling";
+  }
+  if (n.includes("package") || n.includes("elite") || n.includes("deluxe")) {
+    return "premium-package";
+  }
+  return "haircut";
+}
 
 // Get all services (for super admin)
 export const getAllServices = query({
@@ -8,18 +37,18 @@ export const getAllServices = query({
   handler: async (ctx) => {
     const services = await ctx.db.query("services").collect();
 
-    // Get branch information for each service
-    const servicesWithBranch = await Promise.all(
-      services.map(async (service) => {
-        const branch = await ctx.db.get(service.branch_id);
-        return {
-          ...service,
-          branch_name: branch?.name || "Unknown Branch",
-        };
-      })
-    );
+    // Batch-load unique branches to avoid N+1
+    const branchIds = [...new Set(services.map((s) => s.branch_id))];
+    const branchMap = new Map<string, string>();
+    for (const bid of branchIds) {
+      const branch = await ctx.db.get(bid);
+      branchMap.set(bid as string, branch?.name || "Unknown Branch");
+    }
 
-    return servicesWithBranch;
+    return services.map((service) => ({
+      ...service,
+      branch_name: branchMap.get(service.branch_id as string) || "Unknown Branch",
+    }));
   },
 });
 
@@ -91,6 +120,20 @@ export const createService = mutation({
     hide_price: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
+    if (!args.name.trim()) {
+      throwUserError(
+        ERROR_CODES.INVALID_INPUT,
+        "Invalid name",
+        "Service name cannot be empty."
+      );
+    }
+    if (!args.description.trim()) {
+      throwUserError(
+        ERROR_CODES.INVALID_INPUT,
+        "Invalid description",
+        "Service description cannot be empty."
+      );
+    }
     if (args.price < 0) {
       throwUserError(
         ERROR_CODES.INVALID_INPUT,
@@ -105,11 +148,21 @@ export const createService = mutation({
         "Duration must be greater than 0 minutes."
       );
     }
-    if (!args.name.trim()) {
+    if (!VALID_CATEGORIES.includes(args.category)) {
       throwUserError(
         ERROR_CODES.INVALID_INPUT,
-        "Invalid name",
-        "Service name cannot be empty."
+        "Invalid category",
+        `Category must be one of: ${VALID_CATEGORIES.join(", ")}.`
+      );
+    }
+
+    // Verify branch exists
+    const branch = await ctx.db.get(args.branch_id);
+    if (!branch) {
+      throwUserError(
+        ERROR_CODES.RESOURCE_NOT_FOUND,
+        "Branch not found",
+        "The specified branch does not exist."
       );
     }
 
@@ -158,6 +211,20 @@ export const updateService = mutation({
     }
 
     // Validate updates if provided
+    if (updates.name !== undefined && !updates.name.trim()) {
+      throwUserError(
+        ERROR_CODES.INVALID_INPUT,
+        "Invalid name",
+        "Service name cannot be empty."
+      );
+    }
+    if (updates.description !== undefined && !updates.description.trim()) {
+      throwUserError(
+        ERROR_CODES.INVALID_INPUT,
+        "Invalid description",
+        "Service description cannot be empty."
+      );
+    }
     if (updates.price !== undefined && updates.price < 0) {
       throwUserError(
         ERROR_CODES.INVALID_INPUT,
@@ -175,12 +242,24 @@ export const updateService = mutation({
         "Duration must be greater than 0 minutes."
       );
     }
-    if (updates.name !== undefined && !updates.name.trim()) {
+    if (updates.category !== undefined && !VALID_CATEGORIES.includes(updates.category)) {
       throwUserError(
         ERROR_CODES.INVALID_INPUT,
-        "Invalid name",
-        "Service name cannot be empty."
+        "Invalid category",
+        `Category must be one of: ${VALID_CATEGORIES.join(", ")}.`
       );
+    }
+
+    // Verify branch exists if branch_id is being updated
+    if (updates.branch_id !== undefined) {
+      const branch = await ctx.db.get(updates.branch_id);
+      if (!branch) {
+        throwUserError(
+          ERROR_CODES.RESOURCE_NOT_FOUND,
+          "Branch not found",
+          "The specified branch does not exist."
+        );
+      }
     }
 
     await ctx.db.patch(id, {
@@ -192,7 +271,7 @@ export const updateService = mutation({
   },
 });
 
-// Delete service
+// Deactivate service (soft delete — preserves booking references)
 export const deleteService = mutation({
   args: { id: v.id("services") },
   handler: async (ctx, args) => {
@@ -204,7 +283,12 @@ export const deleteService = mutation({
         "The service you are trying to delete does not exist."
       );
     }
-    await ctx.db.delete(args.id);
+
+    await ctx.db.patch(args.id, {
+      is_active: false,
+      updatedAt: Date.now(),
+    });
+
     return { success: true };
   },
 });
@@ -223,47 +307,23 @@ export const bulkInsertServices = mutation({
     ),
   },
   handler: async (ctx, args) => {
+    const branch = await ctx.db.get(args.branch_id);
+    if (!branch) {
+      throwUserError(ERROR_CODES.RESOURCE_NOT_FOUND, "Branch not found", "The specified branch does not exist.");
+    }
+
     const insertedServices: string[] = [];
 
     for (const service of args.services) {
-      // Determine category based on service name/description
-      let category = "haircut"; // default category
-
-      const serviceName = service.name.toLowerCase();
-      const serviceDesc = service.description.toLowerCase();
-
-      if (
-        serviceName.includes("beard") ||
-        serviceName.includes("mustache") ||
-        serviceDesc.includes("shav")
-      ) {
-        category = "beard-care";
-      } else if (
-        serviceName.includes("hair spa") ||
-        serviceName.includes("treatment") ||
-        serviceName.includes("scalp")
-      ) {
-        category = "hair-treatment";
-      } else if (
-        serviceName.includes("color") ||
-        serviceName.includes("perm") ||
-        serviceName.includes("tattoo")
-      ) {
-        category = "hair-styling";
-      } else if (
-        serviceName.includes("package") ||
-        serviceName.includes("elite") ||
-        serviceName.includes("deluxe")
-      ) {
-        category = "premium-package";
-      }
+      if (!service.name.trim()) continue; // skip empty names
+      if (service.duration_minutes <= 0 || service.price < 0) continue; // skip invalid
 
       const serviceId = await ctx.db.insert("services", {
         name: service.name,
         description: service.description,
         price: service.price,
         duration_minutes: service.duration_minutes,
-        category: category,
+        category: inferCategory(service.name, service.description),
         branch_id: args.branch_id,
         is_active: true,
         createdAt: Date.now(),
@@ -295,47 +355,23 @@ export const bulkInsertServicesForBranch = mutation({
     ),
   },
   handler: async (ctx, args) => {
+    const branch = await ctx.db.get(args.branch_id);
+    if (!branch) {
+      throwUserError(ERROR_CODES.RESOURCE_NOT_FOUND, "Branch not found", "The specified branch does not exist.");
+    }
+
     const insertedServices: string[] = [];
 
     for (const service of args.services) {
-      // Determine category based on service name/description
-      let category = "haircut"; // default category
-
-      const serviceName = service.name.toLowerCase();
-      const serviceDesc = service.description.toLowerCase();
-
-      if (
-        serviceName.includes("beard") ||
-        serviceName.includes("mustache") ||
-        serviceDesc.includes("shav")
-      ) {
-        category = "beard-care";
-      } else if (
-        serviceName.includes("hair spa") ||
-        serviceName.includes("treatment") ||
-        serviceName.includes("scalp")
-      ) {
-        category = "hair-treatment";
-      } else if (
-        serviceName.includes("color") ||
-        serviceName.includes("perm") ||
-        serviceName.includes("tattoo")
-      ) {
-        category = "hair-styling";
-      } else if (
-        serviceName.includes("package") ||
-        serviceName.includes("elite") ||
-        serviceName.includes("deluxe")
-      ) {
-        category = "premium-package";
-      }
+      if (!service.name.trim()) continue;
+      if (service.duration_minutes <= 0 || service.price < 0) continue;
 
       const serviceId = await ctx.db.insert("services", {
         name: service.name,
         description: service.description,
         price: service.price,
         duration_minutes: service.duration_minutes,
-        category: category,
+        category: inferCategory(service.name, service.description),
         branch_id: args.branch_id,
         is_active: true,
         createdAt: Date.now(),
@@ -384,13 +420,6 @@ export const insertDefaultServicesForBranch = mutation({
         description: "More than a shave. It's a service you'll feel.",
         duration_minutes: 30,
         price: 200.0,
-      },
-      {
-        name: "FACVNDO ELITE BARBERING SERVICE",
-        description:
-          "If you are looking for wedding haircuts, trust the elite hands that turn grooms into legends.",
-        duration_minutes: 0,
-        price: 10000.0,
       },
       {
         name: "Package 1",
@@ -450,47 +479,20 @@ export const insertDefaultServicesForBranch = mutation({
       },
     ];
 
+    const branch = await ctx.db.get(args.branch_id);
+    if (!branch) {
+      throwUserError(ERROR_CODES.RESOURCE_NOT_FOUND, "Branch not found", "The specified branch does not exist.");
+    }
+
     const insertedServices: string[] = [];
 
     for (const service of defaultServices) {
-      // Determine category based on service name/description
-      let category = "haircut"; // default category
-
-      const serviceName = service.name.toLowerCase();
-      const serviceDesc = service.description.toLowerCase();
-
-      if (
-        serviceName.includes("beard") ||
-        serviceName.includes("mustache") ||
-        serviceDesc.includes("shav")
-      ) {
-        category = "beard-care";
-      } else if (
-        serviceName.includes("hair spa") ||
-        serviceName.includes("treatment") ||
-        serviceName.includes("scalp")
-      ) {
-        category = "hair-treatment";
-      } else if (
-        serviceName.includes("color") ||
-        serviceName.includes("perm") ||
-        serviceName.includes("tattoo")
-      ) {
-        category = "hair-styling";
-      } else if (
-        serviceName.includes("package") ||
-        serviceName.includes("elite") ||
-        serviceName.includes("deluxe")
-      ) {
-        category = "premium-package";
-      }
-
       const serviceId = await ctx.db.insert("services", {
         name: service.name,
         description: service.description,
         price: service.price,
         duration_minutes: service.duration_minutes,
-        category: category,
+        category: inferCategory(service.name, service.description),
         branch_id: args.branch_id,
         is_active: true,
         createdAt: Date.now(),

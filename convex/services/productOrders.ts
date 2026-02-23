@@ -931,30 +931,37 @@ export const getAllOrders = query({
         .collect();
     }
 
-    // Enrich with branch and user details
-    const enrichedOrders = await Promise.all(
-      orders.map(async (order) => {
-        const branch = await ctx.db.get(order.branch_id);
-        const requestedBy = await ctx.db.get(order.requested_by);
-        const approvedBy = order.approved_by
-          ? await ctx.db.get(order.approved_by)
-          : null;
+    // Batch-load unique branches and users to avoid N+1
+    const branchIds = [...new Set(orders.map((o) => o.branch_id))];
+    const userIds = [...new Set(orders.flatMap((o) => [o.requested_by, o.approved_by, o.paid_by].filter(Boolean)))];
 
-        const paidBy = order.paid_by ? await ctx.db.get(order.paid_by) : null;
+    const branchMap = new Map<string, any>();
+    for (const id of branchIds) {
+      const branch = await ctx.db.get(id);
+      if (branch) branchMap.set(id as string, branch);
+    }
+    const userMap = new Map<string, any>();
+    for (const id of userIds) {
+      const user = await ctx.db.get(id as any);
+      if (user) userMap.set(id as string, user);
+    }
 
-        return {
-          ...order,
-          branch_name: branch?.name || "Unknown Branch",
-          branch_code: branch?.branch_code,
-          requested_by_name: requestedBy?.username || "Unknown User",
-          approved_by_name: approvedBy?.username,
-          paid_by_name: paidBy?.username,
-          is_manual_order: order.is_manual_order || false,
-        };
-      })
-    );
+    return orders.map((order) => {
+      const branch = branchMap.get(order.branch_id as string);
+      const requestedBy = userMap.get(order.requested_by as string);
+      const approvedBy = order.approved_by ? userMap.get(order.approved_by as string) : null;
+      const paidBy = order.paid_by ? userMap.get(order.paid_by as string) : null;
 
-    return enrichedOrders;
+      return {
+        ...order,
+        branch_name: branch?.name || "Unknown Branch",
+        branch_code: branch?.branch_code,
+        requested_by_name: requestedBy?.username || "Unknown User",
+        approved_by_name: approvedBy?.username,
+        paid_by_name: paidBy?.username,
+        is_manual_order: order.is_manual_order || false,
+      };
+    });
   },
 });
 
@@ -986,23 +993,24 @@ export const getOrdersByBranch = query({
       orders = orders.filter((o) => o.status === args.status);
     }
 
-    // Enrich with user details
-    const enrichedOrders = await Promise.all(
-      orders.map(async (order) => {
-        const requestedBy = await ctx.db.get(order.requested_by);
-        const approvedBy = order.approved_by
-          ? await ctx.db.get(order.approved_by)
-          : null;
+    // Batch-load unique users to avoid N+1
+    const userIds = [...new Set(orders.flatMap((o) => [o.requested_by, o.approved_by].filter(Boolean)))];
+    const userMap = new Map<string, any>();
+    for (const id of userIds) {
+      const user = await ctx.db.get(id as any);
+      if (user) userMap.set(id as string, user);
+    }
 
-        return {
-          ...order,
-          requested_by_name: requestedBy?.username || "Unknown User",
-          approved_by_name: approvedBy?.username,
-        };
-      })
-    );
+    return orders.map((order) => {
+      const requestedBy = userMap.get(order.requested_by as string);
+      const approvedBy = order.approved_by ? userMap.get(order.approved_by as string) : null;
 
-    return enrichedOrders;
+      return {
+        ...order,
+        requested_by_name: requestedBy?.username || "Unknown User",
+        approved_by_name: approvedBy?.username,
+      };
+    });
   },
 });
 

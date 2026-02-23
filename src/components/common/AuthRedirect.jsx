@@ -7,7 +7,7 @@
  */
 
 import { useAuth } from '../../context/AuthContext'
-import { useUser } from '@clerk/clerk-react'
+import { useUser, useClerk } from '@clerk/clerk-react'
 import { useQuery } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
 import { Navigate } from 'react-router-dom'
@@ -15,12 +15,13 @@ import { getRoleRedirectPath } from '../../utils/roleRedirect'
 
 const AuthRedirect = ({ children }) => {
   // Legacy auth
-  const { isAuthenticated: legacyAuthenticated, user: legacyUser, loading: legacyLoading } = useAuth()
+  const { isAuthenticated: legacyAuthenticated, user: legacyUser } = useAuth()
 
   // Clerk auth
   const { user: clerkUser, isLoaded: clerkLoaded, isSignedIn: clerkSignedIn } = useUser()
+  const clerk = useClerk()
 
-  // Query Convex for Clerk user (only if signed in via Clerk)
+  // Query Convex for Clerk user (only if fully signed in via Clerk)
   const clerkConvexUser = useQuery(
     api.services.auth.getUserByClerkId,
     clerkLoaded && clerkSignedIn && clerkUser?.id
@@ -28,20 +29,23 @@ const AuthRedirect = ({ children }) => {
       : "skip"
   )
 
-  // Check if authenticated via either method
-  const isAuthenticated = legacyAuthenticated || (clerkSignedIn && clerkConvexUser !== null)
+  // Don't redirect while Clerk is mid-flow (factor-one/factor-two/sso-callback).
+  // The Clerk SignIn component handles its own sub-step routing internally.
+  const clerkSession = clerk?.client?.signIn
+  const isClerkMidFlow = clerkSession?.status && clerkSession.status !== 'complete'
+  if (isClerkMidFlow) return children
 
-  // Get the active user (prefer Clerk user if signed in via Clerk)
-  const user = (clerkSignedIn && clerkConvexUser) ? clerkConvexUser : legacyUser
+  // clerkConvexUser is undefined while loading, null if not found, or the user object.
+  // Only redirect when we have an actual user object (not undefined/null).
+  const hasClerkUser = clerkSignedIn && clerkConvexUser && clerkConvexUser._id
+  const isAuthenticated = legacyAuthenticated || hasClerkUser
+  const user = hasClerkUser ? clerkConvexUser : legacyUser
 
-  // For auth pages (login/register), don't block on loading — show the form immediately.
-  // If the user turns out to be authenticated, redirect once loading completes.
   if (isAuthenticated && user) {
     const redirectPath = getRoleRedirectPath(user.role)
     return <Navigate to={redirectPath} replace />
   }
 
-  // Show login/register page immediately (don't wait for Clerk to load)
   return children
 }
 

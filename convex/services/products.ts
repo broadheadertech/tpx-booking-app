@@ -1,6 +1,6 @@
 import { v } from "convex/values";
 import { mutation, query } from "../_generated/server";
-import { throwUserError, ERROR_CODES, validateInput } from "../utils/errors";
+import { throwUserError, ERROR_CODES } from "../utils/errors";
 import { Id } from "../_generated/dataModel";
 import { logAudit } from "./auditLogs";
 
@@ -264,25 +264,28 @@ export const updateProduct = mutation({
   },
 });
 
-// Delete product
+// Deactivate product (soft delete — preserves transaction/order/batch references)
 export const deleteProduct = mutation({
   args: {
     id: v.id("products"),
   },
   handler: async (ctx, args) => {
     const product = await ctx.db.get(args.id);
-    
+
     if (!product) {
       throwUserError(ERROR_CODES.PRODUCT_NOT_FOUND);
     }
-    
-    await ctx.db.delete(args.id);
+
+    await ctx.db.patch(args.id, {
+      status: "inactive",
+      updatedAt: Date.now(),
+    });
 
     await logAudit(ctx, {
       branch_id: product.branch_id as string,
       category: "product",
-      action: "product.deleted",
-      description: `Deleted product "${product.name}" (SKU: ${product.sku})`,
+      action: "product.deactivated",
+      description: `Deactivated product "${product.name}" (SKU: ${product.sku})`,
       target_type: "product",
       target_id: args.id as string,
       metadata: { name: product.name, sku: product.sku },

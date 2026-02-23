@@ -325,7 +325,7 @@ const ProductsManagement = ({ onRefresh, user }) => {
   }
 
   const handleDelete = async (productId) => {
-    const confirmed = await showConfirm({ title: 'Delete Product', message: 'Are you sure you want to delete this product?', type: 'warning' })
+    const confirmed = await showConfirm({ title: 'Deactivate Product', message: 'Are you sure you want to deactivate this product? It will be hidden but existing records will be preserved.', type: 'warning' })
     if (!confirmed) return
 
     try {
@@ -390,7 +390,12 @@ const ProductsManagement = ({ onRefresh, user }) => {
 
 
 
-  const filteredProducts = products.filter(product => {
+  // Branch admins only see catalog-synced products (from HQ orders)
+  const visibleProducts = user?.role === 'super_admin'
+    ? products
+    : products.filter(p => p.catalog_product_id)
+
+  const filteredProducts = visibleProducts.filter(product => {
     const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       product.brand.toLowerCase().includes(searchTerm.toLowerCase()) ||
       product.sku.toLowerCase().includes(searchTerm.toLowerCase())
@@ -403,12 +408,12 @@ const ProductsManagement = ({ onRefresh, user }) => {
   })
 
   const stats = {
-    total: products.length,
-    inStock: products.filter(p => p.stock > p.minStock).length,
-    lowStock: products.filter(p => p.stock > 0 && p.stock <= p.minStock).length,
-    outOfStock: products.filter(p => p.stock === 0).length,
-    totalValue: products.reduce((sum, p) => sum + (p.price * p.stock), 0),
-    totalSold: products.reduce((sum, p) => sum + p.soldThisMonth, 0)
+    total: visibleProducts.length,
+    inStock: visibleProducts.filter(p => p.stock > p.minStock).length,
+    lowStock: visibleProducts.filter(p => p.stock > 0 && p.stock <= p.minStock).length,
+    outOfStock: visibleProducts.filter(p => p.stock === 0).length,
+    totalValue: visibleProducts.reduce((sum, p) => sum + (p.price * p.stock), 0),
+    totalSold: visibleProducts.reduce((sum, p) => sum + p.soldThisMonth, 0)
   }
 
   return (
@@ -498,13 +503,15 @@ const ProductsManagement = ({ onRefresh, user }) => {
             <ScanLine className="h-4 w-4" />
             <span>Scan & Receive</span>
           </button>
-          <button
-            onClick={() => setShowCreateModal(true)}
-            className="flex items-center space-x-2 px-4 py-2 bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-accent)] text-white rounded-lg hover:from-[var(--color-accent)] hover:brightness-110 transition-colors text-sm"
-          >
-            <Plus className="h-4 w-4" />
-            <span>New Product</span>
-          </button>
+          {user?.role === 'super_admin' && (
+            <button
+              onClick={() => setShowCreateModal(true)}
+              className="flex items-center space-x-2 px-4 py-2 bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-accent)] text-white rounded-lg hover:from-[var(--color-accent)] hover:brightness-110 transition-colors text-sm"
+            >
+              <Plus className="h-4 w-4" />
+              <span>New Product</span>
+            </button>
+          )}
           <button onClick={() => setShowTutorial(true)} className="p-2 rounded-lg text-gray-500 hover:text-white hover:bg-[#2A2A2A] transition-colors" title="Show tutorial">
             <HelpCircle className="h-4 w-4" />
           </button>
@@ -899,8 +906,7 @@ const ProductsManagement = ({ onRefresh, user }) => {
                       >
                         <Edit className="h-4 w-4" />
                       </button>
-                      {!product.catalog_product_id && (user?.role === "branch_admin" ||
-                        user?.role === "super_admin") && (
+                      {!product.catalog_product_id && user?.role === "super_admin" && (
                           <button
                             onClick={() => handleDelete(product._id)}
                             className="p-2 text-gray-400 hover:text-red-400 hover:bg-red-400/20 rounded-lg transition-colors"
@@ -921,14 +927,16 @@ const ProductsManagement = ({ onRefresh, user }) => {
       {filteredProducts.length === 0 && !loading && (
         <div className="text-center py-12">
           <Package className="mx-auto h-12 w-12 text-gray-300" />
-          <h3 className="mt-2 text-sm font-medium text-gray-900">No products found</h3>
+          <h3 className="mt-2 text-sm font-medium text-gray-300">No products found</h3>
           <p className="mt-1 text-sm text-gray-500">
             {searchTerm || filterCategory !== 'all' || filterStock !== 'all'
               ? 'Try adjusting your search or filter criteria.'
-              : 'Get started by adding your first product.'
+              : user?.role === 'super_admin'
+                ? 'Get started by adding your first product.'
+                : 'Order products from HQ to see them here.'
             }
           </p>
-          {!searchTerm && filterCategory === 'all' && filterStock === 'all' && (
+          {!searchTerm && filterCategory === 'all' && filterStock === 'all' && user?.role === 'super_admin' && (
             <div className="mt-6">
               <button
                 onClick={() => setShowCreateModal(true)}
