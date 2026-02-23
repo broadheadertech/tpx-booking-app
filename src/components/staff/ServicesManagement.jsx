@@ -103,7 +103,7 @@ const ServicesManagement = ({ services = [], onRefresh, user }) => {
   }
 
   const handleDelete = async (service) => {
-    const confirmed = await showConfirm({ title: 'Delete Service', message: `Are you sure you want to delete "${service.name}"?`, type: 'warning' })
+    const confirmed = await showConfirm({ title: 'Deactivate Service', message: `Are you sure you want to deactivate "${service.name}"? It will be hidden from customers but existing bookings will be preserved.`, type: 'warning' })
     if (!confirmed) return
 
     setLoading(true)
@@ -111,8 +111,8 @@ const ServicesManagement = ({ services = [], onRefresh, user }) => {
       await deleteService({ id: service._id })
       onRefresh()
     } catch (err) {
-      console.error('Failed to delete service:', err)
-      showAlert({ title: 'Error', message: 'Failed to delete service. Please try again.', type: 'error' })
+      console.error('Failed to deactivate service:', err)
+      showAlert({ title: 'Error', message: 'Failed to deactivate service. Please try again.', type: 'error' })
     } finally {
       setLoading(false)
     }

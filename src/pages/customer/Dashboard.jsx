@@ -213,6 +213,28 @@ const Dashboard = ({ initialSection = 'home' }) => {
               />
             </div>
 
+            {/* AI Mirror CTA — hidden until catalog is populated
+            <div className="px-4">
+              <button
+                onClick={() => navigate('/customer/ai-mirror')}
+                className="w-full relative overflow-hidden rounded-2xl bg-gradient-to-br from-purple-600/20 via-blue-600/20 to-cyan-500/20 border border-white/10 p-4 text-left group hover:border-white/20 transition-all"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 rounded-xl bg-white/10 flex items-center justify-center text-2xl shrink-0">
+                    ✨
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-white font-semibold text-sm">AI Mirror</p>
+                    <p className="text-white/50 text-xs">Try hairstyles on your face in real-time</p>
+                  </div>
+                  <div className="shrink-0 text-white/30 group-hover:text-white/60 transition-colors">
+                    →
+                  </div>
+                </div>
+              </button>
+            </div>
+            */}
+
             {/* Active Promotions Banner - Compact */}
             {user?._id && currentBranch?._id && (
               <div data-tour="home-promos" className="px-4">

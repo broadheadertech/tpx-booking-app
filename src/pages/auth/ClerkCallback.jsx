@@ -6,7 +6,7 @@
  * Waits for webhook to create Convex user, then redirects to role-appropriate dashboard.
  */
 
-import { useEffect, useState, useCallback, useRef } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useUser } from "@clerk/clerk-react";
 import { useConvex, useMutation } from "convex/react";
@@ -20,139 +20,106 @@ function ClerkCallback() {
   const convex = useConvex();
   const { branding } = useBranding();
 
-  const [status, setStatus] = useState("loading"); // loading, polling, creating, error, redirecting
+  const [status, setStatus] = useState("loading");
   const [error, setError] = useState(null);
   const [pollCount, setPollCount] = useState(0);
+
   const isCreatingRef = useRef(false);
 
-  // Mutation to create user if webhook hasn't processed yet
   const ensureUserFromClerk = useMutation(api.services.auth.ensureUserFromClerk);
 
-  const MAX_POLLS = 3; // Reduced - we'll create user if not found after 3 polls
+  const MAX_POLLS = 3;
   const POLL_INTERVAL = 500;
 
-  // Poll for user with retry logic
-  const pollForUser = useCallback(async () => {
-    if (!clerkUser?.id) return null;
-
-    try {
-      const user = await convex.query(api.services.auth.getUserByClerkId, {
-        clerk_user_id: clerkUser.id,
-      });
-      return user;
-    } catch (err) {
-      console.error("[ClerkCallback] Error querying user:", err?.message || err);
-      return null;
-    }
-  }, [clerkUser?.id, convex]);
-
-  // Create user directly using ensureUserFromClerk mutation
-  const createUserDirectly = useCallback(async () => {
-    if (!clerkUser?.id || isCreatingRef.current) return null;
-
-    isCreatingRef.current = true;
-    setStatus("creating");
-
-    try {
-      // Get email from multiple sources (Google OAuth may use emailAddresses array)
-      const email =
-        clerkUser.primaryEmailAddress?.emailAddress ||
-        clerkUser.emailAddresses?.[0]?.emailAddress ||
-        `${clerkUser.id}@clerk.local`;
-
-      console.log("[ClerkCallback] Creating user directly via ensureUserFromClerk...", {
-        clerk_user_id: clerkUser.id,
-        email,
-        first_name: clerkUser.firstName,
-        last_name: clerkUser.lastName,
-      });
-
-      const user = await ensureUserFromClerk({
-        clerk_user_id: clerkUser.id,
-        email,
-        first_name: clerkUser.firstName || undefined,
-        last_name: clerkUser.lastName || undefined,
-        image_url: clerkUser.imageUrl || undefined,
-      });
-      console.log("[ClerkCallback] User created successfully:", user);
-      return user;
-    } catch (err) {
-      console.error("[ClerkCallback] Error creating user:", err);
-      return { _error: err?.message || err?.data?.message || "Unable to set up your account. Please try again." };
-    } finally {
-      isCreatingRef.current = false;
-    }
-  }, [clerkUser, ensureUserFromClerk]);
-
   useEffect(() => {
-    // Wait for Clerk to load
     if (!clerkLoaded) {
       setStatus("loading");
       return;
     }
 
-    // If not signed in, redirect to login
     if (!isSignedIn) {
       navigate("/auth/login", { replace: true });
       return;
     }
 
-    // Guard: prevent double-execution from StrictMode
     let cancelled = false;
     let timeoutId = null;
+    let count = 0;
+
     setStatus("polling");
     setPollCount(0);
+
+    const queryUser = async () => {
+      if (!clerkUser?.id) return null;
+      try {
+        return await convex.query(api.services.auth.getUserByClerkId, {
+          clerk_user_id: clerkUser.id,
+        });
+      } catch (err) {
+        console.error("[ClerkCallback] Error querying user:", err?.message || err);
+        return null;
+      }
+    };
+
+    const createUser = async () => {
+      if (!clerkUser?.id || isCreatingRef.current) return null;
+      isCreatingRef.current = true;
+      setStatus("creating");
+
+      try {
+        const email =
+          clerkUser.primaryEmailAddress?.emailAddress ||
+          clerkUser.emailAddresses?.[0]?.emailAddress ||
+          `${clerkUser.id}@clerk.local`;
+
+        const user = await ensureUserFromClerk({
+          clerk_user_id: clerkUser.id,
+          email,
+          first_name: clerkUser.firstName || undefined,
+          last_name: clerkUser.lastName || undefined,
+          image_url: clerkUser.imageUrl || undefined,
+        });
+        return user;
+      } catch (err) {
+        console.error("[ClerkCallback] Error creating user:", err);
+        return { _error: err?.message || err?.data?.message || "Unable to set up your account. Please try again." };
+      } finally {
+        isCreatingRef.current = false;
+      }
+    };
 
     const poll = async () => {
       if (cancelled) return;
 
-      const user = await pollForUser();
+      const user = await queryUser();
       if (cancelled) return;
 
       if (user) {
-        // User found - redirect to appropriate dashboard
         setStatus("redirecting");
         const redirectPath = getRoleRedirectPath(user.role);
-
-        console.log("[ClerkCallback] User found, redirecting to:", redirectPath, {
-          userId: user._id,
-          role: user.role,
-        });
-
         navigate(redirectPath, { replace: true });
         return;
       }
 
-      // User not found yet
-      setPollCount((prev) => {
-        const newCount = prev + 1;
+      count++;
+      setPollCount(count);
 
-        if (newCount >= MAX_POLLS) {
-          // Webhook hasn't processed yet - create user directly
-          console.log("[ClerkCallback] User not found after polling, creating directly...");
-
-          createUserDirectly().then((result) => {
-            if (cancelled) return;
-            if (result && !result._error) {
-              setStatus("redirecting");
-              const redirectPath = getRoleRedirectPath(result.role || "customer");
-              console.log("[ClerkCallback] User created, redirecting to:", redirectPath);
-              navigate(redirectPath, { replace: true });
-            } else {
-              setStatus("error");
-              setError(result?._error || "Unable to set up your account. Please try again.");
-            }
-          });
-
-          return newCount;
+      if (count >= MAX_POLLS) {
+        const result = await createUser();
+        if (cancelled) return;
+        if (result && !result._error) {
+          setStatus("redirecting");
+          navigate(getRoleRedirectPath(result.role || "customer"), { replace: true });
+        } else {
+          setStatus("error");
+          setError(result?._error || "Unable to set up your account. Please try again.");
         }
+        return;
+      }
 
-        // Continue polling
-        if (!cancelled) {
-          timeoutId = setTimeout(poll, POLL_INTERVAL);
-        }
-        return newCount;
-      });
+      if (!cancelled) {
+        timeoutId = setTimeout(poll, POLL_INTERVAL);
+      }
     };
 
     poll();
@@ -160,11 +127,14 @@ function ClerkCallback() {
     return () => {
       cancelled = true;
       if (timeoutId) clearTimeout(timeoutId);
+      isCreatingRef.current = false;
     };
-  }, [clerkLoaded, isSignedIn, clerkUser?.id, navigate, pollForUser, createUserDirectly]);
+    // Only depend on stable values — clerkUser.id won't change mid-session
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [clerkLoaded, isSignedIn]);
 
-  // Handle retry
   const handleRetry = () => {
+    isCreatingRef.current = false;
     setPollCount(0);
     setError(null);
     setStatus("polling");

@@ -15,7 +15,7 @@
  *   "breaking" — Breaking/major change (bumps MAJOR)
  */
 
-export const APP_VERSION = '2.1.0';
+export const APP_VERSION = '2.2.0';
 export const LAST_DEPLOY = '2026-02-23';
 export const VERSION_INFO = {
   version: APP_VERSION,
@@ -28,6 +28,18 @@ export const VERSION_INFO = {
  * Each entry: { version, date, changes: [{ tag, text }] }
  */
 export const CHANGELOG = [
+  {
+    version: '2.2.0',
+    date: '2026-02-23',
+    changes: [
+      { tag: 'feature', text: 'AI Mirror — virtual hairstyle try-on with live camera face detection and real-time overlay' },
+      { tag: 'feature', text: 'Face shape classification — detects oval, round, square, heart, diamond, oblong from facial geometry' },
+      { tag: 'feature', text: 'Hairstyle catalog with face shape compatibility scoring (0-100 per shape)' },
+      { tag: 'feature', text: 'Save looks — capture composite screenshots and save to personal lookbook' },
+      { tag: 'feature', text: 'Admin hairstyle catalog manager — upload overlay PNGs, set face shape scores, manage styles' },
+      { tag: 'feature', text: 'AI Mirror CTA on customer home feed with route /customer/ai-mirror' },
+    ],
+  },
   {
     version: '2.1.0',
     date: '2026-02-23',
