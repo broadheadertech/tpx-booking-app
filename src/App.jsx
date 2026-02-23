@@ -53,6 +53,7 @@ import AccountDeletion from "./pages/AccountDeletion.jsx";
 import EmailTest from "./pages/EmailTest.jsx";
 import FaceCheckIn from "./components/staff/FaceCheckIn";
 import DownloadApp from "./pages/DownloadApp.jsx";
+// import AIMirrorPage from "./components/customer/AIMirror/AIMirrorPage"; // Hidden until AI Mirror is ready
 import ErrorBoundary from "./components/common/ErrorBoundary";
 import MaintenanceGuard from "./components/common/MaintenanceGuard";
 import { getInitialRoute } from "./utils/platform";
@@ -342,6 +343,16 @@ function App() {
                   </ProtectedRoute>
                 }
               />
+              {/* AI Mirror route — hidden until catalog is populated
+              <Route
+                path="/customer/ai-mirror"
+                element={
+                  <ProtectedRoute>
+                    <AIMirrorPage />
+                  </ProtectedRoute>
+                }
+              />
+              */}
               <Route
                 path="/customer/shop"
                 element={

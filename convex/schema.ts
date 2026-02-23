@@ -3851,4 +3851,86 @@ export default defineSchema({
     .index("by_category", ["category", "created_at"])
     .index("by_user", ["user_id", "created_at"])
     .index("by_action", ["action", "created_at"]),
+
+  // ============================================================================
+  // AI MIRROR — Virtual Hairstyle Try-On
+  // ============================================================================
+
+  hairstyle_catalog: defineTable({
+    name: v.string(),
+    category: v.union(
+      v.literal("fade"),
+      v.literal("undercut"),
+      v.literal("classic"),
+      v.literal("modern"),
+      v.literal("long"),
+      v.literal("buzz"),
+      v.literal("textured")
+    ),
+    description: v.optional(v.string()),
+    // Face shape compatibility scores (0-100)
+    face_shape_scores: v.object({
+      oval: v.number(),
+      round: v.number(),
+      square: v.number(),
+      heart: v.number(),
+      diamond: v.number(),
+      oblong: v.number(),
+    }),
+    overlay_image_id: v.id("_storage"),       // Transparent PNG for overlay
+    thumbnail_image_id: v.optional(v.id("_storage")), // Thumbnail for catalog grid
+    recommended_product_ids: v.optional(v.array(v.id("products"))),
+    maintenance_level: v.optional(v.union(
+      v.literal("low"),
+      v.literal("medium"),
+      v.literal("high")
+    )),
+    style_tags: v.optional(v.array(v.string())),
+    try_count: v.number(),
+    save_count: v.number(),
+    is_active: v.boolean(),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_category", ["category"])
+    .index("by_active", ["is_active"])
+    .index("by_try_count", ["try_count"])
+    .index("by_save_count", ["save_count"]),
+
+  user_face_profile: defineTable({
+    user_id: v.id("users"),
+    face_shape: v.union(
+      v.literal("oval"),
+      v.literal("round"),
+      v.literal("square"),
+      v.literal("heart"),
+      v.literal("diamond"),
+      v.literal("oblong")
+    ),
+    measurements: v.object({
+      jaw_width: v.number(),
+      forehead_width: v.number(),
+      cheekbone_width: v.number(),
+      face_length: v.number(),
+    }),
+    confidence: v.number(),        // 0-1 confidence score
+    reference_photo_id: v.optional(v.id("_storage")),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_user", ["user_id"]),
+
+  mirror_saved_looks: defineTable({
+    user_id: v.id("users"),
+    hairstyle_id: v.id("hairstyle_catalog"),
+    composite_image_id: v.id("_storage"),   // Screenshot with overlay
+    face_shape: v.string(),
+    compatibility_score: v.optional(v.number()),
+    notes: v.optional(v.string()),
+    is_favorite: v.boolean(),
+    createdAt: v.number(),
+  })
+    .index("by_user", ["user_id", "createdAt"])
+    .index("by_hairstyle", ["hairstyle_id"])
+    .index("by_user_favorite", ["user_id", "is_favorite"]),
 });

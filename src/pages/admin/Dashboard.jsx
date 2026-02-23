@@ -29,6 +29,7 @@ import DefaultServicesManager from '../../components/admin/DefaultServicesManage
 import ShopBannerManagement from '../../components/admin/ShopBannerManagement'
 import ShopConfigPanel from '../../components/admin/ShopConfigPanel'
 import SystemAuditLog from '../../components/common/SystemAuditLog'
+import HairstyleCatalogManager from '../../components/admin/HairstyleCatalogManager'
 // SuperAdminPaymentHistory removed - payments managed in staff dashboard
 // SuperAdminExpenseManagement removed - expenses now managed in P&L dashboard
 import { useQuery, useMutation } from 'convex/react'
@@ -219,6 +220,13 @@ function AdminDashboard() {
           <div className="text-center text-gray-400">You do not have access to product catalog management.</div>
         )
 
+      case 'hairstyle_catalog':
+        return user?.role === 'super_admin' || user?.role === 'it_admin' ? (
+          <HairstyleCatalogManager />
+        ) : (
+          <div className="text-center text-gray-400">You do not have access to hairstyle catalog management.</div>
+        )
+
       case 'royalty':
         return user?.role === 'super_admin' || user?.role === 'it_admin' ? (
           <RoyaltyManagement />
@@ -344,6 +352,7 @@ function AdminDashboard() {
       { id: 'default_services', label: 'Services', icon: 'scissors', category: 'Commerce' },
       { id: 'catalog', label: 'Catalog', icon: 'package', category: 'Commerce' },
       { id: 'vouchers', label: 'Vouchers', icon: 'ticket', category: 'Commerce' },
+      // { id: 'hairstyle_catalog', label: 'Hairstyles', icon: 'scissors', category: 'Commerce' }, // Hidden until AI Mirror is ready
       { id: 'shop_banners', label: 'Banners', icon: 'image', category: 'Commerce' },
       { id: 'delivery_orders', label: 'Deliveries', icon: 'truck', category: 'Commerce' },
       { id: 'damage_claims', label: 'Damage Claims', icon: 'alert-triangle', category: 'Commerce' },
