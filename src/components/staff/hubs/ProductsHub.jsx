@@ -6,6 +6,8 @@ import ProductsManagement from '../ProductsManagement'
 import BranchProductOrdering from '../BranchProductOrdering'
 import VoucherManagement from '../VoucherManagement'
 import ServicesManagement from '../ServicesManagement'
+import { useQuery } from 'convex/react'
+import { api } from '../../../../convex/_generated/api'
 
 /**
  * Products Hub - Consolidated products & services management
@@ -21,6 +23,11 @@ const ProductsHub = ({ user, services = [], vouchers = [], onRefresh, onCreateVo
     localStorage.setItem('staff_hub_products_section', activeSection)
   }, [activeSection])
   const [showTutorial, setShowTutorial] = useState(false)
+
+  const lowStockCount = useQuery(
+    api.services.products.getLowStockCount,
+    user?.branch_id ? { branch_id: user.branch_id } : 'skip'
+  ) || 0
 
   const allSections = [
     { id: 'services', label: 'Services', icon: Scissors },
@@ -82,6 +89,11 @@ const ProductsHub = ({ user, services = [], vouchers = [], onRefresh, onCreateVo
             >
               <Icon className="w-4 h-4" />
               <span>{section.label}</span>
+              {section.id === 'order' && lowStockCount > 0 && (
+                <span className={`text-xs font-bold px-1.5 py-0.5 rounded-full ${isActive ? 'bg-white/20 text-white' : 'bg-red-500 text-white'}`}>
+                  {lowStockCount}
+                </span>
+              )}
             </button>
           )
         })}

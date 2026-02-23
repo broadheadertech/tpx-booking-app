@@ -1,11 +1,13 @@
-import React from "react";
+import React, { useState } from "react";
 import { Heart, Code } from "lucide-react";
 import { APP_VERSION } from "../../config/version";
 import { useBranding } from "../../context/BrandingContext";
+import ChangelogModal from "./ChangelogModal";
 
 const DashboardFooter = () => {
   const currentYear = new Date().getFullYear();
   const { branding } = useBranding();
+  const [showChangelog, setShowChangelog] = useState(false);
 
   return (
     <footer className="bg-gradient-to-r from-[#1A1A1A] to-[#2A2A2A] border-t border-[#333333]/50 py-8 px-4">
@@ -51,13 +53,20 @@ const DashboardFooter = () => {
           {/* Right section - Version & Links */}
           <div className="text-center lg:text-right">
             <div className="flex items-center justify-center lg:justify-end space-x-4">
-              <span className="text-gray-500 text-xs">v{APP_VERSION}</span>
+              <button
+                onClick={() => setShowChangelog(true)}
+                className="text-gray-500 text-xs hover:text-[var(--color-primary)] transition-colors cursor-pointer"
+                title="View changelog"
+              >
+                v{APP_VERSION}
+              </button>
               <div className="w-1 h-1 bg-gray-600 rounded-full"></div>
               <span className="text-gray-500 text-xs">Multi-Branch System</span>
             </div>
           </div>
         </div>
       </div>
+      <ChangelogModal isOpen={showChangelog} onClose={() => setShowChangelog(false)} />
     </footer>
   );
 };

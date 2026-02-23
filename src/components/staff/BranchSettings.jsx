@@ -5,12 +5,14 @@ import {
   CreditCard,
   Wallet,
   Bell,
-  Clock
+  Clock,
+  Info
 } from 'lucide-react'
 import BranchProfileSettings from './BranchProfileSettings'
 import PaymentSettings from './PaymentSettings'
 import BranchWalletView from './BranchWalletView'
 import BranchScheduleSettings from './BranchScheduleSettings'
+import SystemInfoPanel from './SystemInfoPanel'
 
 /**
  * Branch Settings Component
@@ -24,6 +26,7 @@ const BranchSettings = ({ user, onRefresh }) => {
     { id: 'payments', label: 'Payment Settings', icon: CreditCard, description: 'Payment methods & fees' },
     { id: 'wallet', label: 'Wallet Settings', icon: Wallet, description: 'Customer wallet configuration' },
     { id: 'schedule', label: 'Schedule', icon: Clock, description: 'Operating hours & closures' },
+    { id: 'system', label: 'System Info', icon: Info, description: 'Version & changelog' },
   ]
 
   const renderSectionContent = () => {
@@ -36,6 +39,8 @@ const BranchSettings = ({ user, onRefresh }) => {
         return <BranchWalletView />
       case 'schedule':
         return <BranchScheduleSettings />
+      case 'system':
+        return <SystemInfoPanel />
       default:
         return <BranchProfileSettings user={user} />
     }

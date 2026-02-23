@@ -249,6 +249,50 @@ const POS = () => {
     }
   }, [services, customers, barbers])
 
+  // Check for walk-in data from WalkInSection (Proceed to POS)
+  useEffect(() => {
+    const posWalkIn = sessionStorage.getItem('posWalkIn')
+    if (posWalkIn && services !== undefined) {
+      try {
+        const walkIn = JSON.parse(posWalkIn)
+        sessionStorage.removeItem('posWalkIn')
+
+        // Set barber
+        if (walkIn.barber_id && barbers) {
+          const barber = barbers.find(b => b._id === walkIn.barber_id)
+          if (barber) {
+            setSelectedBarber(barber)
+          }
+        }
+
+        // Find service and build transaction
+        const service = walkIn.service_id ? services?.find(s => s._id === walkIn.service_id) : null
+
+        setCurrentTransaction(prev => ({
+          ...prev,
+          customer_name: walkIn.customer_name || 'Walk-in Customer',
+          customer_phone: walkIn.customer_phone || '',
+          customer_email: '',
+          customer_address: '',
+          services: service ? [{
+            service_id: service._id,
+            service_name: service.name,
+            price: service.price,
+            quantity: 1
+          }] : [],
+          subtotal: service ? service.price : 0,
+          discount_amount: 0,
+          booking_fee: 0,
+          late_fee: 0,
+          total_amount: service ? service.price : 0,
+        }))
+
+      } catch (error) {
+        console.error('Error parsing walk-in data:', error)
+      }
+    }
+  }, [services, barbers])
+
   // Ensure booking fee is 0 for walk-ins (no booking attached)
   // Booking fees only apply to online bookings
   useEffect(() => {
@@ -1629,6 +1673,16 @@ const POS = () => {
                         <span className="text-base font-bold text-[var(--color-primary)]">₱{product.price}</span>
                         <span className="text-xs text-gray-500">Stock: {product.stock}</span>
                       </div>
+                      {product.oldest_batch && (
+                        <div className="flex items-center gap-1.5 mt-1">
+                          <span className="text-[10px] text-gray-600 font-mono">{product.oldest_batch.batch_number}</span>
+                          {product.oldest_batch.expiry_date && (
+                            <span className={`text-[10px] ${product.oldest_batch.expiry_date < Date.now() ? 'text-red-400' : product.oldest_batch.expiry_date < Date.now() + 90 * 86400000 ? 'text-yellow-400' : 'text-gray-500'}`}>
+                              exp {new Date(product.oldest_batch.expiry_date).toLocaleDateString()}
+                            </span>
+                          )}
+                        </div>
+                      )}
                     </div>
                     <div className="ml-3 w-10 h-10 bg-[var(--color-primary)]/20 rounded-full flex items-center justify-center flex-shrink-0">
                       <Plus className="w-5 h-5 text-[var(--color-primary)]" />
@@ -2369,6 +2423,16 @@ const POS = () => {
                           <span className="text-lg font-bold text-[var(--color-primary)]">₱{product.price}</span>
                           <span className="text-xs text-gray-500">Stock: {product.stock}</span>
                         </div>
+                        {product.oldest_batch && (
+                          <div className="flex items-center gap-1.5 mt-1.5">
+                            <span className="text-[10px] text-gray-600 font-mono">{product.oldest_batch.batch_number}</span>
+                            {product.oldest_batch.expiry_date && (
+                              <span className={`text-[10px] ${product.oldest_batch.expiry_date < Date.now() ? 'text-red-400' : product.oldest_batch.expiry_date < Date.now() + 90 * 86400000 ? 'text-yellow-400' : 'text-gray-500'}`}>
+                                exp {new Date(product.oldest_batch.expiry_date).toLocaleDateString()}
+                              </span>
+                            )}
+                          </div>
+                        )}
                       </button>
                     ))}
                   </div>
@@ -2382,6 +2446,7 @@ const POS = () => {
                           <th className="px-4 py-3 text-left text-sm font-semibold text-gray-300 border-b border-[#555555]">Description</th>
                           <th className="px-4 py-3 text-left text-sm font-semibold text-gray-300 border-b border-[#555555]">Price</th>
                           <th className="px-4 py-3 text-left text-sm font-semibold text-gray-300 border-b border-[#555555]">Stock</th>
+                          <th className="px-4 py-3 text-left text-sm font-semibold text-gray-300 border-b border-[#555555]">Batch</th>
                           <th className="px-4 py-3 text-center text-sm font-semibold text-gray-300 border-b border-[#555555]">Action</th>
                         </tr>
                       </thead>
@@ -2395,6 +2460,20 @@ const POS = () => {
                             <td className="px-4 py-3 text-sm text-gray-400 max-w-xs truncate">{item.description || '-'}</td>
                             <td className="px-4 py-3 text-sm font-bold text-[var(--color-primary)]">₱{item.price}</td>
                             <td className="px-4 py-3 text-sm text-gray-500">{item.stock}</td>
+                            <td className="px-4 py-3 text-sm">
+                              {item.oldest_batch ? (
+                                <div>
+                                  <span className="text-gray-500 font-mono text-xs">{item.oldest_batch.batch_number}</span>
+                                  {item.oldest_batch.expiry_date && (
+                                    <div className={`text-[10px] mt-0.5 ${item.oldest_batch.expiry_date < Date.now() ? 'text-red-400' : item.oldest_batch.expiry_date < Date.now() + 90 * 86400000 ? 'text-yellow-400' : 'text-gray-600'}`}>
+                                      exp {new Date(item.oldest_batch.expiry_date).toLocaleDateString()}
+                                    </div>
+                                  )}
+                                </div>
+                              ) : (
+                                <span className="text-gray-600">—</span>
+                              )}
+                            </td>
                             <td className="px-4 py-3 text-center">
                               <button
                                 onClick={() => addProduct(item)}

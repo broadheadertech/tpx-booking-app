@@ -73,10 +73,28 @@ const AddWalkInModal = ({ isOpen, onClose }) => {
     }
   }, [isOpen])
 
-  // Reset downstream selections when barber changes
+  // Auto-assign the first available time slot when slots data changes
   useEffect(() => {
-    setFormData((prev) => ({ ...prev, scheduledTime: '' }))
-  }, [formData.barberId, formData.serviceId])
+    if (!slotsData?.slots?.length) {
+      setFormData((prev) => ({ ...prev, scheduledTime: '' }))
+      return
+    }
+
+    // Find the first available slot (earliest time across all barbers)
+    let firstSlot = null
+    for (const bs of slotsData.slots) {
+      if (bs.slots.length > 0) {
+        const slot = bs.slots[0]
+        const slotKey = isAnyBarber ? `${bs.barber_id}|${slot}` : slot
+        if (!firstSlot) {
+          firstSlot = slotKey
+        }
+        break
+      }
+    }
+
+    setFormData((prev) => ({ ...prev, scheduledTime: firstSlot || '' }))
+  }, [slotsData, isAnyBarber])
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -314,17 +332,17 @@ const AddWalkInModal = ({ isOpen, onClose }) => {
               </div>
             )}
 
-            {/* Available Time Slots */}
+            {/* Auto-Assigned Time Slot */}
             {formData.barberId && formData.serviceId && (
               <div>
                 <label className="block text-sm font-medium text-gray-300 mb-2">
-                  Available Time Slots <span className="text-red-400">*</span>
+                  Assigned Time Slot
                 </label>
 
                 {slotsData === undefined ? (
                   <div className="flex items-center gap-2 p-3 text-gray-400 text-sm">
                     <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-[var(--color-primary)]" />
-                    Loading slots...
+                    Finding next available slot...
                   </div>
                 ) : !hasSlots ? (
                   <div className="p-4 bg-amber-400/10 border border-amber-400/20 rounded-lg text-center">
@@ -332,55 +350,34 @@ const AddWalkInModal = ({ isOpen, onClose }) => {
                     <p className="text-sm text-amber-400">No available slots for today</p>
                     <p className="text-xs text-gray-500 mt-1">All time slots are occupied or past</p>
                   </div>
-                ) : (
-                  <div className="space-y-3 max-h-48 overflow-y-auto">
-                    {allSlots
-                      .filter((bs) => bs.slots.length > 0)
-                      .map((bs) => (
-                        <div key={bs.barber_id}>
-                          {/* Show barber name header only for "any barber" mode */}
-                          {isAnyBarber && (
-                            <p className="text-xs font-medium text-gray-400 mb-1.5">
-                              {bs.barber_name}
-                            </p>
+                ) : formData.scheduledTime ? (
+                  <div className="p-4 bg-[var(--color-primary)]/10 border border-[var(--color-primary)]/30 rounded-lg">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full bg-[var(--color-primary)]/20 flex items-center justify-center">
+                        <Clock className="h-5 w-5 text-[var(--color-primary)]" />
+                      </div>
+                      <div>
+                        <p className="text-white font-semibold text-lg">
+                          {formatSlotTime(
+                            isAnyBarber
+                              ? formData.scheduledTime.split('|')[1]
+                              : formData.scheduledTime
                           )}
-                          <div className="flex flex-wrap gap-2">
-                            {bs.slots.map((slot, idx) => {
-                              const slotKey = isAnyBarber ? `${bs.barber_id}|${slot}` : slot
-                              const isSelected = formData.scheduledTime === slotKey
-                              const isFirst = idx === 0
-
-                              return (
-                                <button
-                                  key={slotKey}
-                                  type="button"
-                                  disabled={loading}
-                                  onClick={() =>
-                                    setFormData((prev) => ({
-                                      ...prev,
-                                      scheduledTime: slotKey,
-                                    }))
-                                  }
-                                  className={`relative px-3 py-1.5 rounded-lg text-sm font-medium transition-all border ${
-                                    isSelected
-                                      ? 'bg-[var(--color-primary)] text-white border-[var(--color-primary)]'
-                                      : 'bg-[#0A0A0A] text-gray-300 border-[#444444] hover:border-[var(--color-primary)]/50 hover:text-white'
-                                  }`}
-                                >
-                                  {formatSlotTime(slot)}
-                                  {isFirst && idx === 0 && !isAnyBarber && (
-                                    <span className="absolute -top-1.5 -right-1.5 text-[9px] bg-green-500 text-white px-1 rounded-full">
-                                      Next
-                                    </span>
-                                  )}
-                                </button>
-                              )
-                            })}
-                          </div>
-                        </div>
-                      ))}
+                        </p>
+                        <p className="text-xs text-gray-400">
+                          Next available slot
+                          {isAnyBarber && formData.scheduledTime && (
+                            <> with <span className="text-[var(--color-primary)]">
+                              {allSlots.find(
+                                (bs) => bs.barber_id === formData.scheduledTime.split('|')[0]
+                              )?.barber_name || 'Barber'}
+                            </span></>
+                          )}
+                        </p>
+                      </div>
+                    </div>
                   </div>
-                )}
+                ) : null}
               </div>
             )}
 
@@ -400,35 +397,6 @@ const AddWalkInModal = ({ isOpen, onClose }) => {
               />
             </div>
 
-            {/* Summary */}
-            {formData.scheduledTime && (
-              <div className="bg-[#0A0A0A]/50 border border-[#2A2A2A]/50 rounded-lg p-3">
-                <div className="flex items-center space-x-2 text-sm text-gray-400">
-                  <Calendar className="h-4 w-4 text-[var(--color-primary)]" />
-                  <Clock className="h-4 w-4 text-[var(--color-primary)]" />
-                  <span>
-                    Scheduled for{' '}
-                    <span className="text-white font-medium">
-                      {formatSlotTime(
-                        isAnyBarber
-                          ? formData.scheduledTime.split('|')[1]
-                          : formData.scheduledTime
-                      )}
-                    </span>
-                    {isAnyBarber && formData.scheduledTime && (
-                      <>
-                        {' '}with{' '}
-                        <span className="text-white font-medium">
-                          {allSlots.find(
-                            (bs) => bs.barber_id === formData.scheduledTime.split('|')[0]
-                          )?.barber_name || 'Barber'}
-                        </span>
-                      </>
-                    )}
-                  </span>
-                </div>
-              </div>
-            )}
 
             {/* Modal Footer */}
             <div className="flex justify-end space-x-3 pt-4 border-t border-[#444444]/30">

@@ -34,6 +34,10 @@ import {
   Star,
   Zap,
   HelpCircle,
+  AlertCircle,
+  PackageCheck,
+  ChevronDown,
+  ChevronUp,
 } from "lucide-react";
 import Skeleton from "../common/Skeleton";
 import Modal from "../common/Modal";
@@ -581,7 +585,7 @@ const ReceiveStockModal = ({ isOpen, onClose, product }) => {
   const toast = useToast();
   const receiveStock = useMutation(api.services.productCatalog.receiveStock);
 
-  const [formData, setFormData] = useState({ quantity: "", supplier: "", cost_per_unit: "", notes: "" });
+  const [formData, setFormData] = useState({ quantity: "", supplier: "", cost_per_unit: "", expiry_date: "", notes: "" });
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleSubmit = async (e) => {
@@ -601,6 +605,7 @@ const ReceiveStockModal = ({ isOpen, onClose, product }) => {
         quantity,
         cost_per_unit: formData.cost_per_unit ? parseInt(formData.cost_per_unit, 10) : undefined,
         supplier: formData.supplier || undefined,
+        expiry_date: formData.expiry_date ? new Date(formData.expiry_date).getTime() : undefined,
         notes: formData.notes || undefined,
         created_by: user._id,
       });
@@ -614,7 +619,7 @@ const ReceiveStockModal = ({ isOpen, onClose, product }) => {
   };
 
   const handleClose = () => {
-    setFormData({ quantity: "", supplier: "", cost_per_unit: "", notes: "" });
+    setFormData({ quantity: "", supplier: "", cost_per_unit: "", expiry_date: "", notes: "" });
     onClose();
   };
 
@@ -640,6 +645,12 @@ const ReceiveStockModal = ({ isOpen, onClose, product }) => {
         <div>
           <label className="block text-sm font-medium text-gray-400 mb-1">Cost per Unit (PHP)</label>
           <input type="number" value={formData.cost_per_unit} onChange={(e) => setFormData((p) => ({ ...p, cost_per_unit: e.target.value }))} min="0" className="w-full bg-[#111111] border border-[#333333] text-white rounded-lg px-3 py-2" />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-400 mb-1">Expiry Date <span className="text-gray-600 font-normal">(Optional)</span></label>
+          <input type="date" value={formData.expiry_date} onChange={(e) => setFormData((p) => ({ ...p, expiry_date: e.target.value }))} className="w-full bg-[#111111] border border-[#333333] text-white rounded-lg px-3 py-2" />
+          <p className="text-xs text-gray-500 mt-1">Leave blank if product has no expiry</p>
         </div>
 
         <div>
@@ -1159,6 +1170,12 @@ const ViewBatchesModal = ({ isOpen, onClose, product }) => {
                     <p className="text-white font-medium text-sm">{batch.batch_number}</p>
                     <p className="text-gray-500 text-xs">Received: {formatDate(batch.received_at)}</p>
                     {batch.supplier && <p className="text-gray-500 text-xs">Supplier: {batch.supplier}</p>}
+                    {batch.expiry_date && (() => {
+                      const daysLeft = Math.ceil((batch.expiry_date - Date.now()) / (1000 * 60 * 60 * 24));
+                      const color = daysLeft <= 0 ? "text-red-400" : daysLeft <= 30 ? "text-orange-400" : daysLeft <= 90 ? "text-yellow-400" : "text-green-400";
+                      const label = daysLeft <= 0 ? "EXPIRED" : daysLeft <= 30 ? `Expires in ${daysLeft}d` : daysLeft <= 90 ? `Expires in ${daysLeft}d` : formatDate(batch.expiry_date);
+                      return <p className={`text-xs font-medium ${color}`}>Expiry: {label}</p>;
+                    })()}
                   </div>
                   <div className="text-right">
                     <p className="text-white font-bold">{batch.quantity}</p>
@@ -1685,12 +1702,17 @@ const BranchOrdersTab = () => {
   const [orderToApprove, setOrderToApprove] = useState(null);
   const [orderToReject, setOrderToReject] = useState(null);
   const [orderToShip, setOrderToShip] = useState(null);
+  const [shipExpiryDates, setShipExpiryDates] = useState({}); // { [catalog_product_id]: "YYYY-MM-DD" }
   const [rejectReason, setRejectReason] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
 
   const orders = useQuery(api.services.productOrders.getAllOrders, filterStatus === "all" ? {} : { status: filterStatus });
   const ordersSummary = useQuery(api.services.productOrders.getOrdersSummary);
   const paymentDebug = useQuery(api.services.productOrders.getPaymentStatusDebug);
+  const batchGuide = useQuery(
+    api.services.productOrders.getOrderBatchGuide,
+    orderToShip?._id ? { order_id: orderToShip._id } : "skip"
+  );
 
   const approveOrder = useMutation(api.services.productOrders.approveOrder);
   const rejectOrder = useMutation(api.services.productOrders.rejectOrder);
@@ -1745,9 +1767,21 @@ const BranchOrdersTab = () => {
     if (!user || !orderToShip) return;
     setIsProcessing(true);
     try {
-      await shipOrder({ order_id: orderToShip._id, shipped_by: user._id });
+      // Build expiry dates array from the form state
+      const item_expiry_dates = orderToShip.items
+        ?.filter(item => shipExpiryDates[item.catalog_product_id])
+        .map(item => ({
+          catalog_product_id: item.catalog_product_id,
+          expiry_date: new Date(shipExpiryDates[item.catalog_product_id]).getTime(),
+        }));
+      await shipOrder({
+        order_id: orderToShip._id,
+        shipped_by: user._id,
+        item_expiry_dates: item_expiry_dates?.length > 0 ? item_expiry_dates : undefined,
+      });
       toast.success("Success", "Order marked as shipped");
       setOrderToShip(null);
+      setShipExpiryDates({});
     } catch (err) {
       toast.error("Error", err.message);
     } finally {
@@ -2093,7 +2127,7 @@ const BranchOrdersTab = () => {
 
       {/* Ship Order Confirmation Modal */}
       {orderToShip && (
-        <Modal isOpen={!!orderToShip} onClose={() => !isProcessing && setOrderToShip(null)} title="Confirm Shipment" size="md" variant="dark">
+        <Modal isOpen={!!orderToShip} onClose={() => { if (!isProcessing) { setOrderToShip(null); setShipExpiryDates({}); } }} title="Confirm Shipment" size="md" variant="dark">
           <div className="space-y-4">
             <div className="bg-purple-500/10 border border-purple-500/30 rounded-xl p-4">
               <div className="flex items-start gap-3">
@@ -2109,13 +2143,57 @@ const BranchOrdersTab = () => {
 
             <div className="bg-[#111111] rounded-lg p-3">
               <p className="text-xs text-gray-500 mb-2">Items being shipped:</p>
-              <div className="space-y-1 max-h-32 overflow-y-auto">
-                {orderToShip.items?.map((item, idx) => (
-                  <div key={idx} className="flex justify-between text-sm">
-                    <span className="text-gray-300">{item.product_name} × {item.quantity_approved || item.quantity_requested || item.quantity}</span>
-                    <span className="text-gray-400">{formatPrice(item.unit_price * (item.quantity_approved || item.quantity_requested || item.quantity))}</span>
-                  </div>
-                ))}
+              <div className="space-y-4 max-h-[50vh] overflow-y-auto">
+                {orderToShip.items?.map((item, idx) => {
+                  const guide = batchGuide?.find(g => g.catalog_product_id === item.catalog_product_id);
+                  return (
+                    <div key={idx} className="space-y-2 pb-3 border-b border-[#222222] last:border-0 last:pb-0">
+                      <div className="flex justify-between text-sm">
+                        <span className="text-gray-300 font-medium">{item.product_name} × {item.quantity_approved || item.quantity_requested || item.quantity}</span>
+                        <span className="text-gray-400">{formatPrice(item.unit_price * (item.quantity_approved || item.quantity_requested || item.quantity))}</span>
+                      </div>
+
+                      {/* FIFO Batch Picking Guide */}
+                      {guide && guide.picks.length > 0 && (
+                        <div className="ml-2 space-y-1">
+                          <p className="text-[10px] text-gray-600 uppercase tracking-wide">Pull from (oldest first):</p>
+                          {guide.picks.map((pick, pi) => (
+                            <div key={pi} className="flex items-center gap-2 text-xs bg-[#1A1A1A] rounded px-2 py-1.5">
+                              <span className="text-purple-400 font-mono">{pick.batch_number}</span>
+                              <span className="text-white font-semibold">{pick.take_qty} units</span>
+                              <span className="text-gray-600">·</span>
+                              <span className="text-gray-500">{pick.batch_remaining} in batch</span>
+                              {pick.expiry_date && (
+                                <>
+                                  <span className="text-gray-600">·</span>
+                                  <span className={`${pick.expiry_date < Date.now() ? 'text-red-400' : pick.expiry_date < Date.now() + 90 * 86400000 ? 'text-yellow-400' : 'text-gray-500'}`}>
+                                    exp {new Date(pick.expiry_date).toLocaleDateString()}
+                                  </span>
+                                </>
+                              )}
+                            </div>
+                          ))}
+                          {guide.shortage > 0 && (
+                            <div className="flex items-center gap-1.5 text-xs text-red-400 px-2 py-1">
+                              <AlertCircle className="w-3 h-3" />
+                              Short by {guide.shortage} units
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      <div className="flex items-center gap-2">
+                        <label className="text-xs text-gray-500 whitespace-nowrap">Expiry:</label>
+                        <input
+                          type="date"
+                          value={shipExpiryDates[item.catalog_product_id] || ""}
+                          onChange={(e) => setShipExpiryDates(prev => ({ ...prev, [item.catalog_product_id]: e.target.value }))}
+                          className="flex-1 bg-[#1A1A1A] border border-[#333333] text-white rounded px-2 py-1 text-xs focus:border-purple-500 outline-none"
+                        />
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
               <div className="border-t border-[#333333] mt-2 pt-2 flex justify-between text-sm font-semibold">
                 <span className="text-gray-300">Total</span>
@@ -2125,7 +2203,7 @@ const BranchOrdersTab = () => {
 
             <div className="flex gap-3 pt-2">
               <button
-                onClick={() => setOrderToShip(null)}
+                onClick={() => { setOrderToShip(null); setShipExpiryDates({}); }}
                 disabled={isProcessing}
                 className="flex-1 px-4 py-3 bg-[#333333] hover:bg-[#444444] text-white font-medium rounded-lg transition-colors disabled:opacity-50"
               >
@@ -2335,16 +2413,195 @@ const BranchInventoryTab = () => {
 // ============================================
 // MAIN COMPONENT
 // ============================================
+// ============================================
+// TAB 4: DISCREPANCIES
+// ============================================
+const DiscrepanciesTab = () => {
+  const { user } = useCurrentUser();
+  const toast = useToast();
+  const discrepancies = useQuery(api.services.productOrders.getPendingDiscrepancies) || [];
+  const resolveDiscrepancy = useMutation(api.services.productOrders.resolveDiscrepancy);
+
+  const [expandedId, setExpandedId] = useState(null);
+  const [resolvingId, setResolvingId] = useState(null);
+  const [resolutionNotes, setResolutionNotes] = useState({});
+  const [filterStatus, setFilterStatus] = useState("pending");
+
+  const filtered = discrepancies.filter((d) =>
+    filterStatus === "all" ? true : d.status === filterStatus
+  );
+
+  const handleResolve = async (discrepancy, resolution) => {
+    if (!user) return;
+    setResolvingId(discrepancy._id);
+    try {
+      await resolveDiscrepancy({
+        discrepancy_id: discrepancy._id,
+        resolution,
+        resolution_notes: resolutionNotes[discrepancy._id] || undefined,
+        resolved_by: user._id,
+      });
+      toast.success("Done", resolution === "resolved" ? "Discrepancy marked as resolved" : "Discrepancy waived");
+    } catch (err) {
+      toast.error("Error", err.message || "Failed to update discrepancy");
+    } finally {
+      setResolvingId(null);
+    }
+  };
+
+  const statusColors = {
+    pending: "text-orange-400 bg-orange-500/10 border-orange-500/30",
+    resolved: "text-green-400 bg-green-500/10 border-green-500/30",
+    waived: "text-gray-400 bg-gray-500/10 border-gray-500/30",
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* Summary */}
+      <div className="grid grid-cols-3 gap-4">
+        {["pending", "resolved", "waived"].map((s) => {
+          const count = discrepancies.filter((d) => d.status === s).length;
+          const colors = { pending: "text-orange-400", resolved: "text-green-400", waived: "text-gray-400" };
+          return (
+            <button
+              key={s}
+              onClick={() => setFilterStatus(s)}
+              className={`bg-[#1A1A1A] border rounded-xl p-4 text-left transition-colors ${filterStatus === s ? "border-[var(--color-primary)]/50" : "border-[#333333]"}`}
+            >
+              <p className={`text-2xl font-bold ${colors[s]}`}>{count}</p>
+              <p className="text-gray-500 text-sm capitalize">{s}</p>
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Filter row */}
+      <div className="flex gap-2">
+        {["all", "pending", "resolved", "waived"].map((s) => (
+          <button
+            key={s}
+            onClick={() => setFilterStatus(s)}
+            className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${filterStatus === s ? "bg-[var(--color-primary)] text-white" : "bg-[#1A1A1A] text-gray-400 hover:text-white"}`}
+          >
+            {s === "all" ? "All" : s.charAt(0).toUpperCase() + s.slice(1)}
+          </button>
+        ))}
+      </div>
+
+      {/* List */}
+      {filtered.length === 0 ? (
+        <div className="bg-[#1A1A1A] border border-[#333333] rounded-xl p-12 text-center">
+          <PackageCheck className="w-12 h-12 text-green-500 mx-auto mb-3 opacity-50" />
+          <p className="text-white font-medium">No discrepancies</p>
+          <p className="text-gray-500 text-sm mt-1">All shipments are reconciled</p>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {filtered.map((d) => {
+            const isExpanded = expandedId === d._id;
+            return (
+              <div key={d._id} className={`bg-[#1A1A1A] border rounded-xl overflow-hidden ${d.status === "pending" ? "border-orange-500/30" : "border-[#333333]"}`}>
+                {/* Header row */}
+                <button
+                  className="w-full flex items-center justify-between p-4 text-left hover:bg-[#222222] transition-colors"
+                  onClick={() => setExpandedId(isExpanded ? null : d._id)}
+                >
+                  <div className="flex items-center gap-3">
+                    <AlertCircle className={`w-5 h-5 flex-shrink-0 ${d.status === "pending" ? "text-orange-400" : "text-gray-500"}`} />
+                    <div>
+                      <p className="text-white font-medium text-sm">{d.order_number}</p>
+                      <p className="text-gray-500 text-xs">{d.branch_name} · {new Date(d.submitted_at).toLocaleDateString()}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <div className="text-right hidden sm:block">
+                      <p className="text-orange-400 text-sm font-semibold">{d.total_discrepancy_units} units</p>
+                      <p className="text-gray-500 text-xs">₱{d.total_discrepancy_amount.toLocaleString()}</p>
+                    </div>
+                    <span className={`text-xs px-2 py-1 rounded-full border capitalize ${statusColors[d.status]}`}>{d.status}</span>
+                    {isExpanded ? <ChevronUp className="w-4 h-4 text-gray-500" /> : <ChevronDown className="w-4 h-4 text-gray-500" />}
+                  </div>
+                </button>
+
+                {/* Expanded detail */}
+                {isExpanded && (
+                  <div className="px-4 pb-4 space-y-4 border-t border-[#333333]">
+                    {/* Items table */}
+                    <div className="mt-4 space-y-2">
+                      {d.items.map((item) => (
+                        <div key={item.catalog_product_id} className="flex items-center justify-between bg-[#111111] rounded-lg px-3 py-2 text-sm">
+                          <span className="text-gray-300 flex-1">{item.product_name}</span>
+                          <div className="flex items-center gap-4 text-xs">
+                            <span className="text-gray-500">Shipped: <span className="text-white">{item.quantity_shipped}</span></span>
+                            <span className="text-gray-500">Received: <span className="text-white">{item.quantity_received}</span></span>
+                            <span className={item.discrepancy > 0 ? "text-red-400 font-semibold" : "text-yellow-400 font-semibold"}>
+                              {item.discrepancy > 0 ? `−${item.discrepancy}` : `+${Math.abs(item.discrepancy)}`}
+                            </span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+
+                    {d.notes && (
+                      <p className="text-gray-500 text-xs italic">Branch note: "{d.notes}"</p>
+                    )}
+
+                    {/* Resolution */}
+                    {d.status === "pending" && (
+                      <div className="space-y-3">
+                        <textarea
+                          value={resolutionNotes[d._id] || ""}
+                          onChange={(e) => setResolutionNotes((p) => ({ ...p, [d._id]: e.target.value }))}
+                          rows={2}
+                          placeholder="Resolution notes (optional)..."
+                          className="w-full bg-[#111111] border border-[#333333] text-white rounded-lg px-3 py-2 text-sm resize-none"
+                        />
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => handleResolve(d, "resolved")}
+                            disabled={resolvingId === d._id}
+                            className="flex-1 py-2 bg-green-600 hover:bg-green-500 text-white rounded-lg text-sm font-medium disabled:opacity-50 flex items-center justify-center gap-1.5"
+                          >
+                            {resolvingId === d._id ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <CheckCircle className="w-3.5 h-3.5" />}
+                            Mark Resolved
+                          </button>
+                          <button
+                            onClick={() => handleResolve(d, "waived")}
+                            disabled={resolvingId === d._id}
+                            className="flex-1 py-2 bg-[#2A2A2A] hover:bg-[#333333] text-gray-400 hover:text-white rounded-lg text-sm disabled:opacity-50 flex items-center justify-center gap-1.5"
+                          >
+                            <X className="w-3.5 h-3.5" /> Waive
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
+                    {d.status !== "pending" && d.resolution_notes && (
+                      <p className="text-gray-500 text-xs">Resolution: "{d.resolution_notes}"</p>
+                    )}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+};
+
 const ProductCatalogManager = () => {
   const [activeTab, setActiveTab] = useState("inventory");
   const [showTutorial, setShowTutorial] = useState(false);
   const handleTutorialDone = useCallback(() => setShowTutorial(false), []);
   const pendingOrdersCount = useQuery(api.services.productOrders.getPendingOrdersCount);
+  const pendingDiscrepanciesCount = useQuery(api.services.productOrders.getPendingDiscrepanciesCount);
 
   const tabs = [
     { id: "inventory", label: "My Inventory", icon: Warehouse },
     { id: "orders", label: "Branch Orders", icon: ShoppingCart, badge: pendingOrdersCount || 0 },
     { id: "branches", label: "Branch Inventory", icon: Store },
+    { id: "discrepancies", label: "Discrepancies", icon: AlertCircle, badge: pendingDiscrepanciesCount || 0 },
   ];
 
   return (
@@ -2385,6 +2642,7 @@ const ProductCatalogManager = () => {
       {activeTab === "inventory" && <MyInventoryTab />}
       {activeTab === "orders" && <BranchOrdersTab />}
       {activeTab === "branches" && <BranchInventoryTab />}
+      {activeTab === "discrepancies" && <DiscrepanciesTab />}
 
       <WalkthroughOverlay steps={productCatalogSteps} isVisible={showTutorial} onComplete={handleTutorialDone} onSkip={handleTutorialDone} />
     </div>

@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react'
-import { UserPlus, Search, Filter, Plus, Clock, User, Phone, Calendar, CheckCircle, XCircle, Trash2, Play, HelpCircle } from 'lucide-react'
+import { UserPlus, Search, Filter, Plus, Clock, User, Phone, Calendar, CheckCircle, XCircle, Trash2, Play, HelpCircle, ShoppingBag } from 'lucide-react'
 import { useQuery, useMutation } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
 import { useAppModal } from '../../context/AppModalContext'
@@ -146,6 +146,31 @@ export default function WalkInSection() {
       cancelled: 'bg-red-400/20 text-red-400 border-red-400/30'
     }
     return badges[status] || badges.waiting
+  }
+
+  const handleProceedToPOS = async (walkIn) => {
+    const confirmed = await showConfirm({ title: 'Proceed to POS', message: 'Complete this walk-in and proceed to POS for payment?', type: 'warning' })
+    if (!confirmed) return
+    try {
+      // Mark as completed first
+      await completeWalkIn({ walkInId: walkIn._id })
+
+      // Store walk-in data for POS auto-fill
+      sessionStorage.setItem('posWalkIn', JSON.stringify({
+        walkIn_id: walkIn._id,
+        customer_name: walkIn.name,
+        customer_phone: walkIn.number || '',
+        barber_id: walkIn.barberId,
+        barber_name: walkIn.barber_name || walkIn.assignedBarber,
+        service_id: walkIn.service_id || null,
+        scheduled_time: walkIn.scheduled_time || null,
+      }))
+
+      // Navigate to POS
+      window.location.href = '/staff/pos'
+    } catch (error) {
+      showAlert({ title: 'Error', message: error.message || 'Failed to proceed to POS', type: 'error' })
+    }
   }
 
   const handleManualCleanup = async () => {
@@ -408,6 +433,14 @@ export default function WalkInSection() {
                       )}
                       {walkIn.status === 'active' && (
                         <>
+                          <button
+                            onClick={() => handleProceedToPOS(walkIn)}
+                            className="flex items-center space-x-1 px-3 py-1.5 bg-[var(--color-primary)]/20 text-[var(--color-primary)] border border-[var(--color-primary)]/30 rounded-lg hover:bg-[var(--color-primary)]/30 transition-colors"
+                            title="Complete and proceed to POS for payment"
+                          >
+                            <ShoppingBag className="h-4 w-4" />
+                            <span>POS</span>
+                          </button>
                           <button
                             onClick={() => handleComplete(walkIn._id)}
                             className="flex items-center space-x-1 px-3 py-1.5 bg-green-400/20 text-green-400 border border-green-400/30 rounded-lg hover:bg-green-400/30 transition-colors"
