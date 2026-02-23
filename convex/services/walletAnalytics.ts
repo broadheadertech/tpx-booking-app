@@ -602,8 +602,12 @@ export const getQuickStats = query({
 export const getBranchWalletSummaries = query({
   args: {},
   handler: async (ctx) => {
-    // Super Admin only
-    await checkRole(ctx, "super_admin");
+    // Super Admin only — graceful fallback so UI doesn't break on auth edge cases
+    try {
+      await checkRole(ctx, "super_admin");
+    } catch {
+      return { branches: [], totalBranches: 0 };
+    }
 
     // Get all branches
     const branches = await ctx.db.query("branches").collect();
