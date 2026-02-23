@@ -4,6 +4,7 @@ import { api } from "../_generated/api";
 import { throwUserError, ERROR_CODES, validateInput } from "../utils/errors";
 import { getCurrentUser } from "../lib/clerkAuth";
 import type { Id } from "../_generated/dataModel";
+import { logAudit } from "./auditLogs";
 
 // ============================================================================
 // SECURE CUSTOMER QUERIES (Story 13-7: Customer Booking Self-Service)
@@ -943,6 +944,30 @@ export const createBooking = mutation({
       // Don't fail the booking creation if notifications fail
     }
 
+    await logAudit(ctx, {
+      user_id: args.customer as string,
+      user_name: args.customer_name || customer?.nickname || customer?.username,
+      branch_id: args.branch_id as string,
+      category: "booking",
+      action: "booking.created",
+      description: `Created booking #${bookingCode} for ${args.customer_name || customer?.nickname || customer?.username || "Customer"} on ${args.date} at ${args.time}`,
+      target_type: "booking",
+      target_id: bookingId as string,
+      metadata: {
+        booking_code: bookingCode,
+        service_id: args.service,
+        service_name: service!.name,
+        barber_id: args.barber,
+        date: args.date,
+        time: args.time,
+        price: originalPrice,
+        final_price: finalPrice,
+        discount_amount: discountAmount,
+        status: args.status || "pending",
+        payment_status: args.payment_status || "unpaid",
+      },
+    });
+
     return bookingId;
   },
 });
@@ -1200,6 +1225,26 @@ export const updateBooking = mutation({
       }
     }
 
+    await logAudit(ctx, {
+      user_id: currentBooking.customer as string | undefined,
+      user_name: currentBooking.customer_name,
+      branch_id: currentBooking.branch_id as string,
+      category: "booking",
+      action: "booking.updated",
+      description: `Updated booking #${currentBooking.booking_code}${args.status ? ` status to ${args.status}` : ""}${isRescheduled ? ` rescheduled to ${args.date || currentBooking.date} at ${args.time || currentBooking.time}` : ""}`,
+      target_type: "booking",
+      target_id: id as string,
+      metadata: {
+        booking_code: currentBooking.booking_code,
+        changes: updates,
+        previous_status: currentBooking.status,
+        new_status: args.status || currentBooking.status,
+        rescheduled: isRescheduled,
+        barber_changed: barberChanged,
+        price_updated: newServicePrice !== undefined,
+      },
+    });
+
     return id;
   },
 });
@@ -1328,6 +1373,26 @@ export const deleteBooking = mutation({
     }
 
     await ctx.db.delete(args.id);
+
+    await logAudit(ctx, {
+      user_id: booking.customer as string | undefined,
+      user_name: booking.customer_name,
+      branch_id: booking.branch_id as string,
+      category: "booking",
+      action: "booking.deleted",
+      description: `Deleted booking #${booking.booking_code} for ${booking.customer_name || "Customer"} on ${booking.date} at ${booking.time}`,
+      target_type: "booking",
+      target_id: args.id as string,
+      metadata: {
+        booking_code: booking.booking_code,
+        date: booking.date,
+        time: booking.time,
+        status: booking.status,
+        price: booking.price,
+        payment_status: booking.payment_status,
+      },
+    });
+
     return { success: true };
   },
 });
@@ -1614,6 +1679,24 @@ export const updatePaymentStatus = mutation({
     }
     await ctx.db.patch(args.id, updates);
 
+    const booking = await ctx.db.get(args.id);
+    await logAudit(ctx, {
+      user_id: booking?.customer as string | undefined,
+      user_name: booking?.customer_name,
+      branch_id: booking?.branch_id as string | undefined,
+      category: "booking",
+      action: "booking.payment_status_changed",
+      description: `Updated payment status to "${args.payment_status}" for booking #${booking?.booking_code || args.id}`,
+      target_type: "booking",
+      target_id: args.id as string,
+      metadata: {
+        booking_code: booking?.booking_code,
+        new_payment_status: args.payment_status,
+        price: args.price,
+        final_price: args.final_price,
+      },
+    });
+
     return args.id;
   },
 });
@@ -1816,6 +1899,26 @@ export const cancelBooking = mutation({
         updatedAt: Date.now(),
       });
     } catch (e) { console.error("[BOOKINGS] In-app cancellation notification failed:", e); }
+
+    await logAudit(ctx, {
+      user_id: booking.customer as string | undefined,
+      user_name: booking.customer_name,
+      branch_id: booking.branch_id as string,
+      category: "booking",
+      action: "booking.cancelled",
+      description: `Cancelled booking #${booking.booking_code} for ${booking.customer_name || "Customer"} on ${booking.date} at ${booking.time}${args.reason ? ` — ${args.reason}` : ""}`,
+      target_type: "booking",
+      target_id: args.id as string,
+      metadata: {
+        booking_code: booking.booking_code,
+        date: booking.date,
+        time: booking.time,
+        previous_status: booking.status,
+        reason: args.reason,
+        price: booking.price,
+        payment_status: booking.payment_status,
+      },
+    });
 
     return { success: true, booking_id: args.id };
   },
@@ -2056,6 +2159,29 @@ export const createWalkInBooking = mutation({
       // Don't fail the booking creation if notifications fail
     }
 
+    await logAudit(ctx, {
+      user_name: args.customer_name,
+      branch_id: args.branch_id as string,
+      category: "booking",
+      action: "booking.walkin_created",
+      description: `Created walk-in booking #${bookingCode} for ${args.customer_name} on ${args.date} at ${args.time}`,
+      target_type: "booking",
+      target_id: bookingId as string,
+      metadata: {
+        booking_code: bookingCode,
+        customer_name: args.customer_name,
+        customer_phone: args.customer_phone,
+        customer_email: args.customer_email,
+        service_id: args.service,
+        service_name: service!.name,
+        barber_id: args.barber,
+        date: args.date,
+        time: args.time,
+        price: service!.price,
+        status: args.status || "pending",
+      },
+    });
+
     return bookingId;
   },
 });
@@ -2131,6 +2257,26 @@ export const recordCashPayment = mutation({
         previous_status: booking.payment_status || "unpaid",
         new_status: newPaymentStatus,
         remaining_after: remainingBalance - args.amount,
+      },
+    });
+
+    await logAudit(ctx, {
+      user_id: args.collected_by as string,
+      user_name: undefined,
+      branch_id: booking.branch_id as string,
+      category: "booking",
+      action: "booking.cash_payment_recorded",
+      description: `Recorded ${args.payment_method} payment of ₱${args.amount.toLocaleString()} for booking #${booking.booking_code}`,
+      target_type: "booking",
+      target_id: args.booking_id as string,
+      metadata: {
+        booking_code: booking.booking_code,
+        amount: args.amount,
+        payment_method: args.payment_method,
+        previous_payment_status: booking.payment_status || "unpaid",
+        new_payment_status: newPaymentStatus,
+        service_price: servicePrice,
+        remaining_balance: Math.max(0, remainingBalance - args.amount),
       },
     });
 
@@ -2217,6 +2363,27 @@ export const markBookingComplete = mutation({
         console.error("[markBookingComplete] Failed to update customer branch activity:", error);
       }
     }
+
+    await logAudit(ctx, {
+      user_id: args.completed_by as string,
+      user_name: undefined,
+      branch_id: booking.branch_id as string,
+      category: "booking",
+      action: "booking.completed",
+      description: `Completed booking #${booking.booking_code} for ${booking.customer_name || "Customer"} on ${booking.date} at ${booking.time}`,
+      target_type: "booking",
+      target_id: args.booking_id as string,
+      metadata: {
+        booking_code: booking.booking_code,
+        date: booking.date,
+        time: booking.time,
+        service_price: servicePrice,
+        total_paid: convenienceFeePaid + cashCollected,
+        unpaid_balance: Math.max(0, remainingBalance),
+        forced_complete: args.force_complete || false,
+        payment_status: booking.payment_status || "unpaid",
+      },
+    });
 
     return {
       success: true,

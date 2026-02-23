@@ -30,7 +30,8 @@ import {
   Wallet,
   Target,
   MessageSquare,
-  Megaphone
+  Megaphone,
+  History
 } from 'lucide-react'
 
 const TabNavigation = ({ tabs, activeTab, onTabChange, incompleteBookingsCount = 0, waitingWalkInsCount = 0, pendingAdvancesCount = 0 }) => {
@@ -110,6 +111,7 @@ const TabNavigation = ({ tabs, activeTab, onTabChange, incompleteBookingsCount =
       wallet_earnings: TrendingUp,
       customer_analytics: Target,
       post_moderation: MessageSquare,
+      activity_log: History,
     }
     return iconMap[tabId] || LayoutDashboard
   }

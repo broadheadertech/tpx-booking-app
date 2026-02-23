@@ -13,6 +13,7 @@ import ProductsHub from "../../components/staff/hubs/ProductsHub";
 import FinanceHub from "../../components/staff/hubs/FinanceHub";
 import MarketingHub from "../../components/staff/hubs/MarketingHub";
 import BranchSettings from "../../components/staff/BranchSettings";
+import SystemAuditLog from "../../components/common/SystemAuditLog";
 import MorningBriefing from "../../components/staff/MorningBriefing";
 import DashboardFooter from "../../components/common/DashboardFooter";
 import {
@@ -368,6 +369,13 @@ function StaffDashboard() {
           />
         );
 
+      case "activity_log":
+        return user?.branch_id ? (
+          <SystemAuditLog branchId={user.branch_id} />
+        ) : (
+          <SystemAuditLog />
+        );
+
       case "settings":
         return <BranchSettings user={user} onRefresh={handleRefresh} />;
 
@@ -424,6 +432,7 @@ function StaffDashboard() {
     { id: "products", label: "Products", icon: "package" },
     { id: "finance", label: "Finance", icon: "dollar-sign" },
     { id: "marketing", label: "Marketing", icon: "megaphone" },
+    { id: "activity_log", label: "Activity Log", icon: "history" },
     { id: "settings", label: "Settings", icon: "settings" },
   ];
 

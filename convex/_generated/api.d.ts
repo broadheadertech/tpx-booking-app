@@ -25,6 +25,7 @@ import type * as lib_walletUtils from "../lib/walletUtils.js";
 import type * as seed from "../seed.js";
 import type * as services_accounting from "../services/accounting.js";
 import type * as services_aiAnalytics from "../services/aiAnalytics.js";
+import type * as services_auditLogs from "../services/auditLogs.js";
 import type * as services_auth from "../services/auth.js";
 import type * as services_balanceSheet from "../services/balanceSheet.js";
 import type * as services_barberMatcher from "../services/barberMatcher.js";
@@ -129,6 +130,7 @@ declare const fullApi: ApiFromModules<{
   seed: typeof seed;
   "services/accounting": typeof services_accounting;
   "services/aiAnalytics": typeof services_aiAnalytics;
+  "services/auditLogs": typeof services_auditLogs;
   "services/auth": typeof services_auth;
   "services/balanceSheet": typeof services_balanceSheet;
   "services/barberMatcher": typeof services_barberMatcher;

@@ -593,7 +593,7 @@ const ServiceBooking = ({ onBack, onComplete, prefillData }) => {
 
     return vouchers.filter((voucher) => {
       const isNotExpired = voucher.expires_at > Date.now();
-      const isNotRedeemed = !voucher.redeemed;
+      const isNotRedeemed = voucher.status !== 'redeemed';
 
       return isNotExpired && isNotRedeemed;
     });

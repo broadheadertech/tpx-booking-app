@@ -107,7 +107,7 @@ function ClerkLogin() {
           <div className="clerk-login-container">
             <SignIn
               appearance={clerkAppearance}
-              forceRedirectUrl="/auth/clerk-callback"
+              fallbackRedirectUrl="/auth/clerk-callback"
               routing="path"
               path="/auth/login"
               signUpUrl="/auth/register"

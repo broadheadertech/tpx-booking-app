@@ -236,8 +236,7 @@ function ClerkLoginContent({ branding, onGuestLogin }) {
             footerActionLink: 'text-[var(--color-primary)] hover:text-[var(--color-accent)] font-semibold',
           },
         }}
-        afterSignInUrl="/auth/clerk-callback"
-        forceRedirectUrl="/auth/clerk-callback"
+        fallbackRedirectUrl="/auth/clerk-callback"
         routing="path"
         path="/auth/login"
         signUpUrl="/auth/register"

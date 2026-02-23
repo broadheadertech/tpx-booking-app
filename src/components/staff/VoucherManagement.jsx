@@ -23,6 +23,7 @@ import {
   List,
   AlertCircle,
   HelpCircle,
+  Send,
 } from "lucide-react";
 import WalkthroughOverlay from "../common/WalkthroughOverlay";
 import { branchVoucherSteps } from "../../config/walkthroughSteps";
@@ -30,7 +31,7 @@ import QRCode from "qrcode";
 import Modal from "../common/Modal";
 import SendVoucherModal from "./SendVoucherModal";
 import ViewVoucherUsersModal from "./ViewVoucherUsersModal";
-import { useQuery, useMutation } from "convex/react";
+import { useQuery, useMutation, useAction } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import { useBranding } from "../../context/BrandingContext";
 import { useCurrentUser } from "../../hooks/useCurrentUser";
@@ -53,13 +54,122 @@ const VoucherManagement = ({ vouchers = [], onRefresh, onCreateVoucher }) => {
   // Modal states
   const [confirmModal, setConfirmModal] = useState(null);
   const [errorModal, setErrorModal] = useState(null);
+  const [approveModal, setApproveModal] = useState(null);
+  const [rejectModal, setRejectModal] = useState(null);
+  const [processingId, setProcessingId] = useState(null);
 
   // Convex queries and mutations
   const deleteVoucher = useMutation(api.services.vouchers.deleteVoucher);
+  const approveVoucherMutation = useMutation(api.services.vouchers.approveVoucher);
+  const rejectVoucherMutation = useMutation(api.services.vouchers.rejectVoucher);
   const assignedUsers = useQuery(
     api.services.vouchers.getVoucherAssignedUsers,
     showUsersModal ? { voucherId: showUsersModal._id } : "skip"
   );
+
+  // Send request queries and mutations
+  const pendingSendRequests = useQuery(
+    api.services.vouchers.getSendRequestsByBranch,
+    user?.branch_id ? { branch_id: user.branch_id } : "skip"
+  );
+  const approveSendRequestMutation = useMutation(api.services.vouchers.approveSendRequest);
+  const rejectSendRequestMutation = useMutation(api.services.vouchers.rejectSendRequest);
+  const sendVoucherEmailAction = useAction(api.services.auth.sendVoucherEmailWithQR);
+  const [sendRequestProcessing, setSendRequestProcessing] = useState(null);
+  const [rejectSendModal, setRejectSendModal] = useState(null);
+
+  const isBranchAdminOrHigher = user?.role === "branch_admin" || user?.role === "super_admin" || user?.role === "admin_staff" || user?.role === "it_admin";
+
+  // Approve send request → assign vouchers + send emails
+  const handleApproveSendRequest = async (request) => {
+    setSendRequestProcessing(request._id);
+    try {
+      const result = await approveSendRequestMutation({
+        request_id: request._id,
+        approved_by: user._id,
+      });
+
+      // Send emails to assigned recipients with their unique assignment codes
+      let emailsSent = 0;
+      for (const recipient of result.assignedRecipients) {
+        try {
+          await sendVoucherEmailAction({
+            email: recipient.email,
+            recipientName: recipient.nickname || recipient.username,
+            voucherCode: recipient.assignmentCode || result.voucher.code, // Use unique assignment code
+            voucherValue: `₱${parseFloat(result.voucher.value).toFixed(2)}`,
+            pointsRequired: result.voucher.points_required || 0,
+            expiresAt: new Date(result.voucher.expires_at).toLocaleDateString(),
+            voucherId: result.voucher._id,
+          });
+          emailsSent++;
+        } catch (emailErr) {
+          console.error(`Failed to send email to ${recipient.email}:`, emailErr);
+        }
+      }
+
+      onRefresh();
+      setConfirmModal(null);
+      setErrorModal(emailsSent > 0
+        ? null
+        : { title: "Partial Success", message: `Vouchers assigned but emails failed to send. ${result.assignedRecipients.length} users were assigned.` }
+      );
+    } catch (error) {
+      console.error("Failed to approve send request:", error);
+      setErrorModal({ title: "Approval Failed", message: error.message || "Failed to approve send request." });
+    } finally {
+      setSendRequestProcessing(null);
+    }
+  };
+
+  const handleRejectSendRequest = async () => {
+    if (!rejectSendModal || !rejectSendModal.reason?.trim()) return;
+    setSendRequestProcessing(rejectSendModal._id);
+    try {
+      await rejectSendRequestMutation({
+        request_id: rejectSendModal._id,
+        rejected_by: user._id,
+        reason: rejectSendModal.reason,
+      });
+      setRejectSendModal(null);
+      onRefresh();
+    } catch (error) {
+      console.error("Failed to reject send request:", error);
+      setErrorModal({ title: "Rejection Failed", message: error.message || "Failed to reject send request." });
+    } finally {
+      setSendRequestProcessing(null);
+    }
+  };
+
+  const handleApprove = async () => {
+    if (!approveModal || !user) return;
+    setProcessingId(approveModal._id);
+    try {
+      await approveVoucherMutation({ id: approveModal._id, approved_by: user._id });
+      setApproveModal(null);
+      onRefresh();
+    } catch (error) {
+      console.error("Failed to approve voucher:", error);
+      setErrorModal({ title: "Approval Failed", message: error.message || "Failed to approve voucher." });
+    } finally {
+      setProcessingId(null);
+    }
+  };
+
+  const handleReject = async () => {
+    if (!rejectModal || !user || !rejectModal.reason?.trim()) return;
+    setProcessingId(rejectModal._id);
+    try {
+      await rejectVoucherMutation({ id: rejectModal._id, rejected_by: user._id, reason: rejectModal.reason });
+      setRejectModal(null);
+      onRefresh();
+    } catch (error) {
+      console.error("Failed to reject voucher:", error);
+      setErrorModal({ title: "Rejection Failed", message: error.message || "Failed to reject voucher." });
+    } finally {
+      setProcessingId(null);
+    }
+  };
 
   const getStatusConfig = (voucher) => {
     if (voucher.status === "pending_approval") {
@@ -474,6 +584,75 @@ const VoucherManagement = ({ vouchers = [], onRefresh, onCreateVoucher }) => {
         </div>
       </div>
 
+      {/* Pending Send Requests — visible to branch_admin+ */}
+      {isBranchAdminOrHigher && pendingSendRequests && pendingSendRequests.length > 0 && (
+        <div className="bg-[#1A1A1A] rounded-lg border border-yellow-500/30 shadow-sm overflow-hidden">
+          <div className="px-4 py-3 bg-yellow-500/10 border-b border-yellow-500/20 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Send className="h-4 w-4 text-yellow-400" />
+              <h3 className="text-sm font-bold text-yellow-400">Pending Send Requests</h3>
+              <span className="text-xs bg-yellow-500/20 text-yellow-400 px-2 py-0.5 rounded-full border border-yellow-500/30">
+                {pendingSendRequests.length}
+              </span>
+            </div>
+          </div>
+          <div className="divide-y divide-[#333333]/50">
+            {pendingSendRequests.map((request) => (
+              <div key={request._id} className="p-4 hover:bg-[#222222]/50 transition-colors">
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="text-sm font-mono font-bold text-[var(--color-primary)]">
+                        {request.voucher?.code || "—"}
+                      </span>
+                      <span className="text-xs text-gray-500">
+                        ₱{request.voucher ? parseFloat(request.voucher.value).toFixed(2) : "0"}
+                      </span>
+                    </div>
+                    <p className="text-xs text-gray-400 mb-2">
+                      Requested by <span className="text-white">{request.requester?.username || "Unknown"}</span>
+                      {" · "}{new Date(request.createdAt).toLocaleDateString()}
+                    </p>
+                    <div className="flex flex-wrap gap-1">
+                      {request.recipients.map((r) => (
+                        <span
+                          key={r._id}
+                          className="text-xs bg-[#2A2A2A] text-gray-300 px-2 py-0.5 rounded border border-[#444444]/50"
+                        >
+                          {r.username} ({r.email})
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    <button
+                      onClick={() => setRejectSendModal({ _id: request._id, code: request.voucher?.code, reason: "" })}
+                      disabled={sendRequestProcessing === request._id}
+                      className="p-2 text-red-400 hover:bg-red-500/10 rounded-lg transition-colors disabled:opacity-50"
+                      title="Reject"
+                    >
+                      <XCircle className="h-4 w-4" />
+                    </button>
+                    <button
+                      onClick={() => handleApproveSendRequest(request)}
+                      disabled={sendRequestProcessing === request._id}
+                      className="px-3 py-1.5 bg-green-500/20 text-green-400 rounded-lg hover:bg-green-500/30 transition-colors text-xs font-medium border border-green-500/30 disabled:opacity-50 flex items-center gap-1"
+                    >
+                      {sendRequestProcessing === request._id ? (
+                        <div className="animate-spin rounded-full h-3 w-3 border-2 border-transparent border-t-green-400"></div>
+                      ) : (
+                        <CheckCircle className="h-3 w-3" />
+                      )}
+                      Approve & Send
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Controls */}
       <div data-tour="vouch-controls" className="bg-[#1A1A1A] p-3.5 rounded-lg border border-[#2A2A2A]/50 shadow-sm">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between space-y-3 md:space-y-0">
@@ -712,9 +891,28 @@ const VoucherManagement = ({ vouchers = [], onRefresh, onCreateVoucher }) => {
                       </div>
                     )}
                   {voucher.status === "pending_approval" && (
-                    <div className="text-center py-2 text-xs text-yellow-500 bg-yellow-500/10 rounded-lg border border-yellow-500/20">
-                      Waiting for Admin Approval
-                    </div>
+                    isBranchAdminOrHigher ? (
+                      <div className="flex space-x-2">
+                        <button
+                          onClick={() => setRejectModal({ _id: voucher._id, code: voucher.code, reason: "" })}
+                          disabled={processingId === voucher._id}
+                          className="flex-1 px-3 py-2 bg-red-500/20 text-red-400 rounded-lg hover:bg-red-500/30 transition-colors text-sm font-medium flex items-center justify-center border border-red-500/30 disabled:opacity-50"
+                        >
+                          <XCircle className="h-4 w-4 mr-1" /> Reject
+                        </button>
+                        <button
+                          onClick={() => setApproveModal(voucher)}
+                          disabled={processingId === voucher._id}
+                          className="flex-1 px-3 py-2 bg-green-500/20 text-green-400 rounded-lg hover:bg-green-500/30 transition-colors text-sm font-medium flex items-center justify-center border border-green-500/30 disabled:opacity-50"
+                        >
+                          <CheckCircle className="h-4 w-4 mr-1" /> Approve
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="text-center py-2 text-xs text-yellow-500 bg-yellow-500/10 rounded-lg border border-yellow-500/20">
+                        Waiting for Admin Approval
+                      </div>
+                    )
                   )}
                 </div>
               </div>
@@ -868,6 +1066,26 @@ const VoucherManagement = ({ vouchers = [], onRefresh, onCreateVoucher }) => {
                                 </button>
                               </>
                             )}
+                          {voucher.status === "pending_approval" && isBranchAdminOrHigher && (
+                            <>
+                              <button
+                                onClick={() => setRejectModal({ _id: voucher._id, code: voucher.code, reason: "" })}
+                                disabled={processingId === voucher._id}
+                                className="p-2 text-red-400 hover:bg-red-500/10 rounded-lg transition-colors disabled:opacity-50"
+                                title="Reject"
+                              >
+                                <XCircle className="h-4 w-4" />
+                              </button>
+                              <button
+                                onClick={() => setApproveModal(voucher)}
+                                disabled={processingId === voucher._id}
+                                className="p-2 text-green-400 hover:bg-green-500/10 rounded-lg transition-colors disabled:opacity-50"
+                                title="Approve"
+                              >
+                                <CheckCircle className="h-4 w-4" />
+                              </button>
+                            </>
+                          )}
                           {(user?.role === "branch_admin" ||
                             user?.role === "super_admin") && (
                             <button
@@ -928,10 +1146,17 @@ const VoucherManagement = ({ vouchers = [], onRefresh, onCreateVoucher }) => {
        {showCreateModal && (
             <CreateVoucherModal
               isOpen={showCreateModal}
-              onClose={() => setShowCreateModal(false)}
-              onCreated={() => {
+              onClose={() => {
                 setShowCreateModal(false);
-                onRefresh(); // refresh vouchers after creation
+                onRefresh();
+              }}
+              onSubmit={() => {
+                onRefresh();
+              }}
+              onSendNow={(voucher) => {
+                setShowCreateModal(false);
+                onRefresh();
+                setShowSendModal(voucher);
               }}
             />
           )}
@@ -994,6 +1219,134 @@ const VoucherManagement = ({ vouchers = [], onRefresh, onCreateVoucher }) => {
           >
             Close
           </button>
+        </div>
+      </Modal>
+
+      {/* Approve Voucher Modal */}
+      <Modal
+        isOpen={!!approveModal}
+        onClose={() => setApproveModal(null)}
+        title="Approve Voucher"
+        size="sm"
+        variant="dark"
+      >
+        <div className="space-y-6">
+          <div className="flex items-start gap-3">
+            <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-green-500/20 flex items-center justify-center">
+              <CheckCircle className="w-5 h-5 text-green-400" />
+            </div>
+            <div>
+              <p className="text-sm text-gray-300">
+                Approve voucher <span className="font-mono font-bold text-white">{approveModal?.code}</span>?
+              </p>
+              <p className="text-xs text-gray-500 mt-1">This will make the voucher active and available for use.</p>
+            </div>
+          </div>
+          <div className="flex gap-3">
+            <button
+              onClick={() => setApproveModal(null)}
+              className="flex-1 px-4 py-2 bg-[#2A2A2A] hover:bg-[#333333] text-gray-300 rounded-lg transition-colors text-sm font-medium"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleApprove}
+              disabled={!!processingId}
+              className="flex-1 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors text-sm font-medium disabled:opacity-50"
+            >
+              {processingId ? "Approving..." : "Approve"}
+            </button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Reject Voucher Modal */}
+      <Modal
+        isOpen={!!rejectModal}
+        onClose={() => setRejectModal(null)}
+        title="Reject Voucher"
+        size="sm"
+        variant="dark"
+      >
+        <div className="space-y-4">
+          <div className="flex items-start gap-3">
+            <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-red-500/20 flex items-center justify-center">
+              <XCircle className="w-5 h-5 text-red-400" />
+            </div>
+            <p className="text-sm text-gray-300">
+              Reject voucher <span className="font-mono font-bold text-white">{rejectModal?.code}</span>?
+            </p>
+          </div>
+          <div>
+            <label className="block text-xs text-gray-400 mb-1">Reason for rejection *</label>
+            <textarea
+              value={rejectModal?.reason || ""}
+              onChange={(e) => setRejectModal(prev => prev ? { ...prev, reason: e.target.value } : null)}
+              placeholder="Enter reason for rejection..."
+              rows={3}
+              className="w-full px-3 py-2 bg-[#1A1A1A] border border-[#444444] text-white rounded-lg text-sm focus:ring-2 focus:ring-red-500 focus:border-red-500 resize-none"
+            />
+          </div>
+          <div className="flex gap-3">
+            <button
+              onClick={() => setRejectModal(null)}
+              className="flex-1 px-4 py-2 bg-[#2A2A2A] hover:bg-[#333333] text-gray-300 rounded-lg transition-colors text-sm font-medium"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleReject}
+              disabled={!!processingId || !rejectModal?.reason?.trim()}
+              className="flex-1 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors text-sm font-medium disabled:opacity-50"
+            >
+              {processingId ? "Rejecting..." : "Reject"}
+            </button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Reject Send Request Modal */}
+      <Modal
+        isOpen={!!rejectSendModal}
+        onClose={() => setRejectSendModal(null)}
+        title="Reject Send Request"
+        size="sm"
+        variant="dark"
+      >
+        <div className="space-y-4">
+          <div className="flex items-start gap-3">
+            <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-red-500/20 flex items-center justify-center">
+              <XCircle className="w-5 h-5 text-red-400" />
+            </div>
+            <p className="text-sm text-gray-300">
+              Reject send request for voucher <span className="font-mono font-bold text-white">{rejectSendModal?.code}</span>?
+            </p>
+          </div>
+          <div>
+            <label className="block text-xs text-gray-400 mb-1">Reason for rejection *</label>
+            <textarea
+              value={rejectSendModal?.reason || ""}
+              onChange={(e) => setRejectSendModal(prev => prev ? { ...prev, reason: e.target.value } : null)}
+              placeholder="Enter reason for rejection..."
+              rows={3}
+              className="w-full px-3 py-2 bg-[#1A1A1A] border border-[#444444] text-white rounded-lg text-sm focus:ring-2 focus:ring-red-500 focus:border-red-500 resize-none"
+            />
+          </div>
+          <div className="flex gap-3">
+            <button
+              onClick={() => setRejectSendModal(null)}
+              className="flex-1 px-4 py-2 bg-[#2A2A2A] hover:bg-[#333333] text-gray-300 rounded-lg transition-colors text-sm font-medium"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleRejectSendRequest}
+              disabled={!!sendRequestProcessing || !rejectSendModal?.reason?.trim()}
+              className="flex-1 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors text-sm font-medium disabled:opacity-50"
+            >
+              {sendRequestProcessing ? "Rejecting..." : "Reject"}
+            </button>
+          </div>
         </div>
       </Modal>
 

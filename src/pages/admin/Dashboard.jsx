@@ -28,6 +28,7 @@ import DamageClaimsManagement from '../../components/admin/DamageClaimsManagemen
 import DefaultServicesManager from '../../components/admin/DefaultServicesManager'
 import ShopBannerManagement from '../../components/admin/ShopBannerManagement'
 import ShopConfigPanel from '../../components/admin/ShopConfigPanel'
+import SystemAuditLog from '../../components/common/SystemAuditLog'
 // SuperAdminPaymentHistory removed - payments managed in staff dashboard
 // SuperAdminExpenseManagement removed - expenses now managed in P&L dashboard
 import { useQuery, useMutation } from 'convex/react'
@@ -246,6 +247,13 @@ function AdminDashboard() {
           <div className="text-center text-gray-400">You do not have access to audit trail.</div>
         )
 
+      case 'system_logs':
+        return user?.role === 'super_admin' || user?.role === 'it_admin' ? (
+          <SystemAuditLog />
+        ) : (
+          <div className="text-center text-gray-400">You do not have access to system logs.</div>
+        )
+
       case 'loyalty':
         return user?.role === 'super_admin' || user?.role === 'it_admin' ? (
           <PointsConfigPanel />
@@ -358,6 +366,7 @@ function AdminDashboard() {
       // Reports category
       { id: 'reports', label: 'Reports', icon: 'chart', category: 'Reports' },
       { id: 'audit_trail', label: 'Audit Trail', icon: 'history', category: 'Reports' },
+      { id: 'system_logs', label: 'System Logs', icon: 'activity', category: 'Reports' },
       // Simple tab
       { id: 'settings', label: 'Settings', icon: 'settings' },
     ]
