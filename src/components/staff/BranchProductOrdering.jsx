@@ -1099,7 +1099,7 @@ const ReconcileReceiptModal = ({ order, onClose, onConfirm }) => {
       product_name: item.product_name,
       quantity_shipped: item.quantity_approved ?? item.quantity_requested,
       quantity_received: item.quantity_approved ?? item.quantity_requested,
-      expiry_date: '',
+      hq_expiry_date: item.expiry_date, // HQ-set expiry (timestamp or undefined)
     }))
   )
   const [notes, setNotes] = useState('')
@@ -1114,7 +1114,7 @@ const ReconcileReceiptModal = ({ order, onClose, onConfirm }) => {
     const receivedItems = items.map((item) => ({
       catalog_product_id: item.catalog_product_id,
       quantity_received: Math.max(0, Number(item.quantity_received) || 0),
-      expiry_date: item.expiry_date ? new Date(item.expiry_date).getTime() : undefined,
+      expiry_date: item.hq_expiry_date, // Pass HQ expiry through (already a timestamp)
     }))
     await onConfirm(receivedItems, notes)
     setIsSubmitting(false)
@@ -1176,15 +1176,14 @@ const ReconcileReceiptModal = ({ order, onClose, onConfirm }) => {
                   </div>
                 </div>
 
-                <div>
-                  <label className="text-xs text-gray-500 mb-1 block">Expiry Date <span className="text-gray-600">(Optional)</span></label>
-                  <input
-                    type="date"
-                    value={item.expiry_date}
-                    onChange={(e) => setItems((prev) => prev.map((it, i) => i === index ? { ...it, expiry_date: e.target.value } : it))}
-                    className="w-full bg-[#111111] border border-[#333333] text-white rounded-lg px-3 py-2 text-sm focus:border-[var(--color-primary)] outline-none"
-                  />
-                </div>
+                {item.hq_expiry_date && (
+                  <div>
+                    <label className="text-xs text-gray-500 mb-1 block">Expiry Date <span className="text-gray-600">(set by HQ)</span></label>
+                    <div className="bg-[#1A1A1A] border border-[#2A2A2A] text-gray-400 rounded-lg px-3 py-2 text-sm">
+                      {new Date(item.hq_expiry_date).toLocaleDateString()}
+                    </div>
+                  </div>
+                )}
               </div>
             )
           })}

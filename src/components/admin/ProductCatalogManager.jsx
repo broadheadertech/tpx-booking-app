@@ -1702,12 +1702,17 @@ const BranchOrdersTab = () => {
   const [orderToApprove, setOrderToApprove] = useState(null);
   const [orderToReject, setOrderToReject] = useState(null);
   const [orderToShip, setOrderToShip] = useState(null);
+  const [shipExpiryDates, setShipExpiryDates] = useState({}); // { [catalog_product_id]: "YYYY-MM-DD" }
   const [rejectReason, setRejectReason] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
 
   const orders = useQuery(api.services.productOrders.getAllOrders, filterStatus === "all" ? {} : { status: filterStatus });
   const ordersSummary = useQuery(api.services.productOrders.getOrdersSummary);
   const paymentDebug = useQuery(api.services.productOrders.getPaymentStatusDebug);
+  const batchGuide = useQuery(
+    api.services.productOrders.getOrderBatchGuide,
+    orderToShip?._id ? { order_id: orderToShip._id } : "skip"
+  );
 
   const approveOrder = useMutation(api.services.productOrders.approveOrder);
   const rejectOrder = useMutation(api.services.productOrders.rejectOrder);
@@ -1762,9 +1767,21 @@ const BranchOrdersTab = () => {
     if (!user || !orderToShip) return;
     setIsProcessing(true);
     try {
-      await shipOrder({ order_id: orderToShip._id, shipped_by: user._id });
+      // Build expiry dates array from the form state
+      const item_expiry_dates = orderToShip.items
+        ?.filter(item => shipExpiryDates[item.catalog_product_id])
+        .map(item => ({
+          catalog_product_id: item.catalog_product_id,
+          expiry_date: new Date(shipExpiryDates[item.catalog_product_id]).getTime(),
+        }));
+      await shipOrder({
+        order_id: orderToShip._id,
+        shipped_by: user._id,
+        item_expiry_dates: item_expiry_dates?.length > 0 ? item_expiry_dates : undefined,
+      });
       toast.success("Success", "Order marked as shipped");
       setOrderToShip(null);
+      setShipExpiryDates({});
     } catch (err) {
       toast.error("Error", err.message);
     } finally {
@@ -2110,7 +2127,7 @@ const BranchOrdersTab = () => {
 
       {/* Ship Order Confirmation Modal */}
       {orderToShip && (
-        <Modal isOpen={!!orderToShip} onClose={() => !isProcessing && setOrderToShip(null)} title="Confirm Shipment" size="md" variant="dark">
+        <Modal isOpen={!!orderToShip} onClose={() => { if (!isProcessing) { setOrderToShip(null); setShipExpiryDates({}); } }} title="Confirm Shipment" size="md" variant="dark">
           <div className="space-y-4">
             <div className="bg-purple-500/10 border border-purple-500/30 rounded-xl p-4">
               <div className="flex items-start gap-3">
@@ -2126,13 +2143,57 @@ const BranchOrdersTab = () => {
 
             <div className="bg-[#111111] rounded-lg p-3">
               <p className="text-xs text-gray-500 mb-2">Items being shipped:</p>
-              <div className="space-y-1 max-h-32 overflow-y-auto">
-                {orderToShip.items?.map((item, idx) => (
-                  <div key={idx} className="flex justify-between text-sm">
-                    <span className="text-gray-300">{item.product_name} × {item.quantity_approved || item.quantity_requested || item.quantity}</span>
-                    <span className="text-gray-400">{formatPrice(item.unit_price * (item.quantity_approved || item.quantity_requested || item.quantity))}</span>
-                  </div>
-                ))}
+              <div className="space-y-4 max-h-[50vh] overflow-y-auto">
+                {orderToShip.items?.map((item, idx) => {
+                  const guide = batchGuide?.find(g => g.catalog_product_id === item.catalog_product_id);
+                  return (
+                    <div key={idx} className="space-y-2 pb-3 border-b border-[#222222] last:border-0 last:pb-0">
+                      <div className="flex justify-between text-sm">
+                        <span className="text-gray-300 font-medium">{item.product_name} × {item.quantity_approved || item.quantity_requested || item.quantity}</span>
+                        <span className="text-gray-400">{formatPrice(item.unit_price * (item.quantity_approved || item.quantity_requested || item.quantity))}</span>
+                      </div>
+
+                      {/* FIFO Batch Picking Guide */}
+                      {guide && guide.picks.length > 0 && (
+                        <div className="ml-2 space-y-1">
+                          <p className="text-[10px] text-gray-600 uppercase tracking-wide">Pull from (oldest first):</p>
+                          {guide.picks.map((pick, pi) => (
+                            <div key={pi} className="flex items-center gap-2 text-xs bg-[#1A1A1A] rounded px-2 py-1.5">
+                              <span className="text-purple-400 font-mono">{pick.batch_number}</span>
+                              <span className="text-white font-semibold">{pick.take_qty} units</span>
+                              <span className="text-gray-600">·</span>
+                              <span className="text-gray-500">{pick.batch_remaining} in batch</span>
+                              {pick.expiry_date && (
+                                <>
+                                  <span className="text-gray-600">·</span>
+                                  <span className={`${pick.expiry_date < Date.now() ? 'text-red-400' : pick.expiry_date < Date.now() + 90 * 86400000 ? 'text-yellow-400' : 'text-gray-500'}`}>
+                                    exp {new Date(pick.expiry_date).toLocaleDateString()}
+                                  </span>
+                                </>
+                              )}
+                            </div>
+                          ))}
+                          {guide.shortage > 0 && (
+                            <div className="flex items-center gap-1.5 text-xs text-red-400 px-2 py-1">
+                              <AlertCircle className="w-3 h-3" />
+                              Short by {guide.shortage} units
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      <div className="flex items-center gap-2">
+                        <label className="text-xs text-gray-500 whitespace-nowrap">Expiry:</label>
+                        <input
+                          type="date"
+                          value={shipExpiryDates[item.catalog_product_id] || ""}
+                          onChange={(e) => setShipExpiryDates(prev => ({ ...prev, [item.catalog_product_id]: e.target.value }))}
+                          className="flex-1 bg-[#1A1A1A] border border-[#333333] text-white rounded px-2 py-1 text-xs focus:border-purple-500 outline-none"
+                        />
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
               <div className="border-t border-[#333333] mt-2 pt-2 flex justify-between text-sm font-semibold">
                 <span className="text-gray-300">Total</span>
@@ -2142,7 +2203,7 @@ const BranchOrdersTab = () => {
 
             <div className="flex gap-3 pt-2">
               <button
-                onClick={() => setOrderToShip(null)}
+                onClick={() => { setOrderToShip(null); setShipExpiryDates({}); }}
                 disabled={isProcessing}
                 className="flex-1 px-4 py-3 bg-[#333333] hover:bg-[#444444] text-white font-medium rounded-lg transition-colors disabled:opacity-50"
               >

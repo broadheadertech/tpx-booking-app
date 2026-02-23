@@ -41,7 +41,7 @@ const ProductImage = ({ imageUrl, imageStorageId, productName, className }) => {
 }
 
 const ProductsManagement = ({ onRefresh, user }) => {
-  const { showConfirm } = useAppModal()
+  const { showConfirm, showAlert } = useAppModal()
   const [showTutorial, setShowTutorial] = useState(false)
   const [searchTerm, setSearchTerm] = useState('')
   const [filterCategory, setFilterCategory] = useState('all')
@@ -79,6 +79,7 @@ const ProductsManagement = ({ onRefresh, user }) => {
   const deleteProductMutation = useMutation(api.services.products.deleteProduct)
   const generateUploadUrl = useMutation(api.services.products.generateUploadUrl)
   const deleteImage = useMutation(api.services.products.deleteImage)
+  const generateInitialBatches = useMutation(api.services.products.generateInitialBatchesForBranch)
 
   // Expiry alert queries
   const [showExpiryDetail, setShowExpiryDetail] = useState(false)
@@ -468,6 +469,27 @@ const ProductsManagement = ({ onRefresh, user }) => {
           >
             <RefreshCw className="h-4 w-4" />
             <span>Refresh</span>
+          </button>
+          <button
+            onClick={async () => {
+              if (!user?.branch_id) return
+              const confirmed = await showConfirm({
+                title: 'Generate Initial Batches',
+                message: 'This will create batch records for all products that have stock but no batch history. This is a one-time action for existing inventory. Continue?',
+                type: 'warning',
+              })
+              if (!confirmed) return
+              try {
+                const result = await generateInitialBatches({ branch_id: user.branch_id, created_by: user._id })
+                showAlert({ title: 'Batches Generated', message: `Created ${result.created} batch records out of ${result.total} products with stock.`, type: 'success' })
+              } catch (err) {
+                showAlert({ title: 'Error', message: err.message || 'Failed to generate batches', type: 'error' })
+              }
+            }}
+            className="flex items-center space-x-2 px-4 py-2 bg-[#2A2A2A] text-gray-200 rounded-lg hover:bg-[#3A3A3A] transition-colors text-sm border border-[#3A3A3A]"
+          >
+            <History className="h-4 w-4" />
+            <span>Generate Batches</span>
           </button>
           <button
             onClick={() => setShowScanReceive(true)}

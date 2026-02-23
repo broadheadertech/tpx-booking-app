@@ -12,6 +12,7 @@ import ProfileModal from './ProfileModal'
 import { NotificationBell } from '../common/NotificationSystem'
 import { BranchSelector } from '../common/BranchSelector'
 import { APP_VERSION } from '../../config/version'
+import ChangelogModal from '../common/ChangelogModal'
 
 const DashboardHeader = ({ onLogout, user, onOpenNotifications }) => {
   const { sessionToken } = useCurrentUser()
@@ -19,6 +20,7 @@ const DashboardHeader = ({ onLogout, user, onOpenNotifications }) => {
   const [showSettingsModal, setShowSettingsModal] = useState(false)
   const [showLogoutModal, setShowLogoutModal] = useState(false)
   const [showProfileModal, setShowProfileModal] = useState(false)
+  const [showChangelog, setShowChangelog] = useState(false)
   const [showMobileMenu, setShowMobileMenu] = useState(false)
 
   // Get branch information for the current user
@@ -72,9 +74,13 @@ const DashboardHeader = ({ onLogout, user, onOpenNotifications }) => {
                   <span className="hidden sm:inline md:hidden">{branding?.display_name || ''}</span>
                   <span className="sm:hidden">{branding?.display_name || ''}</span>
                 </h1>
-                <div className="bg-[var(--color-primary)]/15 backdrop-blur-sm rounded-md px-1 sm:px-1.5 py-0.5 border border-[var(--color-primary)]/25 flex-shrink-0 hidden sm:block">
+                <button
+                  onClick={() => setShowChangelog(true)}
+                  className="bg-[var(--color-primary)]/15 backdrop-blur-sm rounded-md px-1 sm:px-1.5 py-0.5 border border-[var(--color-primary)]/25 flex-shrink-0 hidden sm:block hover:bg-[var(--color-primary)]/25 transition-colors cursor-pointer"
+                  title="View changelog"
+                >
                   <span className="text-[9px] sm:text-[10px] font-semibold text-[var(--color-primary)]">v{APP_VERSION}</span>
-                </div>
+                </button>
               </div>
               <div className="flex items-center space-x-1 sm:space-x-1.5 mt-0.5 flex-wrap">
                 <p className="text-[9px] sm:text-[10px] md:text-xs font-medium text-[var(--color-primary)] hidden sm:inline">Staff Dashboard</p>
@@ -203,6 +209,9 @@ const DashboardHeader = ({ onLogout, user, onOpenNotifications }) => {
         onClose={() => setShowLogoutModal(false)}
         onConfirm={onLogout}
       />
+
+      {/* Changelog Modal */}
+      <ChangelogModal isOpen={showChangelog} onClose={() => setShowChangelog(false)} />
 
       {/* Fullscreen Mobile Menu */}
       {showMobileMenu && createPortal(

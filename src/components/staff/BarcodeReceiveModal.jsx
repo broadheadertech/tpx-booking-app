@@ -148,7 +148,7 @@ const BarcodeReceiveModal = ({ isOpen, onClose, branchId, userId }) => {
         quantity: qty,
         cost_per_unit: form.costPerUnit ? parseFloat(form.costPerUnit) : undefined,
         supplier: form.supplier || undefined,
-        expiry_date: form.expiryDate ? new Date(form.expiryDate).getTime() : undefined,
+        expiry_date: orderedItem?.expiry_date ?? (form.expiryDate ? new Date(form.expiryDate).getTime() : undefined),
         notes: form.notes || undefined,
         created_by: userId,
         scanned_barcode: scannedSku || undefined,
@@ -410,13 +410,21 @@ const BarcodeReceiveModal = ({ isOpen, onClose, branchId, userId }) => {
               </div>
 
               <div>
-                <label className="text-xs text-gray-400 mb-1 block">Expiry Date</label>
-                <input
-                  type="date"
-                  value={form.expiryDate}
-                  onChange={(e) => setForm(p => ({ ...p, expiryDate: e.target.value }))}
-                  className="w-full px-3 py-2.5 bg-[#0A0A0A] border border-[#444444] text-white placeholder-gray-600 rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent text-sm"
-                />
+                <label className="text-xs text-gray-400 mb-1 block">
+                  Expiry Date {orderedItem?.expiry_date ? <span className="text-gray-600">(from HQ)</span> : ''}
+                </label>
+                {orderedItem?.expiry_date ? (
+                  <div className="w-full px-3 py-2.5 bg-[#111111] border border-[#2A2A2A] text-gray-400 rounded-lg text-sm">
+                    {new Date(orderedItem.expiry_date).toLocaleDateString()}
+                  </div>
+                ) : (
+                  <input
+                    type="date"
+                    value={form.expiryDate}
+                    onChange={(e) => setForm(p => ({ ...p, expiryDate: e.target.value }))}
+                    className="w-full px-3 py-2.5 bg-[#0A0A0A] border border-[#444444] text-white placeholder-gray-600 rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent text-sm"
+                  />
+                )}
               </div>
 
               <div className="col-span-2">

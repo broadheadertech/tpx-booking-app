@@ -119,9 +119,9 @@ const PaymentSettings = ({ onRefresh }) => {
   const isUsingFallback = !existingConfig || existingConfig.is_fallback;
   const hasOwnConfig = existingConfig?.has_own_config || false;
 
-  // Load existing config into form (only for branch's own config, not fallback)
+  // Load existing config into form (both own config and fallback with saved preferences)
   useEffect(() => {
-    if (existingConfig && !existingConfig.is_fallback) {
+    if (existingConfig) {
       setPayNowEnabled(existingConfig.pay_now_enabled || false);
       setPayLaterEnabled(existingConfig.pay_later_enabled || false);
       setPayAtShopEnabled(existingConfig.pay_at_shop_enabled || false);
@@ -180,8 +180,8 @@ const PaymentSettings = ({ onRefresh }) => {
       return false;
     }
 
-    // If enabling online payments (Pay Now or Pay Later), must have API keys
-    if ((payNowEnabled || payLaterEnabled) && !hasApiKeysConfigured && !isEnteringNewKeys) {
+    // If enabling online payments (Pay Now or Pay Later), must have API keys (own or HQ)
+    if ((payNowEnabled || payLaterEnabled) && !isUsingFallback && !hasApiKeysConfigured && !isEnteringNewKeys) {
       setErrorMessage("PayMongo API keys are required for online payments");
       return false;
     }
@@ -216,17 +216,7 @@ const PaymentSettings = ({ onRefresh }) => {
     setIsSaving(true);
 
     try {
-      // If API keys already configured and user is NOT entering new keys,
-      // just update the settings without touching keys
-      if (hasApiKeysConfigured && !isEnteringNewKeys) {
-        await updateSettings({
-          branch_id: branchId,
-          pay_now_enabled: payNowEnabled,
-          pay_later_enabled: payLaterEnabled,
-          pay_at_shop_enabled: payAtShopEnabled,
-          updated_by: user._id,
-        });
-      } else if (isEnteringNewKeys) {
+      if (isEnteringNewKeys) {
         // User is entering new API keys - save everything
         await saveConfig({
           branch_id: branchId,
@@ -239,18 +229,14 @@ const PaymentSettings = ({ onRefresh }) => {
           updated_by: user._id,
         });
       } else {
-        // No keys configured and not entering new ones
-        if (payNowEnabled || payLaterEnabled) {
-          setErrorMessage("Please enter PayMongo API keys to enable online payments");
-          setSaveStatus("error");
-          setIsSaving(false);
-          return;
-        }
-        // Only Pay at Shop enabled - this shouldn't normally happen but handle it
-        setErrorMessage("Please configure API keys first before saving settings");
-        setSaveStatus("error");
-        setIsSaving(false);
-        return;
+        // Update toggle settings only (works for both own config and HQ fallback)
+        await updateSettings({
+          branch_id: branchId,
+          pay_now_enabled: payNowEnabled,
+          pay_later_enabled: payLaterEnabled,
+          pay_at_shop_enabled: payAtShopEnabled,
+          updated_by: user._id,
+        });
       }
 
       setSaveStatus("success");
@@ -436,70 +422,73 @@ const PaymentSettings = ({ onRefresh }) => {
         </div>
       )}
 
-      {/* Payment Options Section - only when using own PayMongo */}
-      {!isUsingFallback && (
-        <div className="bg-[#1A1A1A] rounded-xl border border-[#333] p-6">
-          <div className="flex items-center gap-2 mb-4">
-            <Wallet className="w-5 h-5 text-[var(--color-primary)]" />
-            <h3 className="text-lg font-semibold text-white">Payment Options</h3>
-          </div>
+      {/* Payment Options Section - available for both own PayMongo and HQ fallback */}
+      <div className="bg-[#1A1A1A] rounded-xl border border-[#333] p-6">
+        <div className="flex items-center gap-2 mb-4">
+          <Wallet className="w-5 h-5 text-[var(--color-primary)]" />
+          <h3 className="text-lg font-semibold text-white">Payment Options</h3>
+        </div>
 
-          {!hasApiKeysConfigured && !isEnteringNewKeys && (
-            <div className="mb-4 flex items-center gap-2 p-3 bg-yellow-500/10 border border-yellow-500/30 rounded-lg">
-              <AlertCircle className="w-4 h-4 text-yellow-500" />
-              <span className="text-yellow-400 text-sm">Configure PayMongo API keys to enable online payment options.</span>
-            </div>
+        {isUsingFallback && (
+          <div className="mb-4 flex items-start gap-2 p-3 bg-blue-500/10 border border-blue-500/30 rounded-lg">
+            <Info className="w-4 h-4 text-blue-400 mt-0.5 flex-shrink-0" />
+            <span className="text-blue-400 text-xs">Online payments use the platform's PayMongo account. You can choose which payment options to offer to your customers.</span>
+          </div>
+        )}
+
+        {!isUsingFallback && !hasApiKeysConfigured && !isEnteringNewKeys && (
+          <div className="mb-4 flex items-center gap-2 p-3 bg-yellow-500/10 border border-yellow-500/30 rounded-lg">
+            <AlertCircle className="w-4 h-4 text-yellow-500" />
+            <span className="text-yellow-400 text-sm">Configure PayMongo API keys to enable online payment options.</span>
+          </div>
+        )}
+
+        <div className="space-y-3">
+          <ToggleSwitch
+            enabled={payNowEnabled}
+            onChange={(v) => { setPayNowEnabled(v); setHasChanges(true); }}
+            disabled={!isUsingFallback && !hasApiKeysConfigured && !isEnteringNewKeys}
+            label="Pay Now"
+            description="Customer pays full amount online via PayMongo (GCash, Maya, Card)"
+          />
+
+          <ToggleSwitch
+            enabled={payLaterEnabled}
+            onChange={(v) => { setPayLaterEnabled(v); setHasChanges(true); }}
+            disabled={!isUsingFallback && !hasApiKeysConfigured && !isEnteringNewKeys}
+            label="Pay Later"
+            description="Customer pays convenience fee now, balance at the shop"
+          />
+
+          <ToggleSwitch
+            enabled={payAtShopEnabled}
+            onChange={(v) => { setPayAtShopEnabled(v); setHasChanges(true); }}
+            label="Pay at Shop"
+            description="No online payment - customer pays full amount at the branch"
+          />
+        </div>
+      </div>
+
+      {/* Save Button */}
+      <div className="flex justify-end">
+        <button
+          onClick={handleSave}
+          disabled={isSaving}
+          className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-accent)] text-white font-semibold rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {isSaving ? (
+            <>
+              <Loader2 className="w-5 h-5 animate-spin" />
+              Saving...
+            </>
+          ) : (
+            <>
+              <Save className="w-5 h-5" />
+              Save Configuration
+            </>
           )}
-
-          <div className="space-y-3">
-            <ToggleSwitch
-              enabled={payNowEnabled}
-              onChange={(v) => { setPayNowEnabled(v); setHasChanges(true); }}
-              disabled={!hasApiKeysConfigured && !isEnteringNewKeys}
-              label="Pay Now"
-              description="Customer pays full amount online via PayMongo (GCash, Maya, Card)"
-            />
-
-            <ToggleSwitch
-              enabled={payLaterEnabled}
-              onChange={(v) => { setPayLaterEnabled(v); setHasChanges(true); }}
-              disabled={!hasApiKeysConfigured && !isEnteringNewKeys}
-              label="Pay Later"
-              description="Customer pays convenience fee now, balance at the shop"
-            />
-
-            <ToggleSwitch
-              enabled={payAtShopEnabled}
-              onChange={(v) => { setPayAtShopEnabled(v); setHasChanges(true); }}
-              label="Pay at Shop"
-              description="No online payment - customer pays full amount at the branch"
-            />
-          </div>
-        </div>
-      )}
-
-      {/* Save Button - shown when using own PayMongo or entering new keys */}
-      {(!isUsingFallback || isEnteringNewKeys) && (
-        <div className="flex justify-end">
-          <button
-            onClick={handleSave}
-            disabled={isSaving}
-            className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-accent)] text-white font-semibold rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {isSaving ? (
-              <>
-                <Loader2 className="w-5 h-5 animate-spin" />
-                Saving...
-              </>
-            ) : (
-              <>
-                <Save className="w-5 h-5" />
-                Save Configuration
-              </>
-            )}
-          </button>
-        </div>
-      )}
+        </button>
+      </div>
     </div>
   );
 };

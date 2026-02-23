@@ -443,13 +443,13 @@ export const updatePaymentSettings = mutation({
       .withIndex("by_branch", (q) => q.eq("branch_id", args.branch_id))
       .first();
 
-    if (!existingConfig) {
-      throw new Error("Payment configuration not found. Please set up API keys first.");
-    }
+    // Check if HQ PayMongo is available as fallback
+    const saConfig = await ctx.db.query("walletConfig").first();
+    const hasHqPaymongo = !!saConfig?.paymongo_secret_key && !!saConfig?.paymongo_public_key;
 
-    // Check if API keys exist when enabling online payments
-    if ((args.pay_now_enabled || args.pay_later_enabled) &&
-        (!existingConfig.public_key_encrypted || !existingConfig.secret_key_encrypted)) {
+    // Check if API keys exist (own or HQ) when enabling online payments
+    const hasOwnKeys = existingConfig?.public_key_encrypted && existingConfig?.secret_key_encrypted;
+    if ((args.pay_now_enabled || args.pay_later_enabled) && !hasOwnKeys && !hasHqPaymongo) {
       throw new Error("PayMongo API keys are required for online payments. Please configure API keys first.");
     }
 
@@ -467,15 +467,26 @@ export const updatePaymentSettings = mutation({
       updated_by: args.updated_by,
     };
 
-    console.log('[updatePaymentSettings] About to patch with:', JSON.stringify(updateData));
-    console.log('[updatePaymentSettings] Config ID:', existingConfig._id);
+    if (existingConfig) {
+      // Update existing record
+      await ctx.db.patch(existingConfig._id, updateData);
+      return { success: true, configId: existingConfig._id };
+    }
 
-    // Update only the settings, not the API keys
-    await ctx.db.patch(existingConfig._id, updateData);
+    // No config record yet — create one for toggle-only storage (still using HQ PayMongo)
+    const configId = await ctx.db.insert("branchPaymentConfig", {
+      branch_id: args.branch_id,
+      provider: "paymongo",
+      is_enabled: false, // Still using HQ PayMongo
+      public_key_encrypted: "",
+      secret_key_encrypted: "",
+      webhook_secret_encrypted: "",
+      encryption_iv: "",
+      ...updateData,
+      created_at: now,
+    });
 
-    console.log('[updatePaymentSettings] Patch completed successfully');
-
-    return { success: true, configId: existingConfig._id };
+    return { success: true, configId };
   },
 });
 
@@ -522,6 +533,8 @@ export const getPaymentConfig = query({
     if (saConfig && saConfig.paymongo_secret_key && saConfig.paymongo_public_key) {
       // has_own_config: true means branch has keys saved but disabled (can re-enable)
       const hasOwnConfig = !!config && !!config.public_key_encrypted && !!config.secret_key_encrypted;
+      // Use branch's saved toggle preferences if they exist, otherwise defaults
+      const hasToggles = !!config;
       return {
         _id: config?._id,
         branch_id: args.branch_id,
@@ -532,14 +545,14 @@ export const getPaymentConfig = query({
         has_public_key: true,
         has_secret_key: true,
         has_webhook_secret: !!saConfig.paymongo_webhook_secret,
-        pay_now_enabled: true,
-        pay_later_enabled: false,
-        pay_at_shop_enabled: true,
-        convenience_fee_type: "percent" as const,
-        convenience_fee_percent: undefined,
-        convenience_fee_amount: undefined,
-        created_at: undefined,
-        updated_at: undefined,
+        pay_now_enabled: hasToggles ? config!.pay_now_enabled : true,
+        pay_later_enabled: hasToggles ? config!.pay_later_enabled : false,
+        pay_at_shop_enabled: hasToggles ? config!.pay_at_shop_enabled : true,
+        convenience_fee_type: (hasToggles ? config!.convenience_fee_type : "percent") as "percent" | "fixed",
+        convenience_fee_percent: hasToggles ? config!.convenience_fee_percent : undefined,
+        convenience_fee_amount: hasToggles ? config!.convenience_fee_amount : undefined,
+        created_at: config?.created_at,
+        updated_at: config?.updated_at,
       };
     }
 

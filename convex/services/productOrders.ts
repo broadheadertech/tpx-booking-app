@@ -474,6 +474,10 @@ export const shipOrder = mutation({
   args: {
     order_id: v.id("productOrders"),
     shipped_by: v.id("users"),
+    item_expiry_dates: v.optional(v.array(v.object({
+      catalog_product_id: v.id("productCatalog"),
+      expiry_date: v.optional(v.number()),
+    }))),
   },
   handler: async (ctx, args) => {
     const order = await ctx.db.get(args.order_id);
@@ -490,6 +494,20 @@ export const shipOrder = mutation({
         message: `Cannot ship order with status: ${order.status}`,
       });
     }
+
+    // Merge expiry dates into order items
+    const expiryMap = new Map<string, number>();
+    if (args.item_expiry_dates) {
+      for (const entry of args.item_expiry_dates) {
+        if (entry.expiry_date) {
+          expiryMap.set(entry.catalog_product_id, entry.expiry_date);
+        }
+      }
+    }
+    const updatedItems = order.items.map(item => ({
+      ...item,
+      expiry_date: expiryMap.get(item.catalog_product_id) ?? item.expiry_date,
+    }));
 
     // Check stock availability and deduct from central warehouse
     for (const item of order.items) {
@@ -538,6 +556,7 @@ export const shipOrder = mutation({
     await ctx.db.patch(args.order_id, {
       status: "shipped",
       shipped_at: now,
+      items: updatedItems,
     });
 
     // Email BA about order shipment
@@ -662,7 +681,7 @@ export const receiveOrder = mutation({
         quantity: quantityReceived,
         initial_quantity: quantityReceived,
         received_at: now,
-        expiry_date: undefined,
+        expiry_date: item.expiry_date, // Auto-populated from HQ ship data
         cost_per_unit: item.unit_price, // Branch buying price, not HQ's supplier cost
         supplier: "Central Warehouse",
         notes: `From order ${order.order_number}`,
@@ -1027,6 +1046,58 @@ export const getOrdersSummary = query({
 });
 
 /**
+ * Get FIFO batch picking guide for an approved order.
+ * Shows HQ staff which batches to pull from (oldest first) for each item.
+ */
+export const getOrderBatchGuide = query({
+  args: { order_id: v.id("productOrders") },
+  handler: async (ctx, args) => {
+    const order = await ctx.db.get(args.order_id);
+    if (!order || order.status !== "approved") return null;
+
+    const itemBatches = [];
+    for (const item of order.items) {
+      const qtyNeeded = item.quantity_approved ?? item.quantity_requested;
+
+      // Get available batches sorted FIFO (oldest first)
+      const batches = await ctx.db
+        .query("inventoryBatches")
+        .withIndex("by_product", (q) => q.eq("product_id", item.catalog_product_id))
+        .filter((q) => q.gt(q.field("quantity"), 0))
+        .collect();
+      batches.sort((a, b) => a.received_at - b.received_at);
+
+      // Build picking instructions
+      let remaining = qtyNeeded;
+      const picks = [];
+      for (const batch of batches) {
+        if (remaining <= 0) break;
+        const take = Math.min(batch.quantity, remaining);
+        picks.push({
+          batch_number: batch.batch_number,
+          take_qty: take,
+          batch_remaining: batch.quantity,
+          received_at: batch.received_at,
+          expiry_date: batch.expiry_date,
+          supplier: batch.supplier,
+        });
+        remaining -= take;
+      }
+
+      itemBatches.push({
+        catalog_product_id: item.catalog_product_id,
+        product_name: item.product_name,
+        qty_needed: qtyNeeded,
+        picks,
+        shortage: remaining > 0 ? remaining : 0,
+      });
+    }
+
+    return itemBatches;
+  },
+});
+
+/**
  * Debug: Get payment status summary for product orders
  */
 export const getPaymentStatusDebug = query({
@@ -1310,7 +1381,7 @@ export const reconcileOrderReceipt = mutation({
       const quantityShipped = item.quantity_approved ?? item.quantity_requested;
       const received = receivedMap.get(item.catalog_product_id);
       const quantityReceived = received?.quantity_received ?? quantityShipped;
-      const expiryDate = received?.expiry_date;
+      const expiryDate = received?.expiry_date ?? item.expiry_date; // Prefer branch override, fall back to HQ-set expiry
 
       // Record discrepancy if quantities differ
       const discrepancy = quantityShipped - quantityReceived;

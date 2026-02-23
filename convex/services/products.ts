@@ -11,8 +11,32 @@ export const getAllProducts = query({
       .query("products")
       .order("desc")
       .collect();
-    
-    return products;
+
+    // Attach oldest batch info (FIFO hint) for POS picking guidance
+    const productsWithBatch = await Promise.all(
+      products.map(async (product) => {
+        const batches = await ctx.db
+          .query("inventoryBatches")
+          .withIndex("by_product", (q) => q.eq("product_id", product._id))
+          .filter((q) => q.gt(q.field("quantity"), 0))
+          .collect();
+        batches.sort((a, b) => a.received_at - b.received_at);
+        const oldest = batches[0] ?? null;
+        return {
+          ...product,
+          oldest_batch: oldest
+            ? {
+                batch_number: oldest.batch_number,
+                quantity: oldest.quantity,
+                received_at: oldest.received_at,
+                expiry_date: oldest.expiry_date,
+              }
+            : null,
+        };
+      })
+    );
+
+    return productsWithBatch;
   },
 });
 
@@ -874,5 +898,105 @@ export const getLowStockCount = query({
       .filter((q) => q.eq(q.field("status"), "active"))
       .collect();
     return products.filter((p) => p.stock <= p.minStock).length;
+  },
+});
+
+/**
+ * Generate initial batch for existing products that have stock but no batch records.
+ * Creates a single FIFO batch using the product's current stock and cost.
+ */
+export const generateInitialBatch = mutation({
+  args: {
+    product_id: v.id("products"),
+    created_by: v.id("users"),
+    expiry_date: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    const product = await ctx.db.get(args.product_id);
+    if (!product) throw new Error("Product not found");
+    if (product.stock <= 0) throw new Error("Product has no stock to batch");
+
+    // Check if product already has active batches
+    const existingBatches = await ctx.db
+      .query("inventoryBatches")
+      .withIndex("by_product", (q) => q.eq("product_id", args.product_id))
+      .filter((q) => q.gt(q.field("quantity"), 0))
+      .collect();
+
+    if (existingBatches.length > 0) {
+      throw new Error("Product already has active batches");
+    }
+
+    const now = Date.now();
+    const batchNumber = `BATCH-${new Date().getFullYear()}-${Math.floor(Math.random() * 100000).toString().padStart(5, "0")}`;
+
+    await ctx.db.insert("inventoryBatches", {
+      product_id: args.product_id,
+      product_type: "branch" as const,
+      branch_id: product.branch_id,
+      batch_number: batchNumber,
+      quantity: product.stock,
+      initial_quantity: product.stock,
+      received_at: product.createdAt ?? now,
+      expiry_date: args.expiry_date,
+      cost_per_unit: product.cost,
+      supplier: "Initial Stock",
+      notes: "Auto-generated batch for existing inventory",
+      created_by: args.created_by,
+      created_at: now,
+    });
+
+    return { batchNumber, quantity: product.stock };
+  },
+});
+
+/**
+ * Bulk-generate initial batches for all branch products missing batch records.
+ */
+export const generateInitialBatchesForBranch = mutation({
+  args: {
+    branch_id: v.id("branches"),
+    created_by: v.id("users"),
+  },
+  handler: async (ctx, args) => {
+    const products = await ctx.db
+      .query("products")
+      .withIndex("by_branch", (q) => q.eq("branch_id", args.branch_id))
+      .filter((q) => q.gt(q.field("stock"), 0))
+      .collect();
+
+    const now = Date.now();
+    let created = 0;
+
+    for (const product of products) {
+      const existingBatches = await ctx.db
+        .query("inventoryBatches")
+        .withIndex("by_product", (q) => q.eq("product_id", product._id))
+        .filter((q) => q.gt(q.field("quantity"), 0))
+        .collect();
+
+      if (existingBatches.length > 0) continue;
+
+      const batchNumber = `BATCH-${new Date().getFullYear()}-${Math.floor(Math.random() * 100000).toString().padStart(5, "0")}`;
+
+      await ctx.db.insert("inventoryBatches", {
+        product_id: product._id,
+        product_type: "branch" as const,
+        branch_id: args.branch_id,
+        batch_number: batchNumber,
+        quantity: product.stock,
+        initial_quantity: product.stock,
+        received_at: product.createdAt ?? now,
+        expiry_date: undefined,
+        cost_per_unit: product.cost,
+        supplier: "Initial Stock",
+        notes: "Auto-generated batch for existing inventory",
+        created_by: args.created_by,
+        created_at: now,
+      });
+      created++;
+    }
+
+    return { created, total: products.length };
   },
 });

@@ -1939,6 +1939,7 @@ export default defineSchema({
         quantity_requested: v.number(),
         quantity_approved: v.optional(v.number()),
         unit_price: v.number(), // Price at time of order
+        expiry_date: v.optional(v.number()), // Set by HQ at ship time, flows to branch on receive
       })
     ),
     total_amount: v.number(),
