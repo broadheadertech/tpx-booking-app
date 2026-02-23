@@ -15,7 +15,7 @@
  *   "breaking" — Breaking/major change (bumps MAJOR)
  */
 
-export const APP_VERSION = '2.0.0';
+export const APP_VERSION = '2.1.0';
 export const LAST_DEPLOY = '2026-02-23';
 export const VERSION_INFO = {
   version: APP_VERSION,
@@ -28,6 +28,16 @@ export const VERSION_INFO = {
  * Each entry: { version, date, changes: [{ tag, text }] }
  */
 export const CHANGELOG = [
+  {
+    version: '2.1.0',
+    date: '2026-02-23',
+    changes: [
+      { tag: 'feature', text: 'System Audit Log — comprehensive action tracking for every user operation across the system' },
+      { tag: 'feature', text: 'SA "System Logs" tab — universal view of all logs with category filters, date range, and search' },
+      { tag: 'feature', text: 'BA "Activity Log" tab — branch-scoped activity feed for branch admins' },
+      { tag: 'feature', text: '40+ backend mutations instrumented — bookings, transactions, auth, vouchers, products, inventory, settings' },
+    ],
+  },
   {
     version: '2.0.0',
     date: '2026-02-23',
