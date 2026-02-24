@@ -213,8 +213,9 @@ export const getBrandingHistory = query({
     limit: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
-    // Use unified auth (supports both Clerk and legacy)
-    const user = await requireSuperAdmin(ctx, args.sessionToken);
+    // Graceful auth — return empty if not authenticated (query should not throw)
+    const user = await getAuthenticatedUser(ctx, args.sessionToken);
+    if (!user || user.role !== "super_admin") return [];
 
     const limit = args.limit || 20;
     const history = await ctx.db
@@ -295,8 +296,9 @@ export const rollbackGlobalBranding = mutation({
 export const exportBranding = query({
   args: { sessionToken: v.optional(v.string()) }, // Optional for backwards compatibility
   handler: async (ctx, args) => {
-    // Use unified auth (supports both Clerk and legacy)
-    const user = await requireSuperAdmin(ctx, args.sessionToken);
+    // Graceful auth — return null if not authenticated (query should not throw)
+    const user = await getAuthenticatedUser(ctx, args.sessionToken);
+    if (!user || user.role !== "super_admin") return null;
 
     const branding = await ctx.db.query("branding_global").first();
     return {
