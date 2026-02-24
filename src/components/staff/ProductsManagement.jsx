@@ -910,7 +910,7 @@ const ProductsManagement = ({ onRefresh, user }) => {
                           <button
                             onClick={() => handleDelete(product._id)}
                             className="p-2 text-gray-400 hover:text-red-400 hover:bg-red-400/20 rounded-lg transition-colors"
-                            title="Delete Product"
+                            title="Deactivate Product"
                           >
                             <Trash2 className="h-4 w-4" />
                           </button>
