@@ -437,7 +437,7 @@ export const sendWalletOtpEmail = action({
 
     try {
       await resend.emails.send({
-        from: "TipunoX Barber <noreply@tipunoxph.com>",
+        from: `TipunoX Barber <noreply@${process.env.RESEND_FROM_DOMAIN || "tipunoxph.com"}>`,
         to: args.to,
         subject: `Wallet Top-Up Code: ${args.otpCode}`,
         html,

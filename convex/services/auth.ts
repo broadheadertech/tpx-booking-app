@@ -1365,7 +1365,7 @@ export const sendPasswordResetEmail = action({
     const resetUrl = `https://tipunoxph.com/auth/reset-password?token=${token}`;
 
     const emailData = {
-      from: `${brandName} <no-reply@tipunoxph.com>`,
+      from: `${brandName} <no-reply@${process.env.RESEND_FROM_DOMAIN || "tipunoxph.com"}>`,
       to: args.email,
       subject: subject,
       html: `
@@ -1716,7 +1716,7 @@ export const ensureUserFromClerk = mutation({
       .withIndex("by_email", (q) => q.eq("email", email))
       .first();
 
-    if (existingByEmail && !existingByEmail.clerk_user_id) {
+    if (existingByEmail) {
       // Check if this is a guest account being converted to full account
       const wasGuest = existingByEmail.is_guest === true;
       const fullName = [first_name, last_name].filter(Boolean).join(" ") || existingByEmail.nickname || "User";
@@ -2036,7 +2036,7 @@ export const sendVoucherEmailWithQR = action({
     const qrImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(qrPayload)}`;
 
     const emailData = {
-      from: `${brandName} <no-reply@tipunoxph.com>`,
+      from: `${brandName} <no-reply@${process.env.RESEND_FROM_DOMAIN || "tipunoxph.com"}>`,
       to: args.email,
       subject: subject,
       html: `
@@ -2360,7 +2360,7 @@ export const sendBookingConfirmationEmail = action({
     const qrImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(qrPayload)}`;
 
     const emailData = {
-      from: `${brandName} <no-reply@tipunoxph.com>`,
+      from: `${brandName} <no-reply@${process.env.RESEND_FROM_DOMAIN || "tipunoxph.com"}>`,
       to: args.email,
       subject: subject,
       html: `
@@ -2640,7 +2640,7 @@ export const sendBarberBookingNotificationEmail = action({
     const resend = new Resend(process.env.RESEND_API_KEY);
 
     const emailData = {
-      from: `${brandName} <no-reply@tipunoxph.com>`,
+      from: `${brandName} <no-reply@${process.env.RESEND_FROM_DOMAIN || "tipunoxph.com"}>`,
       to: args.email,
       subject: `New Appointment - ${args.customerName} on ${formattedDate}`,
       html: `

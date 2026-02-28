@@ -756,7 +756,7 @@ export const sendRoyaltyDueEmail = action({
       if (!admin.email) continue;
 
       const emailData = {
-        from: `${brandName} <no-reply@tipunoxph.com>`,
+        from: `${brandName} <no-reply@${process.env.RESEND_FROM_DOMAIN || "tipunoxph.com"}>`,
         to: admin.email,
         subject: `Royalty Payment Due - ${payment.period_label}`,
         html: `
@@ -1248,7 +1248,7 @@ export const sendReceiptEmail = action({
       if (!admin.email) continue;
 
       const emailData = {
-        from: `${brandName} <no-reply@tipunoxph.com>`,
+        from: `${brandName} <no-reply@${process.env.RESEND_FROM_DOMAIN || "tipunoxph.com"}>`,
         to: admin.email,
         subject: `Official Receipt ${receipt.receipt_number} - Royalty Payment`,
         html: `

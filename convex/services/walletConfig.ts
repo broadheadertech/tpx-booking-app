@@ -26,7 +26,6 @@ import { DEFAULT_BONUS_TIERS, type BonusTier } from "../lib/walletBonus";
 export const getWalletConfig = query({
   args: {},
   handler: async (ctx) => {
-    // Check super_admin role
     await checkRole(ctx, "super_admin");
 
     // Get the singleton config record
@@ -94,7 +93,6 @@ export const updateWalletConfig = mutation({
     monthly_bonus_cap: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
-    // Check super_admin role
     await checkRole(ctx, "super_admin");
 
     // Validate inputs
@@ -468,7 +466,6 @@ export const updateBonusTiers = mutation({
     })),
   },
   handler: async (ctx, args) => {
-    // Check super_admin role
     await checkRole(ctx, "super_admin");
 
     // Validate bonus tiers

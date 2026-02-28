@@ -11,13 +11,7 @@
 export default {
   providers: [
     {
-      // Production Clerk domain (clerk.broadheader.com)
-      domain: "https://clerk.broadheader.com",
-      applicationID: "convex",
-    },
-    {
-      // Development Clerk domain (proper-feline-8.clerk.accounts.dev)
-      domain: "https://proper-feline-8.clerk.accounts.dev",
+      domain: process.env.CLERK_DOMAIN!,
       applicationID: "convex",
     },
   ],

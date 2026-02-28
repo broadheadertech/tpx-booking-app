@@ -15,8 +15,8 @@
  *   "breaking" — Breaking/major change (bumps MAJOR)
  */
 
-export const APP_VERSION = '2.2.0';
-export const LAST_DEPLOY = '2026-02-23';
+export const APP_VERSION = '2.3.0';
+export const LAST_DEPLOY = '2026-02-27';
 export const VERSION_INFO = {
   version: APP_VERSION,
   lastDeploy: LAST_DEPLOY,
@@ -28,6 +28,15 @@ export const VERSION_INFO = {
  * Each entry: { version, date, changes: [{ tag, text }] }
  */
 export const CHANGELOG = [
+  {
+    version: '2.3.0',
+    date: '2026-02-27',
+    changes: [
+      { tag: 'feature', text: 'Face Recognition Attendance Kiosk — standalone tablet-based FR clock-in/out at /kiosk/attendance' },
+      { tag: 'feature', text: 'Device registration enforcement — kiosk only works on registered devices per branch' },
+      { tag: 'feature', text: 'Auto-detect face scan with liveness check, cooldown, and confidence-based approval' },
+    ],
+  },
   {
     version: '2.2.0',
     date: '2026-02-23',
