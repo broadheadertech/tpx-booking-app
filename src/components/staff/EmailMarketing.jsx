@@ -51,9 +51,12 @@ import {
   AlignRight,
   Code,
   Save,
-  RotateCcw
+  RotateCcw,
+  Sparkles,
+  BookmarkPlus
 } from 'lucide-react'
 import Modal from '../common/Modal'
+import AvexaComposer from '../common/AvexaComposer'
 import { renderTemplateHtml, buildTemplateDataFromCampaign } from '../../utils/emailTemplates'
 
 // Memoized Template Preview Component
@@ -207,6 +210,7 @@ const EmailMarketing = memo(({ onRefresh }) => {
   const [recipientFilter, setRecipientFilter] = useState('all_customers')
   const [selectedRecipients, setSelectedRecipients] = useState([])
   const [recipientModalContext, setRecipientModalContext] = useState('create')
+  const [showAvexa, setShowAvexa] = useState(false)
 
   // Form states
   const [campaignForm, setCampaignForm] = useState({
@@ -239,10 +243,16 @@ const EmailMarketing = memo(({ onRefresh }) => {
     user?.branch_id ? { role: 'customer', branch_id: user.branch_id } : 'skip'
   )
 
+  const savedTemplates = useQuery(
+    api.services.emailMarketing.getSavedTemplatesByBranch,
+    user?.branch_id ? { branch_id: user.branch_id } : 'skip'
+  )
+
   // Mutations
   const createCampaign = useMutation(api.services.emailMarketing.createCampaign)
   const updateCampaign = useMutation(api.services.emailMarketing.updateCampaign)
   const deleteCampaignMutation = useMutation(api.services.emailMarketing.deleteCampaign)
+  const deleteSavedTemplate = useMutation(api.services.emailMarketing.deleteSavedTemplate)
   const logCampaignSend = useMutation(api.services.emailMarketing.logCampaignSend)
 
   // Audience data
@@ -1383,6 +1393,51 @@ const EmailMarketing = memo(({ onRefresh }) => {
                       </div>
                     </div>
 
+                    {/* Avexa AI Compose Section */}
+                    <div className="bg-[#222222] rounded-2xl border border-[#2A2A2A]/50 overflow-hidden">
+                      <button
+                        type="button"
+                        onClick={() => setShowAvexa(!showAvexa)}
+                        className="w-full flex items-center justify-between p-6 hover:bg-[#2A2A2A]/30 transition-colors"
+                      >
+                        <div className="flex items-center space-x-2">
+                          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-purple-500/20 to-pink-500/20 flex items-center justify-center">
+                            <Sparkles className="w-4 h-4 text-purple-400" />
+                          </div>
+                          <div className="text-left">
+                            <h3 className="text-lg font-semibold text-white">Ask Avexa</h3>
+                            <p className="text-xs text-gray-400">Let AI compose your email from a prompt</p>
+                          </div>
+                        </div>
+                        <div className={`text-gray-400 transition-transform ${showAvexa ? 'rotate-180' : ''}`}>
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+                        </div>
+                      </button>
+                      {showAvexa && (
+                        <div className="px-6 pb-6 border-t border-[#2A2A2A]/50">
+                          <div className="pt-4">
+                            <AvexaComposer
+                              brandName={user?.branch_name || ''}
+                              brandColor="var(--color-primary)"
+                              businessType="salon/barbershop"
+                              branchId={user?.branch_id}
+                              userId={user?._id}
+                              customers={customers}
+                              enableVoucher={true}
+                              enableSend={false}
+                              enableSaveTemplate={true}
+                              enableDraftSave={true}
+                              onApply={({ subject, body_html }) => {
+                                setCampaignForm(prev => ({ ...prev, subject, body_html, template_type: 'custom' }))
+                                setSelectedTemplate(null)
+                                setShowAvexa(false)
+                              }}
+                            />
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
                     {/* Template Selection Section */}
                     <div className="bg-[#222222] rounded-2xl p-6 border border-[#2A2A2A]/50">
                       <div className="flex items-center space-x-2 mb-6">
@@ -1402,6 +1457,39 @@ const EmailMarketing = memo(({ onRefresh }) => {
                           />
                         ))}
                       </div>
+
+                      {/* Saved AI Templates */}
+                      {savedTemplates && savedTemplates.length > 0 && (
+                        <div className="mt-4 pt-4 border-t border-[#2A2A2A]/50">
+                          <p className="text-xs text-gray-400 font-medium mb-3 uppercase tracking-wider flex items-center gap-1.5">
+                            <BookmarkPlus className="w-3.5 h-3.5 text-purple-400" /> Saved AI Templates
+                          </p>
+                          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                            {savedTemplates.map((tpl) => (
+                              <div key={tpl._id}
+                                className="relative p-3 rounded-xl border border-[#2A2A2A] bg-[#1A1A1A] hover:border-purple-500/40 group cursor-pointer transition-colors"
+                                onClick={() => {
+                                  setCampaignForm(prev => ({
+                                    ...prev, subject: tpl.subject, body_html: tpl.body_html,
+                                    template_type: 'custom', templateData: {},
+                                  }))
+                                  setSelectedTemplate(null)
+                                }}>
+                                <div className="flex items-center gap-2 mb-1">
+                                  <BookmarkPlus className="w-4 h-4 text-purple-400 shrink-0" />
+                                  <span className="text-sm text-white font-medium truncate">{tpl.name}</span>
+                                </div>
+                                <p className="text-xs text-gray-500 truncate">{tpl.subject}</p>
+                                <button type="button"
+                                  onClick={(e) => { e.stopPropagation(); deleteSavedTemplate({ id: tpl._id }) }}
+                                  className="absolute top-2 right-2 hidden group-hover:flex w-6 h-6 items-center justify-center rounded-md bg-red-500/20 text-red-400 hover:bg-red-500/40 transition-all">
+                                  <X className="w-3 h-3" />
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                     </div>
 
                     {/* Template Content Inputs (no rich text) */}
@@ -1414,7 +1502,11 @@ const EmailMarketing = memo(({ onRefresh }) => {
                       </div>
 
                       {!selectedTemplate && (
-                        <div className="text-sm text-gray-400">Select a template above to customize its content.</div>
+                        <div className="text-sm text-gray-400">
+                          {campaignForm.body_html
+                            ? <span className="flex items-center gap-2"><Sparkles className="w-4 h-4 text-purple-400" /> Using Avexa-generated email. Select a template above to switch.</span>
+                            : 'Select a template above to customize its content.'}
+                        </div>
                       )}
 
                       {selectedTemplate?.id === 'marketing' && (

@@ -45,6 +45,7 @@ import {
   segmentByRFM,
   analyzeEmailContent,
 } from '../../utils/emailAI'
+import AvexaComposer from '../common/AvexaComposer'
 
 // ============================================================================
 // SHARED UI COMPONENTS
@@ -1271,6 +1272,7 @@ export default function BranchEmailAI({ user }) {
     { id: 'churn', label: 'Churn Risk', icon: AlertTriangle },
     { id: 'rfm', label: 'RFM Segments', icon: Target },
     { id: 'content', label: 'Content Analyzer', icon: FileText },
+    { id: 'avexa', label: 'Avexa AI', icon: Wand2 },
   ]
 
   return (
@@ -1436,6 +1438,25 @@ export default function BranchEmailAI({ user }) {
         {activeTab === 'churn' && <ChurnRiskAnalyzer customers={branchCustomers} />}
         {activeTab === 'rfm' && <RFMSegments customers={branchCustomers} />}
         {activeTab === 'content' && <ContentAnalyzer />}
+        {activeTab === 'avexa' && (
+          <div className="bg-[#222222] rounded-2xl p-6 border border-[#2A2A2A]/50">
+            <AvexaComposer
+              brandName={brandName}
+              brandColor={brandColor}
+              businessType="salon/barbershop"
+              branchId={user?.branch_id}
+              userId={user?._id}
+              customers={emailableCustomers}
+              enableVoucher={true}
+              enableSend={true}
+              enableSaveTemplate={true}
+              onApply={({ subject, body_html }) => {
+                navigator.clipboard.writeText(`Subject: ${subject}\n\n${body_html}`)
+                  .catch(() => {})
+              }}
+            />
+          </div>
+        )}
       </div>
     </div>
   )

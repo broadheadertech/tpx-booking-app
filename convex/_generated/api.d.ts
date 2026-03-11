@@ -28,6 +28,7 @@ import type * as services_aiAnalytics from "../services/aiAnalytics.js";
 import type * as services_aiMirror from "../services/aiMirror.js";
 import type * as services_auditLogs from "../services/auditLogs.js";
 import type * as services_auth from "../services/auth.js";
+import type * as services_avexa from "../services/avexa.js";
 import type * as services_balanceSheet from "../services/balanceSheet.js";
 import type * as services_barberMatcher from "../services/barberMatcher.js";
 import type * as services_barbers from "../services/barbers.js";
@@ -135,6 +136,7 @@ declare const fullApi: ApiFromModules<{
   "services/aiMirror": typeof services_aiMirror;
   "services/auditLogs": typeof services_auditLogs;
   "services/auth": typeof services_auth;
+  "services/avexa": typeof services_avexa;
   "services/balanceSheet": typeof services_balanceSheet;
   "services/barberMatcher": typeof services_barberMatcher;
   "services/barbers": typeof services_barbers;

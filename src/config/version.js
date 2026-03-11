@@ -15,8 +15,8 @@
  *   "breaking" — Breaking/major change (bumps MAJOR)
  */
 
-export const APP_VERSION = '2.3.0';
-export const LAST_DEPLOY = '2026-02-27';
+export const APP_VERSION = '2.6.0';
+export const LAST_DEPLOY = '2026-02-28';
 export const VERSION_INFO = {
   version: APP_VERSION,
   lastDeploy: LAST_DEPLOY,
@@ -28,6 +28,33 @@ export const VERSION_INFO = {
  * Each entry: { version, date, changes: [{ tag, text }] }
  */
 export const CHANGELOG = [
+  {
+    version: '2.6.0',
+    date: '2026-02-28',
+    changes: [
+      { tag: 'feature', text: 'Avexa Save as Template — save AI-generated emails as reusable templates for future campaigns' },
+      { tag: 'feature', text: 'Avexa Save for Later — one-click save as draft campaign for scheduled sending' },
+      { tag: 'feature', text: 'Saved AI Templates grid in Email Marketing — load, preview, and delete saved templates' },
+    ],
+  },
+  {
+    version: '2.5.0',
+    date: '2026-02-28',
+    changes: [
+      { tag: 'feature', text: 'Avexa model toggle — switch between free Gemini models (2.5 Flash, 2.5 Lite, 3 Flash)' },
+      { tag: 'feature', text: 'Avexa voucher creation — create vouchers inline after generating email and insert code into HTML' },
+      { tag: 'feature', text: 'Avexa direct send — send emails by audience or specific recipients with campaign tracking' },
+    ],
+  },
+  {
+    version: '2.4.0',
+    date: '2026-02-28',
+    changes: [
+      { tag: 'feature', text: 'Avexa AI Email Composer — generate complete marketing emails from natural language prompts using Google Gemini' },
+      { tag: 'feature', text: 'Avexa inline in campaign creator — collapsible "Ask Avexa" section auto-fills subject and body' },
+      { tag: 'feature', text: 'Avexa standalone tab in Email Marketing AI — dedicated AI compose experience with tone selection' },
+    ],
+  },
   {
     version: '2.3.0',
     date: '2026-02-27',
