@@ -13,14 +13,14 @@ export default function WalkInSection() {
   const [showAddModal, setShowAddModal] = useState(false)
   const [dateFilter, setDateFilter] = useState('today')
   const [customDate, setCustomDate] = useState('')
-  const [statusFilter, setStatusFilter] = useState('all')
+  const [statusFilter, setStatusFilter] = useState('in_queue')
   const [cleaningUp, setCleaningUp] = useState(false)
   const [showTutorial, setShowTutorial] = useState(false)
 
   // Get walk-ins data from API with filters
   const allWalkIns = useQuery(
     api.services.walkIn.getAllWalkIns,
-    statusFilter === 'all' ? {} : { status: statusFilter }
+    statusFilter === 'all' || statusFilter === 'in_queue' ? {} : { status: statusFilter }
   ) || []
 
   // Mutations
@@ -74,6 +74,8 @@ export default function WalkInSection() {
 
   const filteredWalkIns = filteredByDate
     .filter(walkIn => {
+      // "In Queue" shows only waiting + active (hides completed/cancelled)
+      if (statusFilter === 'in_queue' && walkIn.status !== 'waiting' && walkIn.status !== 'active') return false
       const matchesSearch =
         walkIn.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         walkIn.number?.includes(searchTerm) ||
@@ -305,6 +307,7 @@ export default function WalkInSection() {
                 onChange={(e) => setStatusFilter(e.target.value)}
                 className="px-3 py-2 bg-[#1A1A1A] border border-[#444444] text-white rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent text-sm"
               >
+                <option value="in_queue">In Queue</option>
                 <option value="all">All Status</option>
                 <option value="waiting">Waiting</option>
                 <option value="active">Active</option>

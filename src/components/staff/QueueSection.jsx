@@ -53,7 +53,7 @@ const QueueSection = () => {
     id: bq.barberId,
     name: bq.barberName,
     avatar: bq.barberAvatar,
-    color: bq.barberColor,
+    color: bq.barberColor || 'bg-blue-500',
     status: bq.barberStatus,
   })) || sampleBarbers
 
