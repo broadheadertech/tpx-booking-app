@@ -578,6 +578,25 @@ export const getRegisteredDevices = query({
   },
 });
 
+export const checkDeviceRegistered = query({
+  args: {
+    branch_id: v.id("branches"),
+    device_fingerprint: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const device = await ctx.db
+      .query("attendance_devices")
+      .withIndex("by_fingerprint", (q) => q.eq("device_fingerprint", args.device_fingerprint))
+      .first();
+
+    if (!device || !device.is_active || device.branch_id !== args.branch_id) {
+      return { registered: false };
+    }
+
+    return { registered: true, device_name: device.device_name };
+  },
+});
+
 export const registerDevice = mutation({
   args: {
     branch_id: v.id("branches"),

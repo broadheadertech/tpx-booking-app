@@ -90,7 +90,6 @@ export const updateBranchWalletSettings = mutation({
     payout_bank_name: v.optional(v.union(v.string(), v.null())),
   },
   handler: async (ctx, args) => {
-    // Only super_admin can update branch wallet settings
     await checkRole(ctx, "super_admin");
 
     // Validate branch exists

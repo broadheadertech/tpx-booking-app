@@ -10,7 +10,7 @@ import { Resend } from "resend";
 const resend = new Resend(process.env.RESEND_API_KEY || "missing_key");
 
 // Default sender - configured with verified Resend domain
-const DEFAULT_FROM = "TipunoX Barber <noreply@tipunoxph.com>";
+const DEFAULT_FROM = `TipunoX Barber <noreply@${process.env.RESEND_FROM_DOMAIN || "tipunoxph.com"}>`;
 
 /**
  * Send a single marketing email via Resend
