@@ -1409,6 +1409,19 @@ export default defineSchema({
     .index("by_campaign", ["campaign_id"])
     .index("by_status", ["status"]),
 
+  // Saved AI-generated marketing email templates (for reuse in campaigns)
+  email_saved_templates: defineTable({
+    branch_id: v.id("branches"),
+    name: v.string(),
+    subject: v.string(),
+    body_html: v.string(),
+    created_by: v.id("users"),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_branch", ["branch_id"])
+    .index("by_created_at", ["createdAt"]),
+
   // Wallets
   wallets: defineTable({
     user_id: v.id("users"),

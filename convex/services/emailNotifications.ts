@@ -415,7 +415,7 @@ export const sendNotificationEmail = action({
     const resend = new Resend(apiKey);
     try {
       const result = await resend.emails.send({
-        from: `${brandName} <no-reply@tipunoxph.com>`,
+        from: `${brandName} <no-reply@${process.env.RESEND_FROM_DOMAIN || "tipunoxph.com"}>`,
         to: args.to_email,
         subject,
         html,

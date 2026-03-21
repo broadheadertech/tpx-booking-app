@@ -188,4 +188,41 @@ export const deleteCampaign = mutation({
 });
 
 
-// EmailJS will be handled client-side, no server actions needed
+// ── Saved AI Email Templates ─────────────────────────────────────────────────
+
+export const saveTemplate = mutation({
+  args: {
+    branch_id: v.id("branches"),
+    name: v.string(),
+    subject: v.string(),
+    body_html: v.string(),
+    created_by: v.id("users"),
+  },
+  handler: async (ctx, args) => {
+    const now = Date.now()
+    return await ctx.db.insert("email_saved_templates", {
+      ...args,
+      createdAt: now,
+      updatedAt: now,
+    })
+  },
+})
+
+export const getSavedTemplatesByBranch = query({
+  args: { branch_id: v.id("branches") },
+  handler: async (ctx, args) => {
+    return await ctx.db
+      .query("email_saved_templates")
+      .withIndex("by_branch", (q) => q.eq("branch_id", args.branch_id))
+      .order("desc")
+      .collect()
+  },
+})
+
+export const deleteSavedTemplate = mutation({
+  args: { id: v.id("email_saved_templates") },
+  handler: async (ctx, args) => {
+    await ctx.db.delete(args.id)
+    return { success: true }
+  },
+})

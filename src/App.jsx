@@ -46,6 +46,7 @@ import BranchProfile from "./pages/b/BranchProfile";
 import LiveQueue from "./pages/b/LiveQueue";
 import WalkInForm from "./pages/b/WalkInForm";
 import Kiosk from "./pages/Kiosk";
+import AttendanceKiosk from "./pages/kiosk/AttendanceKiosk";
 import PaymentSuccess from "./pages/booking/payment/success.jsx";
 import PaymentFailure from "./pages/booking/payment/failure.jsx";
 import Policy from "./pages/Policy.jsx";
@@ -366,6 +367,14 @@ function App() {
                 element={
                   <ErrorBoundary>
                     <Kiosk />
+                  </ErrorBoundary>
+                }
+              />
+              <Route
+                path="/kiosk/attendance"
+                element={
+                  <ErrorBoundary>
+                    <AttendanceKiosk />
                   </ErrorBoundary>
                 }
               />

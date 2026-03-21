@@ -423,6 +423,109 @@ export const migratePageAccess = internalMutation({
 // ============================================================================
 
 /**
+ * Migrate staff accounts (super_admin, admin, branch_admin, staff) to Clerk
+ * with a specified password. Works with system-generated/fake emails.
+ *
+ * Usage from Convex Dashboard:
+ *   migrateStaffAccounts({ password: "YourPassword123!" })
+ *   migrateStaffAccounts({ password: "YourPassword123!", roles: ["branch_admin"] })
+ */
+export const migrateStaffAccounts = action({
+  args: {
+    password: v.string(),
+    roles: v.optional(v.array(v.string())),
+  },
+  handler: async (ctx, args) => {
+    const { api } = require("../_generated/api");
+    const clerkSecretKey = process.env.CLERK_SECRET_KEY;
+    if (!clerkSecretKey) {
+      return { success: false, error: "CLERK_SECRET_KEY not configured in Convex Dashboard" };
+    }
+
+    const targetRoles = args.roles || ["super_admin", "admin", "branch_admin", "staff"];
+
+    // Get all unmigrated users
+    const allUnmigrated = await ctx.runQuery(api.services.clerkMigration.getUnmigratedUsers, {});
+    const staffUsers = allUnmigrated.filter((u: any) => targetRoles.includes(u.role));
+
+    if (staffUsers.length === 0) {
+      return { success: true, message: "No unmigrated staff accounts found", migrated: 0 };
+    }
+
+    const results: Array<{ email: string; role: string; success: boolean; error?: string }> = [];
+
+    for (const user of staffUsers) {
+      try {
+        const nameParts = (user.nickname || user.username || "").split(" ");
+
+        const response = await fetch("https://api.clerk.com/v1/users", {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${clerkSecretKey}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            email_address: [user.email],
+            password: args.password,
+            first_name: nameParts[0] || "",
+            last_name: nameParts.slice(1).join(" ") || "",
+            username: sanitizeUsername(user.username),
+            skip_password_checks: true,
+          }),
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+
+          // If user already exists in Clerk, link them
+          if (errorData.errors?.[0]?.code === "form_identifier_exists") {
+            const existing = await findClerkUserByEmail(clerkSecretKey, user.email);
+            if (existing) {
+              await ctx.runMutation(internal.services.clerkMigration.linkUserToClerk, {
+                userId: user._id, clerk_user_id: existing.id,
+              });
+              results.push({ email: user.email, role: user.role, success: true });
+              continue;
+            }
+          }
+
+          const errMsg = errorData.errors?.[0]?.message || JSON.stringify(errorData);
+          await ctx.runMutation(internal.services.clerkMigration.markMigrationFailed, {
+            userId: user._id, error: errMsg,
+          });
+          results.push({ email: user.email, role: user.role, success: false, error: errMsg });
+          continue;
+        }
+
+        const clerkUser = await response.json();
+        await ctx.runMutation(internal.services.clerkMigration.linkUserToClerk, {
+          userId: user._id, clerk_user_id: clerkUser.id,
+        });
+        results.push({ email: user.email, role: user.role, success: true });
+        console.log(`[ClerkMigration] Migrated ${user.role}: ${user.email} → ${clerkUser.id}`);
+      } catch (error: any) {
+        const errMsg = error?.message || "Unknown error";
+        await ctx.runMutation(internal.services.clerkMigration.markMigrationFailed, {
+          userId: user._id, error: errMsg,
+        });
+        results.push({ email: user.email, role: user.role, success: false, error: errMsg });
+      }
+    }
+
+    const succeeded = results.filter(r => r.success).length;
+    const failed = results.filter(r => !r.success);
+
+    return {
+      success: failed.length === 0,
+      total: staffUsers.length,
+      migrated: succeeded,
+      failed: failed.length,
+      details: results,
+    };
+  },
+});
+
+/**
  * Create a single user in Clerk
  * Uses Clerk Backend API
  */

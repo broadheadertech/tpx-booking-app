@@ -1,6 +1,6 @@
-import { v } from "convex/values";
+import { v, ConvexError } from "convex/values";
 import { mutation, query } from "../_generated/server";
-import { getAuthenticatedUser, requireSuperAdmin, requireRole } from "../lib/unifiedAuth";
+import { getAuthenticatedUser, requireSuperAdmin } from "../lib/unifiedAuth";
 
 // Validation helpers
 function isValidColor(color: string): boolean {
@@ -213,9 +213,7 @@ export const getBrandingHistory = query({
     limit: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
-    // Graceful auth — return empty if not authenticated (query should not throw)
-    const user = await getAuthenticatedUser(ctx, args.sessionToken);
-    if (!user || user.role !== "super_admin") return [];
+    await requireSuperAdmin(ctx, args.sessionToken);
 
     const limit = args.limit || 20;
     const history = await ctx.db
@@ -296,9 +294,7 @@ export const rollbackGlobalBranding = mutation({
 export const exportBranding = query({
   args: { sessionToken: v.optional(v.string()) }, // Optional for backwards compatibility
   handler: async (ctx, args) => {
-    // Graceful auth — return null if not authenticated (query should not throw)
-    const user = await getAuthenticatedUser(ctx, args.sessionToken);
-    if (!user || user.role !== "super_admin") return null;
+    const user = await requireSuperAdmin(ctx, args.sessionToken);
 
     const branding = await ctx.db.query("branding_global").first();
     return {
@@ -379,27 +375,24 @@ export const importBranding = mutation({
 // Allows branch_admin and above to upload images for their branch
 export const generateUploadUrl = mutation({
   args: {
-    sessionToken: v.optional(v.string()), // Optional for backwards compatibility
+    sessionToken: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    // Use unified auth - allow branch_admin and above
-    await requireRole(ctx, "branch_admin", args.sessionToken);
-
+    const user = await getAuthenticatedUser(ctx, args.sessionToken);
+    if (!user) throw new Error("Please log in to upload images");
     return await ctx.storage.generateUploadUrl();
   },
 });
 
 // Get URL for uploaded file
-// Allows branch_admin and above to get image URLs
 export const getImageUrl = mutation({
   args: {
-    sessionToken: v.optional(v.string()), // Optional for backwards compatibility
+    sessionToken: v.optional(v.string()),
     storageId: v.string(),
   },
   handler: async (ctx, args) => {
-    // Use unified auth - allow branch_admin and above
-    await requireRole(ctx, "branch_admin", args.sessionToken);
-
+    const user = await getAuthenticatedUser(ctx, args.sessionToken);
+    if (!user) throw new Error("Please log in to access images");
     const url = await ctx.storage.getUrl(args.storageId as any);
     return url;
   },
