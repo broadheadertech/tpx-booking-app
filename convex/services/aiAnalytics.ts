@@ -849,14 +849,15 @@ export const getSADescriptiveAnalytics = query({
     const periodTxns = completedTxns.filter(t => t.createdAt >= args.start_date);
     const prevTxns = completedTxns.filter(t => t.createdAt < args.start_date);
 
-    // Calculate system-wide revenue
-    const calcRevenue = (txns: typeof transactions) => {
-      let services = 0, products = 0;
+    // Calculate system-wide revenue using actual total_amount (accounts for discounts, vouchers, fees)
+    const calcRevenue = (txns: typeof periodTxns) => {
+      let services = 0, products = 0, total = 0;
       for (const t of txns) {
         for (const s of t.services || []) services += s.price * s.quantity;
         for (const p of t.products || []) products += p.price * p.quantity;
+        total += t.total_amount; // Use actual paid amount, not line item sum
       }
-      return { services, products, total: services + products };
+      return { services, products, total };
     };
 
     const currentRev = calcRevenue(periodTxns);
@@ -969,7 +970,7 @@ export const getSADescriptiveAnalytics = query({
         },
         // Product Catalog stats
         product_catalog: {
-          total_products: productCatalog.length,
+          total_products: allProductCatalog.length,
           active_products: activeProducts.length,
           low_stock_products: lowStockProducts.length,
         },
@@ -1514,12 +1515,7 @@ export const getSAPrescriptiveAnalytics = query({
     // 1. Branch Expansion Strategy
     const branchGrowth = branches.filter(b => b.createdAt >= thirtyDaysAgo).length;
     const avgBranchRevenue = activeBranches.length > 0
-      ? recentTxns.reduce((sum, t) => {
-          let total = 0;
-          for (const s of t.services || []) total += s.price * s.quantity;
-          for (const p of t.products || []) total += p.price * p.quantity;
-          return sum + total;
-        }, 0) / activeBranches.length
+      ? recentTxns.reduce((sum, t) => sum + t.total_amount, 0) / activeBranches.length
       : 0;
 
     if (avgBranchRevenue > 100000 && branchGrowth === 0) {
