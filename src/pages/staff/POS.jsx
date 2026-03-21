@@ -120,7 +120,9 @@ const POS = () => {
       ? useQuery(api.services.services.getServicesByBranch, { branch_id: user.branch_id })
       : []
 
-  const products = useQuery(api.services.products.getAllProducts) // Products remain global
+  const products = useQuery(api.services.products.getAllProducts,
+    user?.branch_id ? { branch_id: user.branch_id } : {}
+  )
 
   const barbers = user?.role === 'super_admin'
     ? useQuery(api.services.barbers.getAllBarbers)

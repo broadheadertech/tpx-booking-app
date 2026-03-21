@@ -5,15 +5,18 @@ import {
   ChevronRight, Star, Package, CreditCard, ArrowUp, ArrowDown,
   BarChart3, PieChart, LineChart, Target, ShoppingCart, UserCheck,
   AlertTriangle, Bell, Zap, Brain, TrendingUpDown, Activity, XCircle,
-  Lightbulb, CheckCircle2, Sparkles
+  Lightbulb, CheckCircle2, Sparkles, HelpCircle
 } from 'lucide-react'
 import { useQuery } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
+import WalkthroughOverlay from '../common/WalkthroughOverlay'
+import { reportsManagementSteps } from '../../config/walkthroughSteps'
 
 const ReportsManagement = ({ onRefresh, user }) => {
   const [selectedPeriod, setSelectedPeriod] = useState('today')
   const [activeTab, setActiveTab] = useState('descriptive')
   const [loading, setLoading] = useState(false)
+  const [showWalkthrough, setShowWalkthrough] = useState(false)
 
   // Calculate date ranges for fetching (include previous period for comparison) using useMemo for stability
   const { queryStart, queryEnd, startDateStr, endDateStr } = useMemo(() => {
@@ -705,7 +708,7 @@ const ReportsManagement = ({ onRefresh, user }) => {
           <p className="text-sm text-gray-400">Comprehensive performance insights</p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2" data-tour="reports-period">
           <select
             value={selectedPeriod}
             onChange={(e) => setSelectedPeriod(e.target.value)}
@@ -726,6 +729,7 @@ const ReportsManagement = ({ onRefresh, user }) => {
 
           <button
             onClick={handleExport}
+            data-tour="reports-export"
             className="flex items-center gap-2 px-3 py-2 bg-[var(--color-primary)] text-white text-sm rounded-lg hover:bg-[var(--color-accent)] transition-colors"
           >
             <Download className="h-4 w-4" />
@@ -738,6 +742,7 @@ const ReportsManagement = ({ onRefresh, user }) => {
       <div className="bg-[#1A1A1A] border border-[#2A2A2A] rounded-lg p-1">
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-1">
           <button
+            data-tour="reports-tab-descriptive"
             onClick={() => setActiveTab('descriptive')}
             className={`flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg font-medium transition-all text-sm ${activeTab === 'descriptive'
               ? 'bg-[var(--color-primary)] text-white shadow-lg'
@@ -749,6 +754,7 @@ const ReportsManagement = ({ onRefresh, user }) => {
             <span className="sm:hidden">What</span>
           </button>
           <button
+            data-tour="reports-tab-diagnostic"
             onClick={() => setActiveTab('diagnostic')}
             className={`flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg font-medium transition-all text-sm ${activeTab === 'diagnostic'
               ? 'bg-[var(--color-primary)] text-white shadow-lg'
@@ -760,6 +766,7 @@ const ReportsManagement = ({ onRefresh, user }) => {
             <span className="sm:hidden">Why</span>
           </button>
           <button
+            data-tour="reports-tab-predictive"
             onClick={() => setActiveTab('predictive')}
             className={`flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg font-medium transition-all text-sm ${activeTab === 'predictive'
               ? 'bg-[var(--color-primary)] text-white shadow-lg'
@@ -771,6 +778,7 @@ const ReportsManagement = ({ onRefresh, user }) => {
             <span className="sm:hidden">Will</span>
           </button>
           <button
+            data-tour="reports-tab-prescriptive"
             onClick={() => setActiveTab('prescriptive')}
             className={`flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg font-medium transition-all text-sm ${activeTab === 'prescriptive'
               ? 'bg-[var(--color-primary)] text-white shadow-lg'
@@ -825,6 +833,12 @@ const ReportsManagement = ({ onRefresh, user }) => {
           aiHealthScore={aiHealthScore}
           aiMarketingStrategies={aiMarketingStrategies}
         />
+      )}
+      <WalkthroughOverlay steps={reportsManagementSteps} isVisible={showWalkthrough} onComplete={() => setShowWalkthrough(false)} onSkip={() => setShowWalkthrough(false)} />
+      {!showWalkthrough && (
+        <button onClick={() => setShowWalkthrough(true)} className="fixed bottom-20 right-4 z-40 w-10 h-10 rounded-full bg-[#1A1A1A] border border-[#2A2A2A] flex items-center justify-center text-gray-400 hover:text-white hover:border-[var(--color-primary)]/50 transition-all shadow-lg shadow-black/40" title="Reports tour">
+          <HelpCircle className="w-5 h-5" />
+        </button>
       )}
     </div>
   )

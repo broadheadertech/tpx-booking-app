@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { DollarSign, Banknote, Percent, PieChart, Scale, Receipt, TrendingUp, Wallet } from 'lucide-react'
+import { DollarSign, Banknote, Percent, PieChart, Scale, Receipt, TrendingUp, Wallet, HelpCircle } from 'lucide-react'
 import PayrollManagement from '../PayrollManagement'
 import CashAdvanceApproval from '../CashAdvanceApproval'
 import BranchRoyaltyHistory from '../BranchRoyaltyHistory'
@@ -8,6 +8,8 @@ import BalanceSheetDashboard from '../BalanceSheetDashboard'
 import PaymentHistory from '../PaymentHistory'
 import WalletEarningsDashboard from '../WalletEarningsDashboard'
 import BranchAdminWallet from '../BranchAdminWallet'
+import WalkthroughOverlay from '../../common/WalkthroughOverlay'
+import { financeHubSteps } from '../../../config/walkthroughSteps'
 
 /**
  * Finance Hub - Consolidated finance & accounting management
@@ -15,6 +17,7 @@ import BranchAdminWallet from '../BranchAdminWallet'
  */
 const FinanceHub = ({ user, onRefresh, pendingAdvancesCount = 0 }) => {
   const [activeSection, setActiveSection] = useState(() => localStorage.getItem('staff_hub_finance_section') || 'accounting')
+  const [showWalkthrough, setShowWalkthrough] = useState(false)
 
   useEffect(() => {
     localStorage.setItem('staff_hub_finance_section', activeSection)
@@ -86,6 +89,7 @@ const FinanceHub = ({ user, onRefresh, pendingAdvancesCount = 0 }) => {
             <button
               key={section.id}
               onClick={() => setActiveSection(section.id)}
+              data-tour={`finance-tab-${section.id}`}
               className={`relative flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all ${
                 isActive
                   ? 'bg-[var(--color-primary)] text-white shadow-lg'
@@ -106,6 +110,12 @@ const FinanceHub = ({ user, onRefresh, pendingAdvancesCount = 0 }) => {
 
       {/* Content */}
       {renderContent()}
+      <WalkthroughOverlay steps={financeHubSteps} isVisible={showWalkthrough} onComplete={() => setShowWalkthrough(false)} onSkip={() => setShowWalkthrough(false)} />
+      {!showWalkthrough && (
+        <button onClick={() => setShowWalkthrough(true)} className="fixed bottom-20 right-4 z-40 w-10 h-10 rounded-full bg-[#1A1A1A] border border-[#2A2A2A] flex items-center justify-center text-gray-400 hover:text-white hover:border-[var(--color-primary)]/50 transition-all shadow-lg shadow-black/40" title="Finance tour">
+          <HelpCircle className="w-5 h-5" />
+        </button>
+      )}
     </div>
   )
 }

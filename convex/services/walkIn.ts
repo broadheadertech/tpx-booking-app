@@ -204,37 +204,37 @@ export const getAllWalkIns = query({
   handler: async (ctx, args) => {
     const limit = args.limit || 100;
 
-    let allWalkInsQuery: any = [];
+    let baseQuery;
 
     try {
-      // Try to get all walk-ins using order and collect
-      allWalkInsQuery = await ctx.db.query("walkIns").order("desc").collect();
-    } catch (queryError) {
+      // Use index for branch + status filtering when both provided
+      if (args.branch_id && args.status) {
+        baseQuery = ctx.db.query("walkIns")
+          .withIndex("by_branch_status", (q: any) => q.eq("branch_id", args.branch_id).eq("status", args.status))
+          .order("desc");
+      } else if (args.branch_id) {
+        baseQuery = ctx.db.query("walkIns")
+          .withIndex("by_branch", (q: any) => q.eq("branch_id", args.branch_id))
+          .order("desc");
+      } else if (args.status) {
+        baseQuery = ctx.db.query("walkIns")
+          .withIndex("by_status", (q: any) => q.eq("status", args.status))
+          .order("desc");
+      } else {
+        baseQuery = ctx.db.query("walkIns").order("desc");
+      }
+
+      var walkIns = await baseQuery.collect();
+    } catch (queryError: any) {
       console.warn("[getAllWalkIns] Query failed, returning empty array:", queryError?.message || queryError);
       return [];
     }
 
-    // Filter by branch if provided
-    let allWalkIns = allWalkInsQuery;
-    if (args.branch_id) {
-      allWalkIns = allWalkInsQuery.filter((w) => w.branch_id === args.branch_id);
-    }
-
-    // Filter by status if provided
-    if (args.status) {
-      allWalkIns = allWalkIns.filter((w) => w.status === args.status);
-    }
-
     // Filter by date range if provided
-    let walkIns = allWalkIns;
     if (args.startDate !== undefined || args.endDate !== undefined) {
-      walkIns = allWalkIns.filter((walkIn) => {
-        if (args.startDate !== undefined && walkIn.createdAt < args.startDate) {
-          return false;
-        }
-        if (args.endDate !== undefined && walkIn.createdAt > args.endDate) {
-          return false;
-        }
+      walkIns = walkIns.filter((walkIn: any) => {
+        if (args.startDate !== undefined && walkIn.createdAt < args.startDate) return false;
+        if (args.endDate !== undefined && walkIn.createdAt > args.endDate) return false;
         return true;
       });
     }

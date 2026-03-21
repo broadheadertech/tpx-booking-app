@@ -1,7 +1,9 @@
 import React, { useState } from 'react'
 import { useQuery, useMutation } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
-import { Building, MapPin, Phone, Mail, CheckCircle, XCircle, AlertCircle, Search, Filter, Plus, Edit, Trash2, RotateCcw, Eye, Users, Calendar, Wallet, DollarSign, TrendingUp, Link, Copy, Check, ExternalLink } from 'lucide-react'
+import { Building, MapPin, Phone, Mail, CheckCircle, XCircle, AlertCircle, Search, Filter, Plus, Edit, Trash2, RotateCcw, Eye, Users, Calendar, Wallet, DollarSign, TrendingUp, Link, Copy, Check, ExternalLink, HelpCircle } from 'lucide-react'
+import WalkthroughOverlay from '../common/WalkthroughOverlay'
+import { branchManagementSteps } from '../../config/walkthroughSteps'
 import BranchFormModal from './BranchFormModal'
 import { formatErrorForDisplay } from '../../utils/errorHandler'
 import { useCurrentUser } from '../../hooks/useCurrentUser'
@@ -26,6 +28,7 @@ export default function BranchManagement() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [copiedBranchId, setCopiedBranchId] = useState(null)
+  const [showWalkthrough, setShowWalkthrough] = useState(false)
 
   // Queries
   const branches = useQuery(api.services.branches.getAllBranches) || []
@@ -221,7 +224,7 @@ export default function BranchManagement() {
   return (
     <div className="space-y-6">
       {/* Stats Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+      <div data-tour="branch-mgmt-stats" className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
         <div className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] p-4 rounded-lg border border-[#444444]/50 shadow-sm">
           <div className="flex items-center justify-between">
             <div>
@@ -284,7 +287,7 @@ export default function BranchManagement() {
       </div>
 
       {/* Controls */}
-      <div className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] p-4 rounded-lg border border-[#444444]/50 shadow-sm">
+      <div data-tour="branch-mgmt-search" className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] p-4 rounded-lg border border-[#444444]/50 shadow-sm">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between space-y-4 md:space-y-0">
           <div className="flex flex-col md:flex-row md:items-center space-y-4 md:space-y-0 md:space-x-4">
             <div className="relative">
@@ -345,7 +348,7 @@ export default function BranchManagement() {
       </div>
 
       {/* Branches Table */}
-      <div className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] rounded-lg border border-[#444444]/50 shadow-sm overflow-hidden">
+      <div data-tour="branch-mgmt-grid" className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] rounded-lg border border-[#444444]/50 shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-[#444444]/30">
             <thead className="bg-gradient-to-r from-[#1A1A1A] to-[#2A2A2A]">
@@ -554,6 +557,13 @@ export default function BranchManagement() {
         loading={loading}
         isEdit={true}
       />
+
+      <WalkthroughOverlay steps={branchManagementSteps} isVisible={showWalkthrough} onComplete={() => setShowWalkthrough(false)} onSkip={() => setShowWalkthrough(false)} />
+      {!showWalkthrough && (
+        <button onClick={() => setShowWalkthrough(true)} className="fixed bottom-6 right-6 z-40 w-10 h-10 rounded-full bg-[#1A1A1A] border border-[#2A2A2A] flex items-center justify-center text-gray-400 hover:text-white hover:border-[var(--color-primary)]/50 transition-all shadow-lg shadow-black/40" title="Branch management tour">
+          <HelpCircle className="w-5 h-5" />
+        </button>
+      )}
     </div>
   )
 }

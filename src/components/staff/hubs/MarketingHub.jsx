@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react'
-import { MessageSquare, CalendarDays, Bell, Brain } from 'lucide-react'
+import { MessageSquare, CalendarDays, Bell, Brain, HelpCircle } from 'lucide-react'
 import PostModerationQueue from '../../admin/PostModerationQueue'
 import BranchEmailAI from '../BranchEmailAI'
 import EventsManagement from '../EventsManagement'
 import NotificationsManagement from '../NotificationsManagement'
+import WalkthroughOverlay from '../../common/WalkthroughOverlay'
+import { marketingHubSteps } from '../../../config/walkthroughSteps'
 
 /**
  * Marketing Hub - Consolidated marketing & communications management
@@ -14,6 +16,7 @@ const PERM_MAP = { ai: 'email_marketing', posts: 'post_moderation' }
 
 const MarketingHub = ({ user, events = [], onRefresh }) => {
   const [activeSection, setActiveSection] = useState(() => localStorage.getItem('staff_hub_marketing_section') || 'ai')
+  const [showWalkthrough, setShowWalkthrough] = useState(false)
 
   useEffect(() => {
     localStorage.setItem('staff_hub_marketing_section', activeSection)
@@ -70,6 +73,7 @@ const MarketingHub = ({ user, events = [], onRefresh }) => {
             <button
               key={section.id}
               onClick={() => setActiveSection(section.id)}
+              data-tour={`marketing-tab-${section.id}`}
               className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all ${
                 isActive
                   ? 'bg-[var(--color-primary)] text-white shadow-lg'
@@ -85,6 +89,12 @@ const MarketingHub = ({ user, events = [], onRefresh }) => {
 
       {/* Content */}
       {renderContent()}
+      <WalkthroughOverlay steps={marketingHubSteps} isVisible={showWalkthrough} onComplete={() => setShowWalkthrough(false)} onSkip={() => setShowWalkthrough(false)} />
+      {!showWalkthrough && (
+        <button onClick={() => setShowWalkthrough(true)} className="fixed bottom-20 right-4 z-40 w-10 h-10 rounded-full bg-[#1A1A1A] border border-[#2A2A2A] flex items-center justify-center text-gray-400 hover:text-white hover:border-[var(--color-primary)]/50 transition-all shadow-lg shadow-black/40" title="Marketing tour">
+          <HelpCircle className="w-5 h-5" />
+        </button>
+      )}
     </div>
   )
 }
