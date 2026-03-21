@@ -73,7 +73,7 @@ const ReportsManagement = ({ onRefresh, user }) => {
       ? useQuery(api.services.services.getServicesByBranch, { branch_id: user.branch_id })
       : []
 
-  const products = useQuery(api.services.products.getAllProducts)
+  const products = useQuery(api.services.products.getAllProducts, {})
 
   // AI Analytics Queries (integrated into DDPP tabs)
   const now = new Date()

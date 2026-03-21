@@ -102,7 +102,7 @@ function StaffDashboard() {
 
   const vouchers =
     user?.role === "super_admin"
-      ? useQuery(api.services.vouchers.getAllVouchers)
+      ? useQuery(api.services.vouchers.getAllVouchers, {})
       : user?.branch_id
         ? useQuery(api.services.vouchers.getVouchersByBranch, {
           branch_id: user.branch_id,
