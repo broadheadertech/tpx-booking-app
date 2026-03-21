@@ -28,7 +28,10 @@ import {
   Activity,
   LogIn,
   X,
+  HelpCircle,
 } from "lucide-react";
+import WalkthroughOverlay from './WalkthroughOverlay';
+import { activityLogSteps } from '../../config/walkthroughSteps';
 
 // ============================================================================
 // CATEGORY CONFIG
@@ -118,6 +121,7 @@ export default function SystemAuditLog({ branchId, branchName }) {
   const [endDate, setEndDate] = useState("");
   const [page, setPage] = useState(0);
   const [expandedEntry, setExpandedEntry] = useState(null);
+  const [showWalkthrough, setShowWalkthrough] = useState(false);
   const pageSize = 100;
 
   // Build query args
@@ -175,7 +179,7 @@ export default function SystemAuditLog({ branchId, branchName }) {
 
       {/* Stats Cards */}
       {stats && (
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div data-tour="audit-stats" className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <div className="bg-[#1A1A1A] p-4 rounded-xl border border-[#2A2A2A]/50">
             <p className="text-xs text-gray-400 mb-1">Total Logs</p>
             <p className="text-2xl font-bold text-white">{stats.total.toLocaleString()}</p>
@@ -199,7 +203,7 @@ export default function SystemAuditLog({ branchId, branchName }) {
 
       {/* Category Chips (from stats) */}
       {stats?.byCategory && Object.keys(stats.byCategory).length > 0 && (
-        <div className="flex flex-wrap gap-2">
+        <div data-tour="audit-categories" className="flex flex-wrap gap-2">
           <button
             onClick={() => { setCategory("all"); setPage(0); }}
             className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors ${
@@ -232,7 +236,7 @@ export default function SystemAuditLog({ branchId, branchName }) {
       )}
 
       {/* Filters Bar */}
-      <div className="bg-[#1A1A1A] p-4 rounded-xl border border-[#2A2A2A]/50">
+      <div data-tour="audit-search" className="bg-[#1A1A1A] p-4 rounded-xl border border-[#2A2A2A]/50">
         <div className="flex flex-col md:flex-row md:items-center gap-4">
           {/* Search */}
           <div className="relative flex-1">
@@ -278,7 +282,7 @@ export default function SystemAuditLog({ branchId, branchName }) {
       </div>
 
       {/* Log Entries */}
-      <div className="bg-[#1A1A1A] rounded-xl border border-[#2A2A2A]/50 overflow-hidden">
+      <div data-tour="audit-entries" className="bg-[#1A1A1A] rounded-xl border border-[#2A2A2A]/50 overflow-hidden">
         {!data ? (
           <div className="flex items-center justify-center py-12">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[var(--color-primary)]" />
@@ -403,6 +407,13 @@ export default function SystemAuditLog({ branchId, branchName }) {
           </div>
         )}
       </div>
+
+      <WalkthroughOverlay steps={activityLogSteps} isVisible={showWalkthrough} onComplete={() => setShowWalkthrough(false)} onSkip={() => setShowWalkthrough(false)} />
+      {!showWalkthrough && (
+        <button onClick={() => setShowWalkthrough(true)} className="fixed bottom-20 right-4 z-40 w-10 h-10 rounded-full bg-[#1A1A1A] border border-[#2A2A2A] flex items-center justify-center text-gray-400 hover:text-white hover:border-[var(--color-primary)]/50 transition-all shadow-lg shadow-black/40" title="Activity log tour">
+          <HelpCircle className="w-5 h-5" />
+        </button>
+      )}
     </div>
   );
 }

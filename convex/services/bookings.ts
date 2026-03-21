@@ -459,12 +459,11 @@ export const getBookingsByCustomer = query({
     // Also get bookings by email (for custom bookings where customer is undefined)
     let bookingsByEmail: typeof bookingsByCustomerId = [];
     if (userEmail) {
-      const allBookings = await ctx.db.query("bookings").collect();
-      bookingsByEmail = allBookings.filter(
-        (b) =>
-          !b.customer && // No customer ID linked
-          b.customer_email?.toLowerCase() === userEmail
-      );
+      const emailBookings = await ctx.db
+        .query("bookings")
+        .withIndex("by_customer_email", (q) => q.eq("customer_email", userEmail))
+        .collect();
+      bookingsByEmail = emailBookings.filter((b) => !b.customer);
     }
 
     // Merge and deduplicate

@@ -4,14 +4,20 @@ import { throwUserError, ERROR_CODES } from "../utils/errors";
 import { Id } from "../_generated/dataModel";
 import { logAudit } from "./auditLogs";
 
-// Get all products
+// Get all products (optionally filtered by branch for performance)
 export const getAllProducts = query({
-  args: {},
-  handler: async (ctx) => {
-    const products = await ctx.db
-      .query("products")
-      .order("desc")
-      .collect();
+  args: { branch_id: v.optional(v.id("branches")) },
+  handler: async (ctx, args) => {
+    const products = args.branch_id
+      ? await ctx.db
+          .query("products")
+          .withIndex("by_branch", (q) => q.eq("branch_id", args.branch_id))
+          .order("desc")
+          .collect()
+      : await ctx.db
+          .query("products")
+          .order("desc")
+          .collect();
 
     // Attach oldest batch info (FIFO hint) for POS picking guidance
     const productsWithBatch = await Promise.all(

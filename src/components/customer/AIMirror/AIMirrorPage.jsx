@@ -10,6 +10,7 @@ import {
   Save,
   X,
   ChevronDown,
+  HelpCircle,
 } from 'lucide-react';
 import { useQuery, useMutation } from 'convex/react';
 import { api } from '../../../../convex/_generated/api';
@@ -25,6 +26,8 @@ import { useEnsureClerkUser } from '../../../hooks/useEnsureClerkUser';
 import FaceShapeIndicator from './FaceShapeIndicator';
 import HairstyleCatalogPanel from './HairstyleCatalogPanel';
 import SaveLookModal from './SaveLookModal';
+import WalkthroughOverlay from '../../common/WalkthroughOverlay';
+import { aiMirrorSteps } from '../../../config/walkthroughSteps';
 
 const STATES = {
   SCANNING: 'scanning',
@@ -46,6 +49,7 @@ export default function AIMirrorPage() {
   const [compositeUrl, setCompositeUrl] = useState(null);
   const [saving, setSaving] = useState(false);
   const [overlayLoading, setOverlayLoading] = useState(false);
+  const [showWalkthrough, setShowWalkthrough] = useState(false);
 
   // ─── Refs ────────────────────────────────────────────────────────────
   const animFrame = useRef(null);
@@ -414,7 +418,7 @@ export default function AIMirrorPage() {
         )}
 
         {/* Bottom action bar */}
-        <div className="absolute bottom-0 inset-x-0 z-20">
+        <div data-tour="mirror-actions" className="absolute bottom-0 inset-x-0 z-20">
           {!catalogOpen && (
             <div className="flex items-center justify-center gap-3 px-4 pb-5 pt-2">
               <button
@@ -516,7 +520,7 @@ export default function AIMirrorPage() {
       `}</style>
 
       {/* Top bar */}
-      <div className="relative z-30 flex items-center justify-between px-4 py-3 bg-gradient-to-b from-black/80 to-transparent">
+      <div data-tour="mirror-header" className="relative z-30 flex items-center justify-between px-4 py-3 bg-gradient-to-b from-black/80 to-transparent">
         <button
           onClick={() => navigate(-1)}
           className="w-10 h-10 rounded-full bg-white/10 backdrop-blur-md border border-white/10 flex items-center justify-center text-white hover:bg-white/20 transition-colors"
@@ -545,7 +549,7 @@ export default function AIMirrorPage() {
       </div>
 
       {/* Camera view area */}
-      <div className="flex-1 relative overflow-hidden">
+      <div data-tour="mirror-camera" className="flex-1 relative overflow-hidden">
         {/* Hidden video element (FaceMesh reads from this) */}
         <video
           ref={videoRef}
@@ -592,6 +596,13 @@ export default function AIMirrorPage() {
         compatibilityScore={selectedHairstyle?.compatibilityScore}
         saving={saving}
       />
+
+      <WalkthroughOverlay steps={aiMirrorSteps} isVisible={showWalkthrough} onComplete={() => setShowWalkthrough(false)} onSkip={() => setShowWalkthrough(false)} />
+      {!showWalkthrough && (
+        <button onClick={() => setShowWalkthrough(true)} className="fixed bottom-20 right-4 z-40 w-10 h-10 rounded-full bg-[#1A1A1A] border border-[#2A2A2A] flex items-center justify-center text-gray-400 hover:text-white hover:border-[var(--color-primary)]/50 transition-all shadow-lg shadow-black/40" title="AI Mirror tour">
+          <HelpCircle className="w-5 h-5" />
+        </button>
+      )}
     </div>
   );
 }

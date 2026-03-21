@@ -25,7 +25,7 @@ export const getActiveBranches = query({
   handler: async (ctx) => {
     return await ctx.db
       .query("branches")
-      .filter((q) => q.eq(q.field("is_active"), true))
+      .withIndex("by_active", (q) => q.eq("is_active", true))
       .order("desc")
       .collect();
   },

@@ -35,7 +35,9 @@ import LicenseManager from '../../components/it-admin/LicenseManager'
 import ErrorMonitorDashboard from '../../components/it-admin/ErrorMonitorDashboard'
 import SecurityMonitorDashboard from '../../components/it-admin/SecurityMonitorDashboard'
 import BanManager from '../../components/it-admin/BanManager'
-import { Wrench, Clock } from 'lucide-react'
+import WalkthroughOverlay from '../../components/common/WalkthroughOverlay'
+import { itAdminSteps, itAdminPlatformSteps } from '../../config/walkthroughSteps'
+import { Wrench, Clock, HelpCircle } from 'lucide-react'
 import { useQuery, useMutation } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
 import { useCurrentUser } from '../../hooks/useCurrentUser'
@@ -71,6 +73,23 @@ function ITAdminDashboard() {
   const [maintenanceDuration, setMaintenanceDuration] = useState('2h')
   const [maintenanceMessage, setMaintenanceMessage] = useState('')
   const [maintenanceSaving, setMaintenanceSaving] = useState(false)
+  const [showWalkthrough, setShowWalkthrough] = useState(false)
+
+  const markTutorialComplete = useMutation(api.services.auth.markTutorialComplete)
+
+  useEffect(() => {
+    if (user?._id && !user.has_seen_tutorial && activeTab === 'overview') {
+      const timer = setTimeout(() => setShowWalkthrough(true), 800)
+      return () => clearTimeout(timer)
+    }
+  }, [user, activeTab])
+
+  const handleWalkthroughDone = useCallback(async () => {
+    setShowWalkthrough(false)
+    if (user?._id) {
+      try { await markTutorialComplete({ user_id: user._id }) } catch (e) { console.error('[Walkthrough]', e) }
+    }
+  }, [user?._id, markTutorialComplete])
 
   const calculateStats = () => {
     if (!branches || !users || !bookings || !transactions) return null
@@ -440,6 +459,13 @@ function ITAdminDashboard() {
           </div>
         </div>
       </div>
+
+      <WalkthroughOverlay steps={itAdminSteps} isVisible={showWalkthrough} onComplete={handleWalkthroughDone} onSkip={handleWalkthroughDone} />
+      {!showWalkthrough && user?.has_seen_tutorial && (
+        <button onClick={() => setShowWalkthrough(true)} className="fixed bottom-6 right-6 z-40 w-10 h-10 rounded-full bg-[#1A1A1A] border border-[#2A2A2A] flex items-center justify-center text-gray-400 hover:text-white hover:border-[var(--color-primary)]/50 transition-all shadow-lg shadow-black/40" title="Show tutorial">
+          <HelpCircle className="w-5 h-5" />
+        </button>
+      )}
     </div>
   )
 }
