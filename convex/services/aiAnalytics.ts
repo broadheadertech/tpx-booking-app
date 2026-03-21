@@ -834,23 +834,20 @@ export const getSADescriptiveAnalytics = query({
     end_date: v.number(),
   },
   handler: async (ctx, args) => {
-    // Fetch all branches
-    const branches = await ctx.db.query("branches").collect();
-    const activeBranches = branches.filter(b => b.is_active);
+    // Fetch active branches using index
+    const branches = await ctx.db.query("branches")
+      .withIndex("by_active", (q) => q.eq("is_active", true)).collect();
+    const activeBranches = branches;
 
-    // Fetch transactions for period
-    const transactions = await ctx.db.query("transactions").collect();
-    const periodTxns = transactions.filter(
-      t => t.payment_status === "completed" && t.createdAt >= args.start_date && t.createdAt <= args.end_date
-    );
-
-    // Previous period for comparison
+    // Fetch transactions for current + previous period using created_at index
     const periodLength = args.end_date - args.start_date;
     const prevStart = args.start_date - periodLength;
-    const prevEnd = args.start_date;
-    const prevTxns = transactions.filter(
-      t => t.payment_status === "completed" && t.createdAt >= prevStart && t.createdAt < prevEnd
-    );
+    const allPeriodTxns = await ctx.db.query("transactions")
+      .withIndex("by_created_at", (q) => q.gte("createdAt", prevStart).lte("createdAt", args.end_date))
+      .collect();
+    const completedTxns = allPeriodTxns.filter(t => t.payment_status === "completed");
+    const periodTxns = completedTxns.filter(t => t.createdAt >= args.start_date);
+    const prevTxns = completedTxns.filter(t => t.createdAt < args.start_date);
 
     // Calculate system-wide revenue
     const calcRevenue = (txns: typeof transactions) => {
@@ -866,42 +863,41 @@ export const getSADescriptiveAnalytics = query({
     const prevRev = calcRevenue(prevTxns);
     const revenueGrowth = prevRev.total > 0 ? ((currentRev.total - prevRev.total) / prevRev.total) * 100 : 0;
 
-    // Fetch royalty payments
-    const royaltyPayments = await ctx.db.query("royaltyPayments").collect();
-    const periodRoyalties = royaltyPayments.filter(
-      r => r.createdAt >= args.start_date && r.createdAt <= args.end_date
-    );
+    // Fetch royalty payments — use due_date index as proxy for period filtering
+    const royaltyPayments = await ctx.db.query("royaltyPayments")
+      .withIndex("by_due_date", (q) => q.gte("due_date", args.start_date).lte("due_date", args.end_date))
+      .collect();
+    const periodRoyalties = royaltyPayments;
     const totalRoyalties = periodRoyalties.reduce((sum, r) => sum + r.amount, 0);
     const paidRoyalties = periodRoyalties.filter(r => r.status === "paid").reduce((sum, r) => sum + r.amount, 0);
-    const pendingRoyalties = periodRoyalties.filter(r => r.status === "pending" || r.status === "overdue").reduce((sum, r) => sum + r.amount, 0);
+    const pendingRoyalties = periodRoyalties.filter(r => r.status === "due" || r.status === "overdue").reduce((sum, r) => sum + r.amount, 0);
 
-    // Fetch wallet transactions
-    const walletTxns = await ctx.db.query("wallet_transactions").collect();
-    const periodWalletTxns = walletTxns.filter(
-      w => w.createdAt >= args.start_date && w.createdAt <= args.end_date && w.type === "topup"
-    );
+    // Fetch wallet transactions — use created_at index for date range
+    const walletTxns = await ctx.db.query("wallet_transactions")
+      .withIndex("by_created_at", (q) => q.gte("createdAt", args.start_date).lte("createdAt", args.end_date))
+      .collect();
+    const periodWalletTxns = walletTxns.filter(w => w.type === "topup");
     const totalTopUps = periodWalletTxns.reduce((sum, w) => sum + w.amount, 0);
     const topUpCount = periodWalletTxns.length;
 
-    // Branch additions
-    const newBranches = branches.filter(
-      b => b.createdAt >= args.start_date && b.createdAt <= args.end_date
-    );
+    // Branch additions — use created_at index
+    const newBranches = await ctx.db.query("branches")
+      .withIndex("by_created_at", (q) => q.gte("createdAt", args.start_date).lte("createdAt", args.end_date))
+      .collect();
 
-    // SA Product Sales (from productOrders - central warehouse to branches)
-    const productOrders = await ctx.db.query("productOrders").collect();
-    const periodProductOrders = productOrders.filter(
-      o => o.created_at >= args.start_date && o.created_at <= args.end_date
-    );
+    // SA Product Sales — use created_at index
+    const periodProductOrders = await ctx.db.query("productOrders")
+      .withIndex("by_created_at", (q) => q.gte("created_at", args.start_date).lte("created_at", args.end_date))
+      .collect();
     const completedOrders = periodProductOrders.filter(o => o.status === "received" || o.status === "shipped" || o.status === "approved");
     const totalProductOrderRevenue = completedOrders.reduce((sum, o) => sum + o.total_amount, 0);
     const paidOrders = completedOrders.filter(o => o.is_paid);
     const paidProductRevenue = paidOrders.reduce((sum, o) => sum + o.total_amount, 0);
     const pendingProductPayments = completedOrders.filter(o => !o.is_paid).reduce((sum, o) => sum + o.total_amount, 0);
 
-    // Product catalog stats
-    const productCatalog = await ctx.db.query("productCatalog").collect();
-    const activeProducts = productCatalog.filter(p => p.is_active);
+    // Product catalog stats — use is_active index
+    const activeProducts = await ctx.db.query("productCatalog")
+      .withIndex("by_is_active", (q) => q.eq("is_active", true)).collect();
     const lowStockProducts = activeProducts.filter(p => p.stock <= p.minStock);
 
     // Per-branch performance
@@ -994,27 +990,22 @@ export const getSADiagnosticAnalytics = query({
     end_date: v.number(),
   },
   handler: async (ctx, args) => {
-    const branches = await ctx.db.query("branches").collect();
-    const activeBranches = branches.filter(b => b.is_active);
-
-    const transactions = await ctx.db.query("transactions").collect();
-    const periodTxns = transactions.filter(
-      t => t.payment_status === "completed" && t.createdAt >= args.start_date && t.createdAt <= args.end_date
-    );
+    const activeBranches = await ctx.db.query("branches")
+      .withIndex("by_active", (q) => q.eq("is_active", true)).collect();
 
     const periodLength = args.end_date - args.start_date;
     const prevStart = args.start_date - periodLength;
-    const prevTxns = transactions.filter(
-      t => t.payment_status === "completed" && t.createdAt >= prevStart && t.createdAt < args.start_date
-    );
+    const allPeriodTxns = await ctx.db.query("transactions")
+      .withIndex("by_created_at", (q) => q.gte("createdAt", prevStart).lte("createdAt", args.end_date))
+      .collect();
+    const completedTxns = allPeriodTxns.filter(t => t.payment_status === "completed");
+    const periodTxns = completedTxns.filter(t => t.createdAt >= args.start_date);
+    const prevTxns = completedTxns.filter(t => t.createdAt < args.start_date);
 
-    // Royalty analysis
-    const royaltyPayments = await ctx.db.query("royaltyPayments").collect();
+    // Royalty analysis — use status index for overdue
     const royaltyConfigs = await ctx.db.query("royaltyConfig").collect();
-
-    const overdueRoyalties = royaltyPayments.filter(
-      r => r.status === "overdue" && r.createdAt <= args.end_date
-    );
+    const overdueRoyalties = await ctx.db.query("royaltyPayments")
+      .withIndex("by_status", (q) => q.eq("status", "overdue")).collect();
 
     // Branch with payment issues
     const branchRoyaltyIssues = activeBranches.map(branch => {
@@ -1073,11 +1064,11 @@ export const getSADiagnosticAnalytics = query({
       };
     }).filter(b => b.change_percent < -10).sort((a, b) => a.change_percent - b.change_percent);
 
-    // Wallet top-up patterns
-    const walletTxns = await ctx.db.query("wallet_transactions").collect();
-    const topUps = walletTxns.filter(
-      w => w.type === "topup" && w.createdAt >= args.start_date && w.createdAt <= args.end_date
-    );
+    // Wallet top-up patterns — use date index
+    const walletTxns = await ctx.db.query("wallet_transactions")
+      .withIndex("by_created_at", (q) => q.gte("createdAt", args.start_date).lte("createdAt", args.end_date))
+      .collect();
+    const topUps = walletTxns.filter(w => w.type === "topup");
 
     const topUpByAmount: Record<string, number> = {};
     for (const t of topUps) {
@@ -1085,11 +1076,10 @@ export const getSADiagnosticAnalytics = query({
       topUpByAmount[bracket] = (topUpByAmount[bracket] || 0) + 1;
     }
 
-    // SA Product Order Analysis (central warehouse to branches)
-    const productOrders = await ctx.db.query("productOrders").collect();
-    const periodProductOrders = productOrders.filter(
-      o => o.created_at >= args.start_date && o.created_at <= args.end_date
-    );
+    // SA Product Order Analysis — use date index
+    const periodProductOrders = await ctx.db.query("productOrders")
+      .withIndex("by_created_at", (q) => q.gte("created_at", args.start_date).lte("created_at", args.end_date))
+      .collect();
 
     // Order fulfillment analysis
     const ordersByStatus: Record<string, number> = {};
@@ -1140,9 +1130,9 @@ export const getSADiagnosticAnalytics = query({
       .sort((a, b) => b.revenue - a.revenue)
       .slice(0, 10);
 
-    // Product Catalog stock analysis
-    const productCatalog = await ctx.db.query("productCatalog").collect();
-    const activeProducts = productCatalog.filter(p => p.is_active);
+    // Product Catalog stock analysis — use is_active index
+    const activeProducts = await ctx.db.query("productCatalog")
+      .withIndex("by_is_active", (q) => q.eq("is_active", true)).collect();
     const lowStockProducts = activeProducts.filter(p => p.stock <= p.minStock);
     const outOfStockProducts = activeProducts.filter(p => p.stock === 0);
 
@@ -1281,10 +1271,10 @@ export const getSAPredictiveAnalytics = query({
     // Get historical data (last 6 months)
     const sixMonthsAgo = now - 180 * 24 * 60 * 60 * 1000;
 
-    const transactions = await ctx.db.query("transactions").collect();
-    const recentTxns = transactions.filter(
-      t => t.payment_status === "completed" && t.createdAt >= sixMonthsAgo
-    );
+    const recentTxnsAll = await ctx.db.query("transactions")
+      .withIndex("by_created_at", (q) => q.gte("createdAt", sixMonthsAgo))
+      .collect();
+    const recentTxns = recentTxnsAll.filter(t => t.payment_status === "completed");
 
     // Monthly revenue data
     const monthlyData: Record<string, { revenue: number; products: number; services: number; txnCount: number }> = {};
@@ -1328,12 +1318,13 @@ export const getSAPredictiveAnalytics = query({
       });
     }
 
-    // Royalty forecast
-    const royaltyPayments = await ctx.db.query("royaltyPayments").collect();
-    const recentRoyalties = royaltyPayments.filter(r => r.createdAt >= sixMonthsAgo);
+    // Royalty forecast — use due_date index as proxy
+    const recentRoyalties = await ctx.db.query("royaltyPayments")
+      .withIndex("by_due_date", (q) => q.gte("due_date", sixMonthsAgo))
+      .collect();
     const monthlyRoyalties: Record<string, number> = {};
     for (const r of recentRoyalties) {
-      const month = new Date(r.createdAt).toISOString().slice(0, 7);
+      const month = new Date(r.created_at).toISOString().slice(0, 7);
       monthlyRoyalties[month] = (monthlyRoyalties[month] || 0) + r.amount;
     }
     const avgMonthlyRoyalty = Object.values(monthlyRoyalties).length > 0
@@ -1341,7 +1332,8 @@ export const getSAPredictiveAnalytics = query({
       : 0;
 
     // Branch growth forecast
-    const branches = await ctx.db.query("branches").collect();
+    const branches = await ctx.db.query("branches")
+      .withIndex("by_active", (q) => q.eq("is_active", true)).collect();
     const branchesByMonth: Record<string, number> = {};
     for (const b of branches) {
       const month = new Date(b.createdAt).toISOString().slice(0, 7);
@@ -1354,9 +1346,11 @@ export const getSAPredictiveAnalytics = query({
       ? recentBranchGrowth.reduce((a, b) => a + b, 0) / recentBranchGrowth.length
       : 0;
 
-    // Wallet top-up forecast
-    const walletTxns = await ctx.db.query("wallet_transactions").collect();
-    const topUps = walletTxns.filter(w => w.type === "topup" && w.createdAt >= sixMonthsAgo);
+    // Wallet top-up forecast — use date index
+    const walletTxns = await ctx.db.query("wallet_transactions")
+      .withIndex("by_created_at", (q) => q.gte("createdAt", sixMonthsAgo))
+      .collect();
+    const topUps = walletTxns.filter(w => w.type === "topup");
     const monthlyTopUps: Record<string, number> = {};
     for (const t of topUps) {
       const month = new Date(t.createdAt).toISOString().slice(0, 7);
@@ -1366,9 +1360,10 @@ export const getSAPredictiveAnalytics = query({
       ? Object.values(monthlyTopUps).reduce((a, b) => a + b, 0) / Object.values(monthlyTopUps).length
       : 0;
 
-    // SA Product Order forecast (central warehouse to branches)
-    const productOrders = await ctx.db.query("productOrders").collect();
-    const recentProductOrders = productOrders.filter(o => o.created_at >= sixMonthsAgo);
+    // SA Product Order forecast — use date index
+    const recentProductOrders = await ctx.db.query("productOrders")
+      .withIndex("by_created_at", (q) => q.gte("created_at", sixMonthsAgo))
+      .collect();
     const monthlyProductOrders: Record<string, { revenue: number; count: number }> = {};
     for (const o of recentProductOrders) {
       const month = new Date(o.created_at).toISOString().slice(0, 7);
@@ -1480,22 +1475,31 @@ export const getSAPrescriptiveAnalytics = query({
     const thirtyDaysAgo = now - 30 * 24 * 60 * 60 * 1000;
     const sixtyDaysAgo = now - 60 * 24 * 60 * 60 * 1000;
 
-    // Fetch data
-    const branches = await ctx.db.query("branches").collect();
-    const activeBranches = branches.filter(b => b.is_active);
+    // Fetch data — use indexes for date-bounded queries
+    const activeBranches = await ctx.db.query("branches")
+      .withIndex("by_active", (q) => q.eq("is_active", true)).collect();
+    const branches = activeBranches; // alias for downstream code
 
-    const transactions = await ctx.db.query("transactions").collect();
-    const recentTxns = transactions.filter(t => t.payment_status === "completed" && t.createdAt >= thirtyDaysAgo);
-    const prevTxns = transactions.filter(t => t.payment_status === "completed" && t.createdAt >= sixtyDaysAgo && t.createdAt < thirtyDaysAgo);
+    const allRecentTxns = await ctx.db.query("transactions")
+      .withIndex("by_created_at", (q) => q.gte("createdAt", sixtyDaysAgo))
+      .collect();
+    const completedTxns = allRecentTxns.filter(t => t.payment_status === "completed");
+    const recentTxns = completedTxns.filter(t => t.createdAt >= thirtyDaysAgo);
+    const prevTxns = completedTxns.filter(t => t.createdAt < thirtyDaysAgo);
 
-    const royaltyPayments = await ctx.db.query("royaltyPayments").collect();
-    const walletTxns = await ctx.db.query("wallet_transactions").collect();
+    const royaltyPayments = await ctx.db.query("royaltyPayments")
+      .withIndex("by_due_date", (q) => q.gte("due_date", sixtyDaysAgo))
+      .collect();
+    const walletTxns = await ctx.db.query("wallet_transactions")
+      .withIndex("by_created_at", (q) => q.gte("createdAt", sixtyDaysAgo))
+      .collect();
 
-    // SA Product Orders and Catalog
-    const productOrders = await ctx.db.query("productOrders").collect();
-    const recentProductOrders = productOrders.filter(o => o.created_at >= thirtyDaysAgo);
-    const productCatalog = await ctx.db.query("productCatalog").collect();
-    const activeProducts = productCatalog.filter(p => p.is_active);
+    // SA Product Orders and Catalog — use date + active indexes
+    const recentProductOrders = await ctx.db.query("productOrders")
+      .withIndex("by_created_at", (q) => q.gte("created_at", thirtyDaysAgo))
+      .collect();
+    const activeProducts = await ctx.db.query("productCatalog")
+      .withIndex("by_is_active", (q) => q.eq("is_active", true)).collect();
 
     // Strategic recommendations
     const strategies: Array<{

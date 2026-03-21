@@ -21,7 +21,10 @@ import {
   BarChart3,
   Heart,
   Users,
+  HelpCircle,
 } from "lucide-react";
+import WalkthroughOverlay from '../common/WalkthroughOverlay';
+import { hairstyleCatalogSteps } from '../../config/walkthroughSteps';
 import Skeleton from "../common/Skeleton";
 import Modal from "../common/Modal";
 import { useCurrentUser } from "../../hooks/useCurrentUser";
@@ -1134,6 +1137,7 @@ const HairstyleCatalogManager = () => {
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
   const [showFilters, setShowFilters] = useState(false);
+  const [showWalkthrough, setShowWalkthrough] = useState(false);
 
   // Derived data
   const isLoading = hairstyles === undefined;
@@ -1202,6 +1206,7 @@ const HairstyleCatalogManager = () => {
           <p className="text-gray-400 text-sm">Manage hairstyles for the AI Mirror feature</p>
         </div>
         <button
+          data-tour="hairstyle-add"
           onClick={() => setShowAddModal(true)}
           className="flex items-center gap-2 px-4 py-2.5 bg-[var(--color-primary)] text-white rounded-xl hover:bg-[var(--color-primary)]/90 transition-colors font-medium"
         >
@@ -1219,7 +1224,7 @@ const HairstyleCatalogManager = () => {
       </div>
 
       {/* Search + Filter Bar */}
-      <div className="bg-[#1A1A1A] border border-[#333333] rounded-xl p-4 space-y-3">
+      <div data-tour="hairstyle-search" className="bg-[#1A1A1A] border border-[#333333] rounded-xl p-4 space-y-3">
         <div className="flex gap-3">
           {/* Search */}
           <div className="flex-1 relative">
@@ -1337,7 +1342,7 @@ const HairstyleCatalogManager = () => {
           )}
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+        <div data-tour="hairstyle-grid" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           {filteredHairstyles.map((hairstyle) => (
             <HairstyleCard
               key={hairstyle._id}
@@ -1364,6 +1369,13 @@ const HairstyleCatalogManager = () => {
         onConfirm={handleDelete}
         isDeleting={isDeleting}
       />
+
+      <WalkthroughOverlay steps={hairstyleCatalogSteps} isVisible={showWalkthrough} onComplete={() => setShowWalkthrough(false)} onSkip={() => setShowWalkthrough(false)} />
+      {!showWalkthrough && (
+        <button onClick={() => setShowWalkthrough(true)} className="fixed bottom-6 right-6 z-40 w-10 h-10 rounded-full bg-[#1A1A1A] border border-[#2A2A2A] flex items-center justify-center text-gray-400 hover:text-white hover:border-[var(--color-primary)]/50 transition-all shadow-lg shadow-black/40" title="Hairstyle catalog tour">
+          <HelpCircle className="w-5 h-5" />
+        </button>
+      )}
     </div>
   );
 };

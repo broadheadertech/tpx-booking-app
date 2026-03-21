@@ -13,16 +13,11 @@ export const sendBookingReminders = mutation({
     console.log(`[NOTIFICATION SCHEDULER] Running booking reminders for ${tomorrowStr}`);
     
     // Get all bookings for tomorrow that haven't had reminders sent
-    const tomorrowBookings = await ctx.db
+    const tomorrowBookings = (await ctx.db
       .query("bookings")
-      .filter((q) => 
-        q.and(
-          q.eq(q.field("date"), tomorrowStr),
-          q.in(q.field("status"), ["pending", "confirmed", "booked"]),
-          q.eq(q.field("reminder_sent"), false)
-        )
-      )
-      .collect();
+      .withIndex("by_date_reminder", (q) => q.eq("date", tomorrowStr).eq("reminder_sent", false))
+      .collect()
+    ).filter((b) => ["pending", "confirmed", "booked"].includes(b.status));
     
     console.log(`[NOTIFICATION SCHEDULER] Found ${tomorrowBookings.length} bookings to remind`);
     

@@ -1545,6 +1545,94 @@ export const customerProfileSteps = [
   },
 ]
 
+// ── Staff: Finance Hub ──
+export const financeHubSteps = [
+  { target: '[data-tour="finance-tab-accounting"]', title: 'Profit & Loss', message: 'View revenue, expenses, and net income with charts and breakdowns.', position: 'bottom' },
+  { target: '[data-tour="finance-tab-balance_sheet"]', title: 'Balance Sheet', message: 'Track assets, liabilities, and equity for your branch.', position: 'bottom' },
+  { target: '[data-tour="finance-tab-payroll"]', title: 'Payroll', message: 'Manage barber and staff payroll — commissions, daily rates, and payslips.', position: 'bottom' },
+  { target: '[data-tour="finance-tab-cash_advances"]', title: 'Cash Advances', message: 'Review and approve cash advance requests from staff.', position: 'bottom' },
+  { target: '[data-tour="finance-tab-royalty"]', title: 'Royalty', message: 'View royalty payment history and calculations.', position: 'bottom' },
+  { target: '[data-tour="finance-tab-payments"]', title: 'Payments', message: 'Browse payment transaction history.', position: 'bottom' },
+  { target: '[data-tour="finance-tab-wallet_earnings"]', title: 'Wallet Earnings', message: 'Track earnings from customer wallet top-ups and spending.', position: 'bottom' },
+  { target: '[data-tour="finance-tab-branch_wallet"]', title: 'Branch Wallet', message: 'Manage the branch-level wallet balance.', position: 'bottom' },
+]
+
+// ── Staff: Marketing Hub ──
+export const marketingHubSteps = [
+  { target: '[data-tour="marketing-tab-ai"]', title: 'AI Email', message: 'Generate and send marketing emails powered by AI — bulk send, templates, and analytics.', position: 'bottom' },
+  { target: '[data-tour="marketing-tab-posts"]', title: 'Posts', message: 'Create and moderate community posts — announcements, tips, and promotions.', position: 'bottom' },
+  { target: '[data-tour="marketing-tab-events"]', title: 'Events', message: 'Manage branch events and special occasions.', position: 'bottom' },
+  { target: '[data-tour="marketing-tab-notifications"]', title: 'Notifications', message: 'Send push notifications to your customers.', position: 'bottom' },
+]
+
+// ── Staff: Reports (DDPP Analytics) ──
+export const reportsManagementSteps = [
+  { target: '[data-tour="reports-tab-descriptive"]', title: 'Descriptive Analytics', message: 'What happened — revenue metrics, booking rates, staff performance rankings.', position: 'bottom' },
+  { target: '[data-tour="reports-tab-diagnostic"]', title: 'Diagnostic Analytics', message: 'Why it happened — cancellation analysis, peak hours, customer retention trends.', position: 'bottom' },
+  { target: '[data-tour="reports-tab-predictive"]', title: 'Predictive Analytics', message: 'What will happen — AI sales forecasts, churn risk, and reorder alerts.', position: 'bottom' },
+  { target: '[data-tour="reports-tab-prescriptive"]', title: 'Prescriptive Analytics', message: 'What to do — AI-generated action recommendations and marketing strategies.', position: 'bottom' },
+  { target: '[data-tour="reports-period"]', title: 'Time Period', message: 'Filter analytics by Today, This Week, This Month, or This Year.', position: 'bottom' },
+  { target: '[data-tour="reports-export"]', title: 'Export Data', message: 'Download your analytics as a CSV file for offline analysis.', position: 'left' },
+]
+
+// ── Staff: Branch Settings ──
+export const branchSettingsSteps = [
+  { target: '[data-tour="settings-tab-profile"]', title: 'Branch Profile', message: 'Update your branch name, logo, cover photo, address, and contact info.', position: 'bottom' },
+  { target: '[data-tour="settings-tab-payment"]', title: 'Payment Settings', message: 'Configure payment methods, processing fees, and PayMongo integration.', position: 'bottom' },
+  { target: '[data-tour="settings-tab-wallet"]', title: 'Wallet Settings', message: 'Enable or disable customer wallets, set top-up limits and earning rules.', position: 'bottom' },
+  { target: '[data-tour="settings-tab-schedule"]', title: 'Schedule', message: 'Set operating hours per day and manage closure or holiday dates.', position: 'bottom' },
+  { target: '[data-tour="settings-tab-system"]', title: 'System Info', message: 'View app version, changelog, and system information.', position: 'bottom' },
+]
+
+// ── Staff/Admin: Activity Log / System Audit Log ──
+export const activityLogSteps = [
+  { target: '[data-tour="audit-stats"]', title: 'Log Statistics', message: 'Quick overview — total logs, last 24 hours, last 7 days, and active categories.', position: 'bottom' },
+  { target: '[data-tour="audit-categories"]', title: 'Category Filters', message: 'Filter logs by category — Booking, Transaction, Payment, Product, and more.', position: 'bottom' },
+  { target: '[data-tour="audit-search"]', title: 'Search & Date Filter', message: 'Search by description or user, and narrow results with date range filters.', position: 'bottom' },
+  { target: '[data-tour="audit-entries"]', title: 'Log Entries', message: 'Click any entry to expand and view full metadata details.', position: 'top' },
+]
+
+// ── Admin: Branch Management ──
+export const branchManagementSteps = [
+  { target: '[data-tour="branch-mgmt-stats"]', title: 'Branch Overview', message: 'Total branches, active/inactive counts, revenue, and wallet balances at a glance.', position: 'bottom' },
+  { target: '[data-tour="branch-mgmt-search"]', title: 'Search & Filter', message: 'Find branches by name, filter by status, and sort by different criteria.', position: 'bottom' },
+  { target: '[data-tour="branch-mgmt-grid"]', title: 'Branch Cards', message: 'Each card shows branch details, financials, and quick actions like Edit and Toggle Status.', position: 'top' },
+]
+
+// ── Admin: Hairstyle Catalog Manager ──
+export const hairstyleCatalogSteps = [
+  { target: '[data-tour="hairstyle-search"]', title: 'Search & Filter', message: 'Find hairstyles by name and filter by category (Fade, Undercut, Classic, etc.).', position: 'bottom' },
+  { target: '[data-tour="hairstyle-add"]', title: 'Add Hairstyle', message: 'Create a new hairstyle with overlay image, face shape scores, and maintenance level.', position: 'bottom' },
+  { target: '[data-tour="hairstyle-grid"]', title: 'Hairstyle Cards', message: 'Each card shows the overlay, face shape compatibility bars, try/save counts, and edit/delete actions.', position: 'top' },
+]
+
+// ── Admin: System Logs (same component, admin scope) ──
+export const systemLogsSteps = [
+  { target: '[data-tour="audit-stats"]', title: 'System Statistics', message: 'Overview of total logs, recent activity, and active categories across all branches.', position: 'bottom' },
+  { target: '[data-tour="audit-categories"]', title: 'Category Filters', message: 'Filter by category — Auth, Booking, Transaction, Payment, User, System, and more.', position: 'bottom' },
+  { target: '[data-tour="audit-search"]', title: 'Search & Date Range', message: 'Search logs by description, user, or action, and filter by date range.', position: 'bottom' },
+  { target: '[data-tour="audit-entries"]', title: 'Log Entries', message: 'View detailed log entries with actor, timestamp, and expandable metadata.', position: 'top' },
+]
+
+// ── IT Admin: Platform-specific tabs ──
+export const itAdminPlatformSteps = [
+  { target: '[data-tour="it-tab-subscriptions"]', title: 'Subscriptions', message: 'Manage branch subscription plans, billing cycles, and payment status.', position: 'bottom' },
+  { target: '[data-tour="it-tab-licenses"]', title: 'Licenses', message: 'Track and manage software licenses per branch.', position: 'bottom' },
+  { target: '[data-tour="it-tab-error_monitor"]', title: 'Error Monitor', message: 'Track system errors by severity — Critical, Error, Warning, Info. Resolve issues in bulk.', position: 'bottom' },
+  { target: '[data-tour="it-tab-security"]', title: 'Security Monitor', message: 'Monitor security events — login attempts, brute force, suspicious IPs, role escalation.', position: 'bottom' },
+  { target: '[data-tour="it-tab-bans"]', title: 'Bans', message: 'Ban or suspend users and branches with reasons and duration.', position: 'bottom' },
+  { target: '[data-tour="it-tab-maintenance"]', title: 'Maintenance Mode', message: 'Toggle maintenance mode with a custom message and duration.', position: 'bottom' },
+]
+
+export const itAdminSteps = [...superAdminSteps, ...itAdminPlatformSteps]
+
+// ── Customer: AI Mirror ──
+export const aiMirrorSteps = [
+  { target: '[data-tour="mirror-header"]', title: 'AI Mirror', message: 'Try on hairstyles virtually — the AI detects your face shape and suggests compatible styles.', position: 'bottom' },
+  { target: '[data-tour="mirror-camera"]', title: 'Face Scanner', message: 'Position your face in the frame — the AI will detect your face shape automatically.', position: 'bottom' },
+  { target: '[data-tour="mirror-actions"]', title: 'Actions', message: 'Rescan your face, capture a photo, or save your favorite look to your lookbook.', position: 'top' },
+]
+
 /**
  * Returns the walkthrough steps for a given user role.
  */
@@ -1561,6 +1649,8 @@ export function getStepsForRole(role) {
     case 'super_admin':
     case 'admin':
       return superAdminSteps
+    case 'it_admin':
+      return itAdminSteps
     default:
       return []
   }

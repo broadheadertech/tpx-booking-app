@@ -23,11 +23,15 @@ function generateAssignmentCode(voucherCode: string) {
   return `${voucherCode}-${suffix}`;
 }
 
-// Get all vouchers with assignment statistics (for super admin)
+// Get all vouchers with assignment statistics (optionally filtered by branch for performance)
 export const getAllVouchers = query({
-  args: {},
-  handler: async (ctx) => {
-    const vouchers = await ctx.db.query("vouchers").collect();
+  args: { branch_id: v.optional(v.id("branches")) },
+  handler: async (ctx, args) => {
+    const vouchers = args.branch_id
+      ? await ctx.db.query("vouchers")
+          .withIndex("by_branch", (q) => q.eq("branch_id", args.branch_id))
+          .collect()
+      : await ctx.db.query("vouchers").collect();
 
     // Enrich vouchers with user information and assignment statistics
     const enrichedVouchers = await Promise.all(

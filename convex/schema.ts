@@ -612,7 +612,9 @@ export default defineSchema({
     .index("by_branch", ["branch_id"])
     .index("by_date_reminder", ["date", "reminder_sent"])
     .index("by_barber_date", ["barber", "date"])
-    .index("by_paymongo_link", ["paymongo_link_id"]),
+    .index("by_paymongo_link", ["paymongo_link_id"])
+    .index("by_customer_email", ["customer_email"])
+    .index("by_branch_date", ["branch_id", "date"]),
 
   // Walk-ins table - for customers who come without booking
   walkIns: defineTable({
@@ -795,7 +797,7 @@ export default defineSchema({
 
   // Products table (Branch-level inventory)
   products: defineTable({
-    branch_id: v.id("branches"), // Which branch owns this product
+    branch_id: v.optional(v.id("branches")), // Which branch owns this product (optional for legacy products)
     catalog_product_id: v.optional(v.id("productCatalog")), // Link to central catalog (auto-synced)
     name: v.string(),
     description: v.string(),
@@ -932,7 +934,8 @@ export default defineSchema({
     .index("by_created_at", ["createdAt"])
     .index("by_booking_id", ["booking_id"])
     .index("by_processed_by", ["processed_by"])
-    .index("by_branch", ["branch_id"]),
+    .index("by_branch", ["branch_id"])
+    .index("by_branch_date", ["branch_id", "createdAt"]),
 
   // POS Sessions table for tracking active POS sessions
   pos_sessions: defineTable({
@@ -1446,7 +1449,9 @@ export default defineSchema({
     .index("by_reference", ["reference_id"])
     .index("by_source", ["source_id"])
     .index("by_payment", ["payment_id"])
-    .index("by_status", ["status"]),
+    .index("by_status", ["status"])
+    .index("by_created_at", ["createdAt"])
+    .index("by_user_date", ["user_id", "createdAt"]),
 
   // ============================================================================
   // LOYALTY POINTS SYSTEM (Customer Experience)
@@ -2503,7 +2508,8 @@ export default defineSchema({
     .index("by_royalty_payment", ["royalty_payment_id"])
     .index("by_product_order", ["product_order_id"])
     .index("by_settlement", ["settlement_id"])
-    .index("by_received_to_sales_cash", ["received_to_sales_cash"]),
+    .index("by_received_to_sales_cash", ["received_to_sales_cash"])
+    .index("by_created_at", ["created_at"]),
 
   // Super Admin Expenses - manual expense entries
   superAdminExpenses: defineTable({
@@ -2545,7 +2551,8 @@ export default defineSchema({
     .index("by_category", ["category"])
     .index("by_expense_type", ["expense_type"])
     .index("by_expense_date", ["expense_date"])
-    .index("by_paid_from_sales_cash", ["paid_from_sales_cash"]),
+    .index("by_paid_from_sales_cash", ["paid_from_sales_cash"])
+    .index("by_created_at", ["created_at"]),
 
   // Super Admin Assets
   superAdminAssets: defineTable({
@@ -2654,7 +2661,8 @@ export default defineSchema({
     updated_at: v.number(),
   })
     .index("by_equity_type", ["equity_type"])
-    .index("by_transaction_date", ["transaction_date"]),
+    .index("by_transaction_date", ["transaction_date"])
+    .index("by_created_at", ["created_at"]),
 
   // Super Admin Accounting Periods (Lock-in periods for financial reporting)
   superAdminAccountingPeriods: defineTable({

@@ -15,8 +15,8 @@
  *   "breaking" — Breaking/major change (bumps MAJOR)
  */
 
-export const APP_VERSION = '2.2.0';
-export const LAST_DEPLOY = '2026-02-23';
+export const APP_VERSION = '2.3.1';
+export const LAST_DEPLOY = '2026-03-16';
 export const VERSION_INFO = {
   version: APP_VERSION,
   lastDeploy: LAST_DEPLOY,
@@ -28,6 +28,27 @@ export const VERSION_INFO = {
  * Each entry: { version, date, changes: [{ tag, text }] }
  */
 export const CHANGELOG = [
+  {
+    version: '2.3.1',
+    date: '2026-03-16',
+    changes: [
+      { tag: 'improve', text: 'Query performance optimization for 500-branch scale — 8 new compound indexes, 20+ full-table scans eliminated' },
+      { tag: 'improve', text: 'SA analytics (descriptive, diagnostic, predictive, prescriptive) now use indexed date-range queries instead of full-table scans' },
+      { tag: 'improve', text: 'IT Admin dashboard stats use indexed queries for subscriptions, licenses, error logs, security events' },
+      { tag: 'improve', text: 'Staff dashboard scoped to branch — customers, walk-ins, products no longer fetch all branches' },
+      { tag: 'fix', text: 'Products table branch_id made optional for legacy products without branch assignment' },
+    ],
+  },
+  {
+    version: '2.3.0',
+    date: '2026-03-16',
+    changes: [
+      { tag: 'feature', text: 'Walkthrough tutorials for 10+ missing pages — Finance Hub, Marketing Hub, Reports, Settings, Activity Log, Branch Management, Hairstyle Catalog, System Logs, IT Admin Dashboard, AI Mirror' },
+      { tag: 'feature', text: 'IT Admin dashboard walkthrough with auto-trigger on first visit and platform-specific tab tours' },
+      { tag: 'feature', text: 'Avexa Save as Template — save AI-generated emails as reusable templates for future campaigns' },
+      { tag: 'feature', text: 'Saved AI Templates grid in Email Marketing — load, preview, and delete saved templates' },
+    ],
+  },
   {
     version: '2.2.0',
     date: '2026-02-23',
