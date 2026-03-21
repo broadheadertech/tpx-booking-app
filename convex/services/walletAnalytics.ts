@@ -469,8 +469,8 @@ export const getRecentTopUps = query({
   handler: async (ctx, args) => {
     const limit = args.limit || 10;
 
-    // Customer wallet top-ups
-    const customerTxns = await ctx.db.query("wallet_transactions").order("desc").collect();
+    // Customer wallet top-ups — fetch recent transactions (limited) then filter for top-ups
+    const customerTxns = await ctx.db.query("wallet_transactions").order("desc").take(limit * 20);
     const customerTopUps = customerTxns
       .filter((t) => t.type === "topup" && t.status === "completed")
       .slice(0, limit);
@@ -491,8 +491,8 @@ export const getRecentTopUps = query({
       })
     );
 
-    // Branch wallet top-ups
-    const branchTxns = await ctx.db.query("branch_wallet_transactions").order("desc").collect();
+    // Branch wallet top-ups — fetch recent transactions (limited) then filter for top-ups
+    const branchTxns = await ctx.db.query("branch_wallet_transactions").order("desc").take(limit * 20);
     const branchTopUps = branchTxns
       .filter((t) => t.type === "topup")
       .slice(0, limit);

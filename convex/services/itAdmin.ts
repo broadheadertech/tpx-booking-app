@@ -174,8 +174,10 @@ export const unbanUser = mutation({
 export const getBannedUsers = query({
   args: {},
   handler: async (ctx) => {
-    const users = await ctx.db.query("users").collect();
-    const bannedUsers = users.filter((u) => u.is_banned === true);
+    // Use filter on users (no index on is_banned, but we only collect banned ones)
+    const bannedUsers = await ctx.db.query("users")
+      .filter((q) => q.eq(q.field("is_banned"), true))
+      .collect();
 
     const enriched = await Promise.all(
       bannedUsers.map(async (u) => {
@@ -207,8 +209,8 @@ export const getBannedUsers = query({
 export const getSuspendedBranches = query({
   args: {},
   handler: async (ctx) => {
-    const branches = await ctx.db.query("branches").collect();
-    const suspended = branches.filter((b) => b.is_suspended === true);
+    const suspended = await ctx.db.query("branches")
+      .filter((q) => q.eq(q.field("is_suspended"), true)).collect();
 
     const enriched = await Promise.all(
       suspended.map(async (b) => {
@@ -243,45 +245,35 @@ export const getItAdminDashboardStats = query({
     const oneDayAgo = now - 24 * 60 * 60 * 1000;
     const thirtyDaysFromNow = now + 30 * 24 * 60 * 60 * 1000;
 
-    // Subscription stats
-    const subscriptions = await ctx.db.query("subscriptions").collect();
-    const activeSubscriptions = subscriptions.filter(
-      (s) => s.status === "active"
-    ).length;
-    const overdueSubscriptions = subscriptions.filter(
-      (s) => s.payment_status === "overdue" || s.status === "past_due"
+    // Subscription stats — use index for status
+    const activeSubscriptions = (await ctx.db.query("subscriptions")
+      .withIndex("by_status", (q) => q.eq("status", "active")).collect()).length;
+    const overdueByStatus = await ctx.db.query("subscriptions")
+      .withIndex("by_status", (q) => q.eq("status", "past_due")).collect();
+    const overdueSubscriptions = overdueByStatus.length + (await ctx.db.query("subscriptions")
+      .filter((q) => q.eq(q.field("payment_status"), "overdue")).collect()).length;
+
+    // License stats — use index for active licenses
+    const activeLicensesList = await ctx.db.query("licenses")
+      .withIndex("by_active", (q) => q.eq("is_active", true)).collect();
+    const activeLicenses = activeLicensesList.filter((l) => l.expires_at > now).length;
+    const expiringLicenses = activeLicensesList.filter(
+      (l) => l.expires_at >= now && l.expires_at <= thirtyDaysFromNow
     ).length;
 
-    // License stats
-    const licenses = await ctx.db.query("licenses").collect();
-    const activeLicenses = licenses.filter(
-      (l) => l.is_active && l.expires_at > now
-    ).length;
-    const expiringLicenses = licenses.filter(
-      (l) =>
-        l.is_active &&
-        l.expires_at >= now &&
-        l.expires_at <= thirtyDaysFromNow
-    ).length;
+    // Error log stats (last 24 hours) — use created_at index
+    const recentErrorLogs = await ctx.db.query("error_logs")
+      .withIndex("by_created_at", (q) => q.gte("createdAt", oneDayAgo)).collect();
+    const recentErrors = recentErrorLogs.length;
+    const criticalErrors = recentErrorLogs.filter((e) => e.severity === "critical").length;
 
-    // Error log stats (last 24 hours)
-    const errorLogs = await ctx.db.query("error_logs").collect();
-    const recentErrors = errorLogs.filter(
-      (e) => e.createdAt > oneDayAgo
-    ).length;
-    const criticalErrors = errorLogs.filter(
-      (e) => e.severity === "critical" && e.createdAt > oneDayAgo
-    ).length;
+    // Security events stats — use resolved index
+    const activeThreats = (await ctx.db.query("security_events")
+      .withIndex("by_resolved", (q) => q.eq("is_resolved", false)).collect()).length;
 
-    // Security events stats (active/unresolved threats)
-    const securityEvents = await ctx.db.query("security_events").collect();
-    const activeThreats = securityEvents.filter(
-      (e) => e.is_resolved !== true
-    ).length;
-
-    // Banned users count
-    const users = await ctx.db.query("users").collect();
-    const bannedUsers = users.filter((u) => u.is_banned === true).length;
+    // Banned users count — filter scan (no is_banned index, but very few banned users)
+    const bannedUsers = (await ctx.db.query("users")
+      .filter((q) => q.eq(q.field("is_banned"), true)).collect()).length;
 
     return {
       activeSubscriptions,

@@ -1230,40 +1230,51 @@ export const getAllUsers = query({
       }
     }
 
-    const limit = args.limit || 1000; // Increased default to 1000 users
-
-    let usersQuery = ctx.db.query("users").order("desc");
+    const limit = args.limit || 1000;
 
     const hasRoles = args.roles && args.roles.length > 0;
     const hasBranch = !!args.branch_id;
+    let users: any[];
 
-    if (hasRoles || hasBranch) {
-      usersQuery = usersQuery.filter((q) => {
-        const conditions = [];
-
-        if (hasRoles) {
-          // Create OR condition for multiple roles
-          const roleConditions = args.roles!.map(role => q.eq(q.field("role"), role));
-          if (roleConditions.length === 1) {
-            conditions.push(roleConditions[0]);
-          } else {
-            conditions.push(q.or(...roleConditions));
+    // Use compound index when both branch + single role provided (most common case)
+    if (hasBranch && hasRoles && args.roles!.length === 1) {
+      users = await ctx.db
+        .query("users")
+        .withIndex("by_branch_role", (q: any) => q.eq("branch_id", args.branch_id).eq("role", args.roles![0]))
+        .order("desc")
+        .take(limit);
+    } else if (hasBranch && !hasRoles) {
+      users = await ctx.db
+        .query("users")
+        .withIndex("by_branch", (q: any) => q.eq("branch_id", args.branch_id))
+        .order("desc")
+        .take(limit);
+    } else if (hasRoles && args.roles!.length === 1 && !hasBranch) {
+      users = await ctx.db
+        .query("users")
+        .withIndex("by_role", (q: any) => q.eq("role", args.roles![0]))
+        .order("desc")
+        .take(limit);
+    } else {
+      // Fallback: full scan with in-memory filter (for multi-role OR queries or no filters)
+      let usersQuery = ctx.db.query("users").order("desc");
+      if (hasRoles || hasBranch) {
+        usersQuery = usersQuery.filter((q) => {
+          const conditions = [];
+          if (hasRoles) {
+            const roleConditions = args.roles!.map(role => q.eq(q.field("role"), role));
+            conditions.push(roleConditions.length === 1 ? roleConditions[0] : q.or(...roleConditions));
           }
-        }
-
-        if (hasBranch) {
-          conditions.push(q.eq(q.field("branch_id"), args.branch_id));
-        }
-
-        // This should not be reached if the outer check is correct, but for type safety:
-        if (conditions.length === 0) return q.eq(q.field("role"), q.field("role")); // Unreachable but type safe
-        if (conditions.length === 1) return conditions[0];
-
-        return q.and(...conditions);
-      });
+          if (hasBranch) {
+            conditions.push(q.eq(q.field("branch_id"), args.branch_id));
+          }
+          if (conditions.length === 0) return q.eq(q.field("role"), q.field("role"));
+          if (conditions.length === 1) return conditions[0];
+          return q.and(...conditions);
+        });
+      }
+      users = await usersQuery.take(limit);
     }
-
-    const users = await usersQuery.take(limit);
 
     // Return only necessary fields to reduce bandwidth
     return users.map(user => ({

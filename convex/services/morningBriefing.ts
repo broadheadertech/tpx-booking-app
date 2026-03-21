@@ -64,9 +64,12 @@ export const getMorningBriefing = query({
     // ================================================================
     // 2. YESTERDAY'S PERFORMANCE
     // ================================================================
+    // Use compound index to only fetch last 30 days of transactions (covers yesterday, 7d, 30d windows)
     const branchTransactions = await ctx.db
       .query("transactions")
-      .withIndex("by_branch", (q) => q.eq("branch_id", args.branch_id))
+      .withIndex("by_branch_date", (q) =>
+        q.eq("branch_id", args.branch_id).gte("createdAt", thirtyDaysAgo)
+      )
       .collect();
 
     const yesterdayTransactions = branchTransactions.filter(

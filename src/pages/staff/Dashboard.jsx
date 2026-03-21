@@ -116,15 +116,20 @@ function StaffDashboard() {
           branch_id: user.branch_id,
         })
         : undefined;
-  // Customers are system-wide (not branch-specific), so always fetch all customers
-  // regardless of the logged-in user's role. The getAllUsers query supports role filtering.
-  const customers = useQuery(api.services.auth.getAllUsers, { roles: ["customer"] });
+  // Fetch customers scoped to branch when available, otherwise system-wide
+  const customers = useQuery(api.services.auth.getAllUsers,
+    user?.branch_id
+      ? { roles: ["customer"], branch_id: user.branch_id }
+      : { roles: ["customer"] }
+  );
 
   // Get customer wallets for wallet monitoring
   const customerWallets = useQuery(api.services.wallet.getAllCustomerWallets, {});
 
-  // Get walk-ins data for queue badge
-  const allWalkInsData = useQuery(api.services.walkIn.getAllWalkIns, {}) || [];
+  // Get walk-ins data for queue badge (branch-scoped)
+  const allWalkInsData = useQuery(api.services.walkIn.getAllWalkIns,
+    user?.branch_id ? { branch_id: user.branch_id } : {}
+  ) || [];
 
   // Expiry alerts for branch users
   const expiryAlerts = useQuery(
