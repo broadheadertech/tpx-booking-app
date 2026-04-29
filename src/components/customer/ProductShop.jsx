@@ -15,7 +15,7 @@ const ProductShop = ({ onBack }) => {
   const [currentView, setCurrentView] = useState('shop') // 'shop' or 'details'
 
   // Fetch products from Convex
-  const products = useQuery(api.services.products.getAllProducts) || []
+  const products = useQuery(api.services.products.getAllProducts, {}) || []
 
   // Filter products based on search and category
   const filteredProducts = products.filter(product => {

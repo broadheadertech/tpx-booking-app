@@ -51,13 +51,28 @@ export function useCurrentUser() {
 
   // Unified logout function that handles both Clerk and legacy auth
   const logout = useCallback(async () => {
-    if (isClerkAuthenticated) {
-      // Sign out from Clerk
-      await clerk.signOut();
+    try {
+      if (isClerkAuthenticated) {
+        // Sign out from Clerk
+        await clerk.signOut();
+      }
+      // Also call legacy logout to clear any local state.
+      // legacyLogout already does a hard window.location.replace to /auth/login,
+      // so we only need to invoke it for the legacy-only path.
+      if (legacyLogout && !isClerkAuthenticated) {
+        await legacyLogout();
+        return;
+      }
+    } catch (e) {
+      console.error('Logout error:', e);
     }
-    // Also call legacy logout to clear any local state
-    if (legacyLogout) {
-      await legacyLogout();
+    // For Clerk sign-outs (and as a safety net) hard-replace history so
+    // the browser Back button can't return to a protected page from bfcache.
+    try {
+      window.history.replaceState(null, '', '/auth/login');
+      window.location.replace('/auth/login');
+    } catch (_) {
+      window.location.href = '/auth/login';
     }
   }, [isClerkAuthenticated, clerk, legacyLogout]);
 

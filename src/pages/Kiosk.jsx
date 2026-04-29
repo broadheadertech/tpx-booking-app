@@ -252,8 +252,8 @@ function Kiosk() {
           </div>
         </div>
         
-        <Link 
-          to="/login"
+        <Link
+          to="/auth/login"
           className="px-3 py-2 md:px-4 md:py-2 text-white rounded-xl transition-all duration-200 flex items-center space-x-2 text-sm md:text-base bg-[#1A1A1A] border border-[#444444] hover:bg-[#2A2A2A] hover:border-[var(--color-primary)]/50"
         >
           <span>Back to Login</span>

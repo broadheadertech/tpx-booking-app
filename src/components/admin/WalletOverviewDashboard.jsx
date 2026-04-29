@@ -55,7 +55,6 @@ const formatCurrency = (amount) => {
  */
 const PERIOD_OPTIONS = [
   { value: "this_month", label: "This Month" },
-  { value: "last_month", label: "Last Month" },
   { value: "last_7_days", label: "Last 7 Days" },
   { value: "last_30_days", label: "Last 30 Days" },
   { value: "this_year", label: "This Year" },
@@ -72,12 +71,6 @@ const getDateRange = (period) => {
     case "this_month": {
       startDate = new Date(now.getFullYear(), now.getMonth(), 1);
       endDate = now;
-      break;
-    }
-    case "last_month": {
-      startDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-      endDate = new Date(now.getFullYear(), now.getMonth(), 0);
-      endDate.setHours(23, 59, 59, 999);
       break;
     }
     case "last_7_days": {
