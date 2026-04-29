@@ -30,7 +30,7 @@ const NotificationsPage = () => {
           <h2 className="text-xl font-bold mb-2 text-center">Authentication Required</h2>
           <p className="text-gray-400 text-center mb-4 text-sm">Please log in to view your notifications.</p>
           <Link
-            to="/login"
+            to="/auth/login"
             className="block w-full bg-[var(--color-primary)] text-white font-semibold py-2.5 rounded-lg hover:bg-[var(--color-primary)]/90 transition-colors text-center"
           >
             Go to Login

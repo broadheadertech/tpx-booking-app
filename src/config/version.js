@@ -15,8 +15,8 @@
  *   "breaking" — Breaking/major change (bumps MAJOR)
  */
 
-export const APP_VERSION = '2.6.0';
-export const LAST_DEPLOY = '2026-02-28';
+export const APP_VERSION = '2.7.0';
+export const LAST_DEPLOY = '2026-04-29';
 export const VERSION_INFO = {
   version: APP_VERSION,
   lastDeploy: LAST_DEPLOY,
@@ -28,6 +28,55 @@ export const VERSION_INFO = {
  * Each entry: { version, date, changes: [{ tag, text }] }
  */
 export const CHANGELOG = [
+  {
+    version: '2.7.0',
+    date: '2026-04-29',
+    changes: [
+      { tag: 'feature', text: 'Desktop notifications for staff — incoming bookings now trigger a native browser notification when the tab is unfocused, so staff never miss a booking; permission auto-requested once per device' },
+    ],
+  },
+  {
+    version: '2.6.6',
+    date: '2026-04-29',
+    changes: [
+      { tag: 'fix', text: 'Attendance List/Grid view toggle — replaced confusing Table/LayoutList icons with proper List/LayoutGrid icons; Grid view now renders responsive card grid instead of a flat list' },
+    ],
+  },
+  {
+    version: '2.6.5',
+    date: '2026-04-29',
+    changes: [
+      { tag: 'fix', text: 'Kiosk Mode "Back to Login" button led to a black screen — was linking to non-existent /login; now goes to /auth/login (Notifications page fixed too)' },
+    ],
+  },
+  {
+    version: '2.6.4',
+    date: '2026-04-29',
+    changes: [
+      { tag: 'improve', text: 'Attendance Config — Per-Staff FR settings now only lists staff (and barbers in their own section), excluding branch_admin and admin_staff' },
+    ],
+  },
+  {
+    version: '2.6.3',
+    date: '2026-04-29',
+    changes: [
+      { tag: 'improve', text: 'Wallet Overview analytics — removed redundant "Last Month" option from period dropdown' },
+    ],
+  },
+  {
+    version: '2.6.2',
+    date: '2026-04-28',
+    changes: [
+      { tag: 'fix', text: 'Order Products page rendered a black screen — branch orders query was passing undefined instead of using the "skip" pattern' },
+    ],
+  },
+  {
+    version: '2.6.1',
+    date: '2026-04-28',
+    changes: [
+      { tag: 'fix', text: 'Signed-out users could briefly see protected pages via browser Back button — now defeats bfcache and replaces history on logout' },
+    ],
+  },
   {
     version: '2.6.0',
     date: '2026-02-28',

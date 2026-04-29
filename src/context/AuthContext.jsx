@@ -256,6 +256,20 @@ export const AuthProvider = ({ children }) => {
     }
   }, [])
 
+  // Defeat browser bfcache: when a user signs out and presses Back,
+  // browsers may restore the previous page from an in-memory snapshot
+  // (bypassing React/auth checks). Always reload on bfcache restore so
+  // ProtectedRoute re-runs against current auth state.
+  useEffect(() => {
+    const handlePageShow = (event) => {
+      if (event.persisted) {
+        window.location.reload()
+      }
+    }
+    window.addEventListener('pageshow', handlePageShow)
+    return () => window.removeEventListener('pageshow', handlePageShow)
+  }, [])
+
   // Query current user - only call when we have a session token
   const currentUser = useQuery(
     api.services.auth.getCurrentUser,
@@ -401,6 +415,14 @@ export const AuthProvider = ({ children }) => {
       setSessionToken(null)
       setIsAuthenticated(false)
       setUser(null)
+      // Hard-replace history so the browser Back button can't return to
+      // the previously rendered protected page (defeats bfcache + history stack).
+      try {
+        window.history.replaceState(null, '', '/auth/login')
+        window.location.replace('/auth/login')
+      } catch (_) {
+        window.location.href = '/auth/login'
+      }
     }
   }
 
