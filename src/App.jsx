@@ -57,6 +57,7 @@ import DownloadApp from "./pages/DownloadApp.jsx";
 // import AIMirrorPage from "./components/customer/AIMirror/AIMirrorPage"; // Hidden until AI Mirror is ready
 import ErrorBoundary from "./components/common/ErrorBoundary";
 import MaintenanceGuard from "./components/common/MaintenanceGuard";
+import ImpersonationBanner from "./components/common/ImpersonationBanner";
 import { getInitialRoute } from "./utils/platform";
 
 function App() {
@@ -96,6 +97,7 @@ function App() {
         <Router>
           <MaintenanceGuard>
           <div className="min-h-screen bg-[var(--color-bg)]">
+            <ImpersonationBanner />
             <Routes>
               <Route
                 path="/"

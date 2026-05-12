@@ -15,8 +15,8 @@
  *   "breaking" — Breaking/major change (bumps MAJOR)
  */
 
-export const APP_VERSION = '2.7.0';
-export const LAST_DEPLOY = '2026-04-29';
+export const APP_VERSION = '2.14.0';
+export const LAST_DEPLOY = '2026-05-11';
 export const VERSION_INFO = {
   version: APP_VERSION,
   lastDeploy: LAST_DEPLOY,
@@ -28,6 +28,66 @@ export const VERSION_INFO = {
  * Each entry: { version, date, changes: [{ tag, text }] }
  */
 export const CHANGELOG = [
+  {
+    version: '2.14.0',
+    date: '2026-05-11',
+    changes: [
+      { tag: 'feature', text: 'Admin "Branch Bookings" tab — branch-first overview that fetches NOTHING until a branch is picked, avoiding system-wide query bottlenecks. Shows date-windowed summary cards (total / today / week / revenue / paid online / cash) + clickable status pills + paginated filterable table' },
+      { tag: 'feature', text: 'Customers · Visits toggle — same tab also shows the branch\'s customer base sorted by visit count (using the existing customer_branch_activity table). Includes total visits, total spend, repeat-customer %, avg visits per customer, last/first visit dates, and engagement status. Loyalty stars at 10+ visits.' },
+    ],
+  },
+  {
+    version: '2.13.0',
+    date: '2026-05-11',
+    changes: [
+      { tag: 'feature', text: 'Customer Subscriptions (Memberships) — admin can now define tiered membership plans (e.g., Bronze / Silver / Gold), each with configurable free-service + free-product allocations per period (monthly / quarterly / annual)' },
+      { tag: 'feature', text: 'Admin assigns subscriptions to customers (with auto-activate + payment capture) or accepts pending applications; daily cron handles period rollover (refresh allocations) + expiry' },
+      { tag: 'feature', text: 'Redemption helper (redeemEntitlement mutation) decrements remaining allocations and logs every redemption with branch + staff context — ready for POS integration' },
+      { tag: 'feature', text: 'New "Memberships" tab in admin + IT-admin Marketing category with Tiers/Subscriptions toggle, status filters, and per-customer assign flow' },
+    ],
+  },
+  {
+    version: '2.12.0',
+    date: '2026-05-11',
+    changes: [
+      { tag: 'feature', text: 'Subscription term discounts — packages can define commitment-tier discounts (e.g., 6 months 10% off, 12 months 20% off). IT admin picks the term in Branch Features and sees live pricing (monthly, total, savings) before committing. All pricing is admin-side billing only — branches never see the numbers.' },
+      { tag: 'feature', text: 'Branch Features now shows the active term commitment (months, discount, monthly/total, end date) alongside an option to override the negotiated base price per-branch' },
+    ],
+  },
+  {
+    version: '2.11.0',
+    date: '2026-05-11',
+    changes: [
+      { tag: 'feature', text: 'Subscription packages — IT admin can now define feature-bundle packages (e.g., Starter, Pro, Enterprise) and assign them to branches. Each package toggles feature flags from a 20-item catalog covering AI Mirror, Avexa, loyalty, wallet, kiosk, analytics, etc.' },
+      { tag: 'feature', text: 'Per-branch feature overrides — IT admin can override individual features on a per-branch basis on top of the assigned package (with optional reason, fully audit-logged)' },
+      { tag: 'feature', text: 'useBranchFeatures() hook + getEffectiveFeatures query — single source of truth for feature gating; respects active impersonation so admin mirror reflects the target branch\'s feature set' },
+      { tag: 'feature', text: 'New IT admin tabs: Packages (CRUD) and Branch Features (assign + override)' },
+    ],
+  },
+  {
+    version: '2.10.0',
+    date: '2026-05-11',
+    changes: [
+      { tag: 'feature', text: 'No-show + transfer fee for paid online bookings — staff can mark a paid PayMongo/wallet booking as no-show, then transfer (reschedule) it to a new date; per-branch transfer fee applies automatically, with a one-click waiver (required reason) when the fault is on the shop\'s end. All actions audit-logged.' },
+      { tag: 'feature', text: 'Booking Settings — new "Transfer Fee (No-Show)" toggle: fixed amount or percent of price; cash bookings exempt by design' },
+    ],
+  },
+  {
+    version: '2.9.0',
+    date: '2026-05-11',
+    changes: [
+      { tag: 'feature', text: 'Royalty automation — monthly cron now auto-generates royalty payments on the 1st at 8 AM PHT, emails each branch their detailed statement, and sends super_admin a consolidated summary; "Run Automation Now" button added for manual triggering' },
+    ],
+  },
+  {
+    version: '2.8.0',
+    date: '2026-05-11',
+    changes: [
+      { tag: 'feature', text: 'Branch P&L tab — admin can now track per-branch revenue, expenses, commission paid to HQ, and net income with a date-range picker and side-by-side branch comparison' },
+      { tag: 'feature', text: 'Branch Mirror — admin / super_admin / it_admin can step into any branch’s view (POS, queue, dashboard) as if they were the branch admin; persistent amber banner shows mirror mode at all times' },
+      { tag: 'feature', text: 'Transparency: every audit log written during mirror mode is auto-tagged with the real user’s ID + role + target branch, and start/stop events are recorded as auth-category audit logs' },
+    ],
+  },
   {
     version: '2.7.0',
     date: '2026-04-29',

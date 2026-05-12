@@ -53,6 +53,42 @@ export async function logAudit(
     metadata?: any;
   }
 ) {
+  // Auto-detect active impersonation for this user and tag the log + bump
+  // the session counter. Avoid recursion for the impersonation.start/end
+  // events themselves (they pass session_id explicitly in metadata).
+  let metadata = args.metadata;
+  const skipImpersonationLookup =
+    args.action === "impersonation.started" || args.action === "impersonation.ended";
+
+  if (args.user_id && !skipImpersonationLookup) {
+    try {
+      const active = await ctx.db
+        .query("impersonation_sessions")
+        .withIndex("by_impersonator", (q) =>
+          q.eq("impersonator_id", args.user_id as any).eq("is_active", true)
+        )
+        .first();
+      if (active) {
+        metadata = {
+          ...(metadata || {}),
+          impersonation: {
+            session_id: active._id,
+            real_user_id: active.impersonator_id,
+            real_user_role: active.impersonator_role,
+            target_branch_id: active.target_branch_id,
+            target_branch_name: active.target_branch_name,
+          },
+        };
+        // Bump the action counter inline (same transaction)
+        await ctx.db.patch(active._id, {
+          action_count: (active.action_count || 0) + 1,
+        });
+      }
+    } catch (_) {
+      // Best-effort tagging — never block the underlying audit log
+    }
+  }
+
   await ctx.db.insert("audit_logs", {
     user_id: args.user_id as any,
     user_name: args.user_name,
@@ -64,7 +100,7 @@ export async function logAudit(
     description: args.description,
     target_type: args.target_type,
     target_id: args.target_id,
-    metadata: args.metadata,
+    metadata,
     created_at: Date.now(),
   });
 }

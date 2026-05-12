@@ -32,6 +32,8 @@ import {
   Scissors,
   AlertTriangle,
   SlidersHorizontal,
+  UserCog,
+  Calendar,
 } from 'lucide-react'
 
 // Category definitions for primary nav
@@ -76,6 +78,8 @@ const TabNavigation = ({ tabs, activeTab, onTabChange }) => {
       catalog: Package,
       royalty: Percent,
       pl: PieChart,
+      branch_pl: Building,
+      mirror: UserCog,
       expenses: Receipt,
       balance_sheet: Scale,
       payment_history: FileText,
@@ -87,7 +91,9 @@ const TabNavigation = ({ tabs, activeTab, onTabChange }) => {
       system_logs: Activity,
       wallet_analytics: Activity,
       customer_analytics: Target,
+      customer_subscriptions: Crown,
       default_services: Scissors,
+      branch_bookings: Calendar,
       shop_config: ShoppingCart,
       shop_banners: Image,
       delivery_orders: Truck,

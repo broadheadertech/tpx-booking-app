@@ -69,4 +69,23 @@ crons.daily(
   internal.services.membershipCards.dailyCardMaintenance
 );
 
+// Customer-subscription daily maintenance — period rollover + expiry
+// Runs at 5 AM PHT (21:00 UTC)
+crons.daily(
+  "customer subscription maintenance",
+  { hourUTC: 21, minuteUTC: 0 },
+  internal.services.customerSubscriptions.dailySubscriptionMaintenance
+);
+
+// Auto-generate monthly royalty payments and email statements
+// Runs on the 1st of every month at 8:00 AM PHT (00:00 UTC)
+// - Generates royalty records for all active configs (idempotent — skips existing)
+// - Emails each branch admin their detailed statement
+// - Emails super_admin / it_admin a consolidated summary
+crons.monthly(
+  "auto generate monthly royalty",
+  { day: 1, hourUTC: 0, minuteUTC: 0 },
+  internal.services.royalty.runMonthlyRoyaltyAutomation
+);
+
 export default crons;

@@ -20,6 +20,10 @@ export default defineSchema({
     booking_fee_type: v.optional(v.string()), // 'fixed' or 'percent'
     late_fee_type: v.optional(v.string()), // 'fixed', 'per_minute', 'per_hour'
     late_fee_grace_period: v.optional(v.number()), // Grace period in minutes
+    // Transfer fee — charged when a no-show paid online booking is rescheduled
+    enable_transfer_fee: v.optional(v.boolean()),
+    transfer_fee_amount: v.optional(v.number()),
+    transfer_fee_type: v.optional(v.string()), // 'fixed' or 'percent'
     carousel_images: v.optional(v.array(v.string())), // Array of carousel image URLs
     // Clerk RBAC field (Story 10.1)
     clerk_org_id: v.optional(v.string()), // Clerk Organization ID for branch-org mapping
@@ -564,7 +568,8 @@ export default defineSchema({
       v.literal("booked"),
       v.literal("confirmed"),
       v.literal("completed"),
-      v.literal("cancelled")
+      v.literal("cancelled"),
+      v.literal("no_show")
     ),
     payment_status: v.optional(
       v.union(
@@ -602,6 +607,16 @@ export default defineSchema({
     email_reminder_sent: v.optional(v.boolean()),
     late_notice_sent: v.optional(v.boolean()),
     no_show_email_sent: v.optional(v.boolean()),
+    // No-show + transfer (reschedule of paid online bookings)
+    no_show_marked_at: v.optional(v.number()),
+    no_show_marked_by: v.optional(v.id("users")),
+    no_show_reason: v.optional(v.string()),
+    transferred_from_booking_id: v.optional(v.id("bookings")), // Set on the new (rescheduled) booking
+    transferred_to_booking_id: v.optional(v.id("bookings")),   // Set on the original no-show booking
+    transferred_at: v.optional(v.number()),
+    transfer_fee: v.optional(v.number()),                       // Fee carried on the NEW booking
+    transfer_fee_waived: v.optional(v.boolean()),
+    transfer_fee_waive_reason: v.optional(v.string()),
   })
     .index("by_customer", ["customer"])
     .index("by_barber", ["barber"])
@@ -3688,11 +3703,68 @@ export default defineSchema({
     created_by: v.id("users"),
     createdAt: v.number(),
     updatedAt: v.number(),
+    // Assigned package (drives feature gating). Optional for legacy subs.
+    package_id: v.optional(v.id("subscription_packages")),
+    // Per-branch feature overrides — explicit per-key boolean wins over the
+    // package's default. Use sparingly; for "this Starter branch also gets X".
+    feature_overrides: v.optional(v.any()), // { [feature_key]: boolean }
+    feature_override_notes: v.optional(v.string()),
+    // Term commitment + applied discount (admin-side billing only)
+    term_months: v.optional(v.number()),               // committed term length
+    term_start: v.optional(v.number()),                // ms timestamp
+    term_end: v.optional(v.number()),                  // ms timestamp
+    base_monthly_amount: v.optional(v.number()),       // package monthly price at sale time
+    applied_discount_percent: v.optional(v.number()),  // 0-100
+    discounted_monthly_amount: v.optional(v.number()), // base × (1 - discount/100)
+    total_term_value: v.optional(v.number()),          // discounted_monthly_amount × term_months
+    term_savings: v.optional(v.number()),              // (base − discounted) × term_months
+    term_notes: v.optional(v.string()),
   })
     .index("by_branch", ["branch_id"])
     .index("by_status", ["status"])
     .index("by_next_renewal", ["next_renewal"])
-    .index("by_plan", ["plan"]),
+    .index("by_plan", ["plan"])
+    .index("by_package", ["package_id"]),
+
+  // ========================================================================
+  // SUBSCRIPTION PACKAGES — IT-admin-managed feature bundles
+  // ========================================================================
+  // Each package defines which features are enabled for the branches assigned
+  // to it. Branches can additionally have per-feature overrides on their
+  // subscription record (feature_overrides).
+  subscription_packages: defineTable({
+    name: v.string(),                     // e.g. "Starter", "Pro", "Enterprise"
+    slug: v.string(),                     // URL-safe key, unique
+    description: v.optional(v.string()),
+    is_active: v.boolean(),               // Soft delete / archive
+    display_order: v.optional(v.number()),
+    // Map of feature_key → boolean (see convex/lib/features.ts)
+    features: v.any(),
+    // Optional billing hint (IT admin still creates the subscription with
+    // actual amount; this is for display in the package UI)
+    monthly_price: v.optional(v.number()),
+    annual_price: v.optional(v.number()),
+    currency: v.optional(v.string()),
+    // Term-commitment discount tiers. Each entry means "if the branch commits
+    // to at least `min_months`, take `discount_percent` off the per-month price".
+    // The best (highest) applicable tier wins. Visible only to IT admin —
+    // branches never see pricing.
+    term_discounts: v.optional(
+      v.array(
+        v.object({
+          min_months: v.number(),
+          discount_percent: v.number(),
+          label: v.optional(v.string()),
+        })
+      )
+    ),
+    created_by: v.id("users"),
+    created_at: v.number(),
+    updated_at: v.number(),
+  })
+    .index("by_slug", ["slug"])
+    .index("by_active", ["is_active"])
+    .index("by_display_order", ["display_order"]),
 
   // Branch license keys
   licenses: defineTable({
@@ -3971,4 +4043,125 @@ export default defineSchema({
   })
     .index("by_user", ["user_id"])
     .index("by_user_unused", ["user_id", "used"]),
+
+  // ========================================================================
+  // CUSTOMER SUBSCRIPTIONS — Recurring "membership boxes" with allocations
+  // ========================================================================
+  // Distinct from membership_cards (which is XP/multiplier-based). This is a
+  // recurring paid plan that gives the customer N free services + N free
+  // products per configurable period (monthly/quarterly/annual).
+
+  customer_subscription_tiers: defineTable({
+    name: v.string(),                                  // "Bronze", "Silver", "Gold"
+    slug: v.string(),                                  // URL-safe key, unique
+    description: v.optional(v.string()),
+    is_active: v.boolean(),
+    display_order: v.optional(v.number()),
+    // Allocations per period (counts only — customer picks any service/product)
+    service_allocations: v.number(),                   // # of free services per period
+    product_allocations: v.number(),                   // # of free products per period
+    // Optional caps to prevent abuse (e.g., redeem any service up to ₱500)
+    service_max_value: v.optional(v.number()),
+    product_max_value: v.optional(v.number()),
+    // Billing
+    period_type: v.union(
+      v.literal("monthly"),
+      v.literal("quarterly"),
+      v.literal("annual")
+    ),
+    price: v.number(),
+    currency: v.optional(v.string()),                  // default PHP
+    // Display perks (free-form bullets shown to customer)
+    perks: v.optional(v.array(v.string())),
+    created_by: v.id("users"),
+    created_at: v.number(),
+    updated_at: v.number(),
+  })
+    .index("by_slug", ["slug"])
+    .index("by_active", ["is_active"])
+    .index("by_display_order", ["display_order"]),
+
+  customer_subscriptions: defineTable({
+    customer_id: v.id("users"),
+    tier_id: v.id("customer_subscription_tiers"),
+    branch_id: v.optional(v.id("branches")),           // home branch (optional)
+    status: v.union(
+      v.literal("pending"),                            // applied, waiting approval / payment
+      v.literal("active"),
+      v.literal("paused"),
+      v.literal("cancelled"),
+      v.literal("expired")
+    ),
+    // Current period window (refreshed by cron each cycle)
+    current_period_start: v.optional(v.number()),
+    current_period_end: v.optional(v.number()),
+    services_remaining: v.number(),
+    products_remaining: v.number(),
+    services_used_this_period: v.number(),
+    products_used_this_period: v.number(),
+    // Lifecycle
+    applied_at: v.number(),
+    activated_at: v.optional(v.number()),
+    activated_by: v.optional(v.id("users")),           // admin who approved (if applicable)
+    ends_at: v.optional(v.number()),                   // when subscription term ends
+    cancelled_at: v.optional(v.number()),
+    cancelled_by: v.optional(v.id("users")),
+    cancel_reason: v.optional(v.string()),
+    // How they signed up
+    applied_via: v.union(v.literal("admin"), v.literal("self_serve")),
+    applied_by: v.id("users"),                         // customer or admin who initiated
+    // Billing trail (basic — actual payment flow can hook later)
+    payment_method: v.optional(v.string()),
+    last_payment_at: v.optional(v.number()),
+    last_payment_amount: v.optional(v.number()),
+    next_billing_at: v.optional(v.number()),
+    auto_renew: v.optional(v.boolean()),
+    notes: v.optional(v.string()),
+    created_at: v.number(),
+    updated_at: v.number(),
+  })
+    .index("by_customer", ["customer_id", "status"])
+    .index("by_tier", ["tier_id"])
+    .index("by_status", ["status"])
+    .index("by_period_end", ["current_period_end"]),
+
+  customer_subscription_redemptions: defineTable({
+    subscription_id: v.id("customer_subscriptions"),
+    customer_id: v.id("users"),
+    redemption_type: v.union(v.literal("service"), v.literal("product")),
+    item_id: v.string(),                               // service or product id (string for flexibility)
+    item_name: v.string(),
+    item_price: v.number(),                            // saved snapshot
+    branch_id: v.optional(v.id("branches")),
+    redeemed_by: v.id("users"),                        // staff who processed it (or customer self)
+    redeemed_at: v.number(),
+    transaction_id: v.optional(v.id("transactions")),  // POS linkage (optional)
+    period_start: v.optional(v.number()),              // which period it counted against
+    notes: v.optional(v.string()),
+  })
+    .index("by_subscription", ["subscription_id", "redeemed_at"])
+    .index("by_customer", ["customer_id", "redeemed_at"])
+    .index("by_transaction", ["transaction_id"]),
+
+  // ========================================================================
+  // IMPERSONATION SESSIONS — Admin "mirror" of a branch for transparency
+  // ========================================================================
+  // Tracks every time an admin/super_admin/it_admin assumes branch_admin view
+  // of a target branch. Every audit log written while a session is active is
+  // auto-tagged with the impersonation context so accountability is preserved.
+  impersonation_sessions: defineTable({
+    impersonator_id: v.id("users"),
+    impersonator_name: v.string(),
+    impersonator_role: v.string(),
+    target_branch_id: v.id("branches"),
+    target_branch_name: v.string(),
+    started_at: v.number(),
+    ended_at: v.optional(v.number()),
+    is_active: v.boolean(),
+    action_count: v.number(),
+    end_reason: v.optional(v.string()), // "manual", "timeout", "superseded"
+  })
+    .index("by_impersonator", ["impersonator_id", "is_active"])
+    .index("by_branch", ["target_branch_id", "started_at"])
+    .index("by_active", ["is_active", "started_at"]),
 });
