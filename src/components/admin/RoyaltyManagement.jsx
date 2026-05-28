@@ -79,6 +79,7 @@ export default function RoyaltyManagement() {
   const generateAllPayments = useMutation(api.services.royalty.generateAllRoyaltyPayments);
   const updateOverduePayments = useMutation(api.services.royalty.updateOverduePayments);
   const sendRoyaltyEmail = useAction(api.services.royalty.sendRoyaltyDueEmail);
+  const runAutomationNow = useAction(api.services.royalty.runRoyaltyAutomationNow);
   const markAsPaid = useMutation(api.services.royalty.markRoyaltyAsPaid);
   const waivePayment = useMutation(api.services.royalty.waiveRoyaltyPayment);
   const sendReceiptEmail = useAction(api.services.royalty.sendReceiptEmail);
@@ -203,6 +204,43 @@ export default function RoyaltyManagement() {
       setLoading(false);
     }
   };
+
+  const handleRunAutomationNow = async () => {
+    const confirmed = await showConfirm({
+      title: 'Run Royalty Automation',
+      message: 'This will generate any missing royalty payments and email every branch their statement + send you a consolidated summary. Continue?',
+      type: 'warning',
+    });
+    if (!confirmed) return;
+
+    setLoading(true);
+    setError('');
+    try {
+      const result = await runAutomationNow({});
+      if (result.success) {
+        setSuccess(
+          `Generated ${result.generated} (${result.skipped} skipped) • Emailed ${result.emailed} branches` +
+          (result.email_failures?.length ? ` • ${result.email_failures.length} failures` : '') +
+          ` • Summary sent to ${result.summary_sent_to} admin${result.summary_sent_to === 1 ? '' : 's'}`
+        );
+      } else {
+        setError(result.message || 'Automation failed');
+      }
+      setTimeout(() => setSuccess(''), 8000);
+    } catch (err) {
+      console.error('Royalty automation error:', err);
+      setError('Failed to run royalty automation');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // First of next month at 8 AM PHT — matches the cron schedule
+  const nextAutoRunLabel = (() => {
+    const now = new Date();
+    const next = new Date(now.getFullYear(), now.getMonth() + 1, 1, 8, 0, 0);
+    return next.toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' }) + ' • 8:00 AM PHT';
+  })();
 
   const handleUpdateOverdue = async () => {
     setLoading(true);
@@ -540,15 +578,38 @@ export default function RoyaltyManagement() {
             </div>
           </div>
 
+          {/* Automation indicator */}
+          <div className="flex items-center gap-3 px-4 py-3 bg-gradient-to-br from-emerald-500/10 to-emerald-500/5 border border-emerald-500/30 rounded-xl">
+            <div className="p-2 bg-emerald-500/20 rounded-lg flex-shrink-0">
+              <Clock className="w-5 h-5 text-emerald-400" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-emerald-300 font-medium text-sm">Auto-royalty enabled</p>
+              <p className="text-emerald-200/70 text-xs">
+                Next run: <span className="font-medium">{nextAutoRunLabel}</span> • Generates payments, emails each branch their statement, and sends you a summary
+              </p>
+            </div>
+          </div>
+
           {/* Actions Bar */}
           <div className="flex flex-wrap items-center gap-4 p-4 bg-gradient-to-br from-[#2A2A2A] to-[#1E1E1E] rounded-xl border border-[#333]">
+            <button
+              onClick={handleRunAutomationNow}
+              disabled={loading || allRoyaltyConfigs.filter(c => c.is_active).length === 0}
+              className="flex items-center gap-2 px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              title="Generate + email branches + send admin summary"
+            >
+              <Mail className="w-4 h-4" />
+              Run Automation Now
+            </button>
             <button
               onClick={handleGenerateRoyalties}
               disabled={loading || allRoyaltyConfigs.filter(c => c.is_active).length === 0}
               className="flex items-center gap-2 px-4 py-2 bg-[var(--color-primary)] hover:bg-[var(--color-primary)] text-white font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              title="Only generate payments (no emails)"
             >
               <Zap className="w-4 h-4" />
-              Generate Royalties
+              Generate Only
             </button>
             <button
               onClick={handleUpdateOverdue}

@@ -5,7 +5,7 @@ import { StatusBadge } from "../common/StatusBadge";
 import Skeleton from "../common/Skeleton";
 import WalkthroughOverlay from "../common/WalkthroughOverlay";
 import { attendanceSteps } from "../../config/walkthroughSteps";
-import { Calendar, Clock, Users, X, Download, Table, LayoutList, CheckCircle, XCircle, LogIn, LogOut, Hourglass, Loader2, Settings, Save, ChevronDown, ChevronUp, DollarSign, Info, AlertCircle, HelpCircle } from "lucide-react";
+import { Calendar, Clock, Users, X, Download, List, LayoutGrid, CheckCircle, XCircle, LogIn, LogOut, Hourglass, Loader2, Settings, Save, ChevronDown, ChevronUp, DollarSign, Info, AlertCircle, HelpCircle } from "lucide-react";
 
 // Philippines timezone offset: UTC+8
 const PHT_OFFSET_MS = 8 * 60 * 60 * 1000;
@@ -369,7 +369,7 @@ function exportToCSV(attendance, hoursByBarber, filterLabel) {
 export function TimeAttendanceView({ branchId, staffName = "Staff" }) {
   const [activeFilter, setActiveFilter] = useState("today");
   const [showCustomPicker, setShowCustomPicker] = useState(false);
-  const [viewMode, setViewMode] = useState("table"); // "table" or "cards"
+  const [viewMode, setViewMode] = useState("list"); // "list" or "grid"
   const [approvingId, setApprovingId] = useState(null);
   const [rejectingId, setRejectingId] = useState(null);
   // Custom date states - default to today
@@ -569,18 +569,20 @@ export function TimeAttendanceView({ branchId, staffName = "Staff" }) {
         <div className="flex items-center gap-2">
           <div className="flex bg-[#1A1A1A] rounded-lg p-1">
             <button
-              onClick={() => setViewMode("table")}
-              className={`p-2 rounded-md transition-all ${viewMode === "table" ? "bg-[var(--color-primary)] text-white" : "text-gray-400 hover:text-white"}`}
-              aria-label="Table view"
+              onClick={() => setViewMode("list")}
+              className={`p-2 rounded-md transition-all ${viewMode === "list" ? "bg-[var(--color-primary)] text-white" : "text-gray-400 hover:text-white"}`}
+              aria-label="List view"
+              title="List view"
             >
-              <Table className="w-4 h-4" />
+              <List className="w-4 h-4" />
             </button>
             <button
-              onClick={() => setViewMode("cards")}
-              className={`p-2 rounded-md transition-all ${viewMode === "cards" ? "bg-[var(--color-primary)] text-white" : "text-gray-400 hover:text-white"}`}
-              aria-label="Card view"
+              onClick={() => setViewMode("grid")}
+              className={`p-2 rounded-md transition-all ${viewMode === "grid" ? "bg-[var(--color-primary)] text-white" : "text-gray-400 hover:text-white"}`}
+              aria-label="Grid view"
+              title="Grid view"
             >
-              <LayoutList className="w-4 h-4" />
+              <LayoutGrid className="w-4 h-4" />
             </button>
           </div>
           <button
@@ -832,7 +834,7 @@ export function TimeAttendanceView({ branchId, staffName = "Staff" }) {
             <Calendar className="w-10 h-10 text-gray-600 mb-3" />
             <p className="text-gray-500 text-sm">No attendance records for this period</p>
           </div>
-        ) : viewMode === "table" ? (
+        ) : viewMode === "list" ? (
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead className="bg-[#0A0A0A]">
@@ -926,59 +928,78 @@ export function TimeAttendanceView({ branchId, staffName = "Staff" }) {
             </table>
           </div>
         ) : (
-          <div className="divide-y divide-[#2A2A2A]">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 p-4">
             {attendance.map((record) => {
               const insights = getRecordInsights(record, barberScheduleMap[record.barber_id]);
               return (
-              <div key={record._id} className="flex items-center justify-between px-4 py-3">
-                <div className="flex items-center gap-3">
+              <div key={record._id} className="bg-[#0A0A0A] border border-[#2A2A2A] rounded-xl p-3 hover:border-[var(--color-primary)]/40 transition-colors">
+                <div className="flex items-center gap-2.5 mb-3">
                   <div className="relative">
                     {record.barber_avatar ? (
-                      <img src={record.barber_avatar} alt="" className="w-9 h-9 rounded-full object-cover" />
+                      <img src={record.barber_avatar} alt="" className="w-10 h-10 rounded-full object-cover" />
                     ) : (
-                      <div className="w-9 h-9 rounded-full bg-[#2A2A2A] flex items-center justify-center">
+                      <div className="w-10 h-10 rounded-full bg-[#2A2A2A] flex items-center justify-center">
                         <span className="text-gray-400 text-xs font-medium">{record.barber_name?.charAt(0)}</span>
                       </div>
                     )}
-                    {!record.clock_out && <div className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-green-500 border-2 border-[#1A1A1A]" />}
+                    {!record.clock_out && <div className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-green-500 border-2 border-[#0A0A0A]" />}
                   </div>
-                  <div>
-                    <span className="text-sm text-white font-medium">{record.barber_name}</span>
-                    <div className="flex items-center gap-1 mt-0.5">
-                      <span className="text-[11px] text-gray-500">{formatDate(record.clock_in)}</span>
-                      <span className="text-[11px] text-gray-600">·</span>
-                      <span className="text-[11px] text-gray-400 font-mono">{formatTime(record.clock_in)}</span>
-                      <span className="text-[11px] text-gray-600">-</span>
-                      <span className="text-[11px] text-gray-400 font-mono">{record.clock_out ? formatTime(record.clock_out) : "active"}</span>
-                    </div>
-                    {insights && (insights.lateMin > 0 || insights.overtimeMin > 0 || insights.undertimeMin > 0 || insights.isCurrentlyOT) && (
-                      <div className="flex flex-wrap gap-1 mt-1">
-                        {insights.lateMin > 0 && (
-                          <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-semibold bg-red-500/10 text-red-400 border border-red-500/20">
-                            Late {formatMinutesCompact(insights.lateMin)}
-                          </span>
-                        )}
-                        {insights.overtimeMin > 0 && (
-                          <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-semibold bg-green-500/10 text-green-400 border border-green-500/20">
-                            OT +{formatMinutesCompact(insights.overtimeMin)}
-                          </span>
-                        )}
-                        {insights.undertimeMin > 0 && (
-                          <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-semibold bg-amber-500/10 text-amber-400 border border-amber-500/20">
-                            UT {formatMinutesCompact(insights.undertimeMin)}
-                          </span>
-                        )}
-                        {insights.isCurrentlyOT && !insights.overtimeMin && (
-                          <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[9px] font-semibold bg-green-500/10 text-green-400 border border-green-500/20">
-                            <div className="w-1 h-1 rounded-full bg-green-400 animate-pulse" />OT Live
-                          </span>
-                        )}
-                      </div>
-                    )}
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm text-white font-medium truncate">{record.barber_name}</p>
+                    <p className="text-[11px] text-gray-500">{formatDate(record.clock_in)}</p>
+                  </div>
+                  {record.clock_out ? (
+                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium bg-gray-500/10 text-gray-400">Done</span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-green-500/10 text-green-500">
+                      <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" /> Active
+                    </span>
+                  )}
+                </div>
+                <div className="grid grid-cols-3 gap-2 mb-2">
+                  <div className="bg-[#1A1A1A] rounded-lg px-2 py-1.5">
+                    <p className="text-[9px] text-gray-500 uppercase">In</p>
+                    <p className="text-xs text-gray-300 font-mono">{formatTime(record.clock_in)}</p>
+                  </div>
+                  <div className="bg-[#1A1A1A] rounded-lg px-2 py-1.5">
+                    <p className="text-[9px] text-gray-500 uppercase">Out</p>
+                    <p className="text-xs text-gray-300 font-mono">{record.clock_out ? formatTime(record.clock_out) : "—"}</p>
+                  </div>
+                  <div className="bg-[#1A1A1A] rounded-lg px-2 py-1.5">
+                    <p className="text-[9px] text-gray-500 uppercase">Hours</p>
+                    <p className="text-xs text-white font-semibold">{formatDuration((record.clock_out || Date.now()) - record.clock_in)}</p>
                   </div>
                 </div>
-                <div className="text-right">
-                  <span className="text-sm font-semibold text-white">{formatDuration((record.clock_out || Date.now()) - record.clock_in)}</span>
+                <div className="flex flex-wrap gap-1">
+                  {record.method === "fr" ? (
+                    <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-semibold bg-blue-500/10 text-blue-400 border border-blue-500/20">
+                      FR {record.confidence_score ? `${Math.round(record.confidence_score * 100)}%` : ""}
+                    </span>
+                  ) : record.method === "pin" ? (
+                    <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-semibold bg-amber-500/10 text-amber-400 border border-amber-500/20">PIN</span>
+                  ) : (
+                    <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-semibold bg-gray-500/10 text-gray-500 border border-gray-500/20">Manual</span>
+                  )}
+                  {insights?.lateMin > 0 && (
+                    <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-semibold bg-red-500/10 text-red-400 border border-red-500/20">
+                      Late {formatMinutesCompact(insights.lateMin)}
+                    </span>
+                  )}
+                  {insights?.overtimeMin > 0 && (
+                    <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-semibold bg-green-500/10 text-green-400 border border-green-500/20">
+                      OT +{formatMinutesCompact(insights.overtimeMin)}
+                    </span>
+                  )}
+                  {insights?.undertimeMin > 0 && (
+                    <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-semibold bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                      UT {formatMinutesCompact(insights.undertimeMin)}
+                    </span>
+                  )}
+                  {insights?.isCurrentlyOT && !insights?.overtimeMin && (
+                    <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[9px] font-semibold bg-green-500/10 text-green-400 border border-green-500/20">
+                      <div className="w-1 h-1 rounded-full bg-green-400 animate-pulse" />OT Live
+                    </span>
+                  )}
                 </div>
               </div>
               );

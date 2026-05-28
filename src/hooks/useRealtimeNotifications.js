@@ -5,6 +5,32 @@ import { useToast } from '../components/common/ToastNotification';
 import { useCurrentUser } from './useCurrentUser';
 
 const STORAGE_KEY = 'last_seen_notifications';
+const DESKTOP_OPT_IN_KEY = 'desktop_notifications_opt_in';
+
+// Show a native desktop notification (Web Notifications API).
+// Silently no-ops if the browser doesn't support it or permission is denied.
+const showDesktopNotification = (title, body, { tag, onClick } = {}) => {
+  if (typeof window === 'undefined' || !('Notification' in window)) return;
+  if (Notification.permission !== 'granted') return;
+  // Don't pop a desktop alert if the tab is already focused — the toast suffices.
+  if (typeof document !== 'undefined' && document.visibilityState === 'visible' && document.hasFocus()) return;
+  try {
+    const n = new Notification(title, {
+      body,
+      tag,
+      icon: '/logo.png',
+      badge: '/logo.png',
+      requireInteraction: false,
+    });
+    n.onclick = () => {
+      window.focus();
+      if (onClick) onClick();
+      n.close();
+    };
+  } catch (e) {
+    console.warn('[Notifications] Desktop notification failed:', e);
+  }
+};
 
 // Hook to show toast notifications for new arrivals
 export const useRealtimeNotifications = () => {
@@ -18,6 +44,26 @@ export const useRealtimeNotifications = () => {
     api.services.notifications.getUserNotifications,
     user?._id ? { userId: user._id, limit: 20 } : "skip"
   );
+
+  // Auto-request desktop notification permission for staff/admin roles
+  // (customers don't need desktop pings for their own bookings — the toast is enough)
+  useEffect(() => {
+    if (!user) return;
+    const isStaffRole = user.role && user.role !== 'customer';
+    if (!isStaffRole) return;
+    if (typeof window === 'undefined' || !('Notification' in window)) return;
+    if (Notification.permission !== 'default') return;
+    // Only ask once per device — track via localStorage so we don't re-prompt aggressively
+    try {
+      const askedKey = `${DESKTOP_OPT_IN_KEY}_${user._id}`;
+      if (localStorage.getItem(askedKey)) return;
+      localStorage.setItem(askedKey, '1');
+      Notification.requestPermission().catch(() => {});
+    } catch (_) {
+      // localStorage may be unavailable; just request once
+      Notification.requestPermission().catch(() => {});
+    }
+  }, [user]);
 
   useEffect(() => {
     if (!notifications || !user) return;
@@ -68,7 +114,7 @@ export const useRealtimeNotifications = () => {
 
       // Show appropriate toast based on notification type
       switch (notification.type) {
-        case 'booking':
+        case 'booking': {
           const isCustomer = user?.role === 'customer';
           toast.booking(
             notification.title,
@@ -83,7 +129,20 @@ export const useRealtimeNotifications = () => {
               } : undefined
             }
           );
+          // Fire a desktop notification for staff/admin so they don't miss
+          // an incoming booking when the tab is in the background.
+          if (!isCustomer) {
+            showDesktopNotification(
+              notification.title || 'New Booking',
+              notification.message || 'A new booking has come in.',
+              {
+                tag: `booking-${notification._id}`,
+                onClick: () => window.dispatchEvent(new CustomEvent('switchToBookings')),
+              }
+            );
+          }
           break;
+        }
           
         case 'payment':
           toast.payment(

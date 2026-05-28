@@ -567,6 +567,9 @@ export const updateBranch = mutation({
     booking_fee_type: v.optional(v.string()),
     late_fee_type: v.optional(v.string()),
     late_fee_grace_period: v.optional(v.number()),
+    enable_transfer_fee: v.optional(v.boolean()),
+    transfer_fee_amount: v.optional(v.number()),
+    transfer_fee_type: v.optional(v.string()),
     // Branch Profile fields
     slug: v.optional(v.string()),
     description: v.optional(v.string()),

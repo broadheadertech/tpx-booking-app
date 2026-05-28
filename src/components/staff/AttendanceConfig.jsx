@@ -42,8 +42,8 @@ const AttendanceConfig = ({ branchId, barbers = [] }) => {
   const enrolledBarberIds = new Set(enrollments?.filter(e => e.barber_id).map(e => e.barber_id) || [])
   const enrolledUserIds = new Set(enrollments?.filter(e => e.user_id).map(e => e.user_id) || [])
 
-  // Filter to staff roles only
-  const staffRoles = ['staff', 'branch_admin', 'admin_staff']
+  // Filter to staff role only (barbers handled in their own section above)
+  const staffRoles = ['staff']
   const filteredStaff = (staffUsers || []).filter(u => staffRoles.includes(u.role) && u.is_active !== false)
 
   const handleSave = async () => {

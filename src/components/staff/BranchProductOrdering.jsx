@@ -124,8 +124,8 @@ const BranchProductOrdering = ({ user, onRefresh }) => {
   // Queries
   const catalogProducts = useQuery(api.services.productCatalog.getCatalogProducts) || []
   const branchOrders = useQuery(
-    user?.branch_id ? api.services.productOrders.getOrdersByBranch : undefined,
-    user?.branch_id ? { branch_id: user.branch_id } : undefined
+    api.services.productOrders.getOrdersByBranch,
+    user?.branch_id ? { branch_id: user.branch_id } : 'skip'
   ) || []
   const branchWallet = useQuery(
     api.services.branchWallet.getBranchWallet,

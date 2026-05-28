@@ -14,6 +14,10 @@ import AdminVoucherManagement from '../../components/admin/VoucherManagement'
 import ProductCatalogManager from '../../components/admin/ProductCatalogManager'
 import RoyaltyManagement from '../../components/admin/RoyaltyManagement'
 import SuperAdminPLDashboard from '../../components/admin/SuperAdminPLDashboard'
+import BranchPLDashboard from '../../components/admin/BranchPLDashboard'
+import ImpersonateBranchPanel from '../../components/admin/ImpersonateBranchPanel'
+import CustomerSubscriptionsManager from '../../components/admin/CustomerSubscriptionsManager'
+import BranchBookingsOverview from '../../components/admin/BranchBookingsOverview'
 import SuperAdminBalanceSheet from '../../components/admin/SuperAdminBalanceSheet'
 import AuditTrailViewer from '../../components/admin/AuditTrailViewer'
 import PointsConfigPanel from '../../components/admin/PointsConfigPanel'
@@ -241,6 +245,34 @@ function AdminDashboard() {
           <div className="text-center text-gray-400">You do not have access to P&L reports.</div>
         )
 
+      case 'branch_pl':
+        return user?.role === 'super_admin' || user?.role === 'it_admin' || user?.role === 'admin' ? (
+          <BranchPLDashboard />
+        ) : (
+          <div className="text-center text-gray-400">You do not have access to branch P&L.</div>
+        )
+
+      case 'mirror':
+        return user?.role === 'super_admin' || user?.role === 'it_admin' || user?.role === 'admin' ? (
+          <ImpersonateBranchPanel />
+        ) : (
+          <div className="text-center text-gray-400">You do not have access to branch mirror.</div>
+        )
+
+      case 'customer_subscriptions':
+        return user?.role === 'super_admin' || user?.role === 'it_admin' || user?.role === 'admin' || user?.role === 'branch_admin' ? (
+          <CustomerSubscriptionsManager />
+        ) : (
+          <div className="text-center text-gray-400">You do not have access to customer subscriptions.</div>
+        )
+
+      case 'branch_bookings':
+        return user?.role === 'super_admin' || user?.role === 'it_admin' || user?.role === 'admin' ? (
+          <BranchBookingsOverview />
+        ) : (
+          <div className="text-center text-gray-400">You do not have access to branch bookings.</div>
+        )
+
       case 'balance_sheet':
         return user?.role === 'super_admin' || user?.role === 'it_admin' ? (
           <SuperAdminBalanceSheet />
@@ -349,6 +381,7 @@ function AdminDashboard() {
       { id: 'branches', label: 'Branches', icon: 'building' },
       { id: 'users', label: 'Users', icon: 'users' },
       // Commerce category
+      { id: 'branch_bookings', label: 'Bookings', icon: 'calendar', category: 'Commerce' },
       { id: 'default_services', label: 'Services', icon: 'scissors', category: 'Commerce' },
       { id: 'catalog', label: 'Catalog', icon: 'package', category: 'Commerce' },
       { id: 'vouchers', label: 'Vouchers', icon: 'ticket', category: 'Commerce' },
@@ -358,6 +391,7 @@ function AdminDashboard() {
       { id: 'damage_claims', label: 'Damage Claims', icon: 'alert-triangle', category: 'Commerce' },
       // Finance category
       { id: 'pl', label: 'P&L', icon: 'pie-chart', category: 'Finance' },
+      { id: 'branch_pl', label: 'Branch P&L', icon: 'building', category: 'Finance' },
       { id: 'balance_sheet', label: 'Balance Sheet', icon: 'scale', category: 'Finance' },
       { id: 'royalty', label: 'Royalty', icon: 'percent', category: 'Finance' },
       { id: 'settlements', label: 'Settlements', icon: 'banknote', category: 'Finance' },
@@ -368,6 +402,7 @@ function AdminDashboard() {
       { id: 'branding', label: 'Branding', icon: 'palette', category: 'Marketing' },
       { id: 'emails', label: 'Emails', icon: 'mail', category: 'Marketing' },
       { id: 'customer_analytics', label: 'Customers', icon: 'target', category: 'Marketing' },
+      { id: 'customer_subscriptions', label: 'Memberships', icon: 'crown', category: 'Marketing' },
       // Configs category
       { id: 'shop_config', label: 'Shop Config', icon: 'shopping-cart', category: 'Configs' },
       { id: 'wallet', label: 'Wallet Config', icon: 'wallet', category: 'Configs' },
@@ -376,6 +411,7 @@ function AdminDashboard() {
       { id: 'reports', label: 'Reports', icon: 'chart', category: 'Reports' },
       { id: 'audit_trail', label: 'Audit Trail', icon: 'history', category: 'Reports' },
       { id: 'system_logs', label: 'System Logs', icon: 'activity', category: 'Reports' },
+      { id: 'mirror', label: 'Branch Mirror', icon: 'user-cog', category: 'Reports' },
       // Simple tab
       { id: 'settings', label: 'Settings', icon: 'settings' },
     ]

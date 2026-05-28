@@ -38,6 +38,8 @@ import {
   Ban,
   ShieldAlert,
   Wrench,
+  Crown,
+  Calendar,
 } from 'lucide-react'
 
 const CATEGORIES = [
@@ -91,6 +93,8 @@ const ITAdminTabNavigation = ({ tabs, activeTab, onTabChange }) => {
       audit_trail: History,
       wallet_analytics: Activity,
       customer_analytics: Target,
+      customer_subscriptions: Crown,
+      branch_bookings: Calendar,
       default_services: Scissors,
       shop_config: ShoppingCart,
       shop_banners: Image,
@@ -98,6 +102,8 @@ const ITAdminTabNavigation = ({ tabs, activeTab, onTabChange }) => {
       damage_claims: AlertTriangle,
       // Platform (IT Admin) icons
       subscriptions: CreditCard,
+      packages: Package,
+      branch_features: SlidersHorizontal,
       licenses: Key,
       error_monitor: Bug,
       security_monitor: ShieldAlert,

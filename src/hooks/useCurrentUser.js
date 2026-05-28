@@ -43,26 +43,69 @@ export function useCurrentUser() {
   const isClerkAuthenticated = clerkSignedIn && clerkConvexUser !== null;
   const isAuthenticated = legacyAuthenticated || isClerkAuthenticated;
 
-  // Get the active user (prefer Clerk if signed in via Clerk)
-  const user = isClerkAuthenticated ? clerkConvexUser : legacyUser;
+  // Get the active (real) user (prefer Clerk if signed in via Clerk)
+  const realUser = isClerkAuthenticated ? clerkConvexUser : legacyUser;
+
+  // ── Impersonation: when the admin is mirroring a branch, swap role &
+  // branch_id on the user object so the rest of the app naturally renders
+  // the branch_admin view. The real user identity (_id, name, email) is
+  // preserved, and the swap is only active for roles that can impersonate.
+  const canImpersonate =
+    realUser?.role === 'admin' ||
+    realUser?.role === 'super_admin' ||
+    realUser?.role === 'it_admin';
+
+  const activeImpersonation = useQuery(
+    api.services.impersonation.getActiveImpersonation,
+    realUser?._id && canImpersonate ? { user_id: realUser._id } : "skip"
+  );
+
+  const user = (realUser && activeImpersonation)
+    ? {
+        ...realUser,
+        role: 'branch_admin',
+        branch_id: activeImpersonation.target_branch_id,
+        _real_role: realUser.role,
+        _real_branch_id: realUser.branch_id,
+        _impersonation: activeImpersonation,
+      }
+    : realUser;
 
   // Determine which auth method is active
   const authMethod = isClerkAuthenticated ? 'clerk' : (legacyAuthenticated ? 'legacy' : null);
 
   // Unified logout function that handles both Clerk and legacy auth
   const logout = useCallback(async () => {
-    if (isClerkAuthenticated) {
-      // Sign out from Clerk
-      await clerk.signOut();
+    try {
+      if (isClerkAuthenticated) {
+        // Sign out from Clerk
+        await clerk.signOut();
+      }
+      // Also call legacy logout to clear any local state.
+      // legacyLogout already does a hard window.location.replace to /auth/login,
+      // so we only need to invoke it for the legacy-only path.
+      if (legacyLogout && !isClerkAuthenticated) {
+        await legacyLogout();
+        return;
+      }
+    } catch (e) {
+      console.error('Logout error:', e);
     }
-    // Also call legacy logout to clear any local state
-    if (legacyLogout) {
-      await legacyLogout();
+    // For Clerk sign-outs (and as a safety net) hard-replace history so
+    // the browser Back button can't return to a protected page from bfcache.
+    try {
+      window.history.replaceState(null, '', '/auth/login');
+      window.location.replace('/auth/login');
+    } catch (_) {
+      window.location.href = '/auth/login';
     }
   }, [isClerkAuthenticated, clerk, legacyLogout]);
 
   return {
     user,
+    realUser,
+    impersonation: activeImpersonation || null,
+    isImpersonating: !!activeImpersonation,
     loading,
     isAuthenticated,
     authMethod,

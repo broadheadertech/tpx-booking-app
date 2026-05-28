@@ -375,17 +375,24 @@ const Profile = () => {
   }
 
   const handleLogout = async () => {
+    const target = isClerkAuth ? '/auth/clerk-login' : '/auth/login'
     try {
       if (isClerkAuth) {
         await signOut()
-        window.location.href = '/auth/clerk-login'
       } else {
         await authLogout()
-        window.location.href = '/auth/login'
+        // legacy authLogout already hard-replaces to /auth/login; stop here.
+        return
       }
     } catch (error) {
       console.error('Logout error:', error)
-      window.location.href = '/auth/login'
+    }
+    // Hard-replace history so Back button can't restore the protected page from bfcache.
+    try {
+      window.history.replaceState(null, '', target)
+      window.location.replace(target)
+    } catch (_) {
+      window.location.href = target
     }
   }
 

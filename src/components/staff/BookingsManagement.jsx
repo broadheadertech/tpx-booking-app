@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react'
-import { Calendar, Clock, User, CheckCircle, XCircle, AlertCircle, Search, Filter, Plus, Edit, Trash2, RotateCcw, Save, X, QrCode, CreditCard, Receipt, DollarSign, Eye, ChevronLeft, ChevronRight, MessageSquare, MoreVertical, Check, Ban, Settings, Banknote, HelpCircle, ClipboardList } from 'lucide-react'
+import { Calendar, Clock, User, CheckCircle, XCircle, AlertCircle, Search, Filter, Plus, Edit, Trash2, RotateCcw, Save, X, QrCode, CreditCard, Receipt, DollarSign, Eye, ChevronLeft, ChevronRight, MessageSquare, MoreVertical, Check, Ban, Settings, Banknote, HelpCircle, ClipboardList, UserX, ArrowRightLeft } from 'lucide-react'
+import TransferBookingModal from './TransferBookingModal'
 import { useQuery, useMutation } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
 import { useAppModal } from '../../context/AppModalContext'
@@ -116,6 +117,31 @@ const BookingsManagement = ({ onRefresh, user }) => {
   const deleteBookingMutation = useMutation(api.services.bookings.deleteBooking)
   const updatePaymentStatus = useMutation(api.services.bookings.updatePaymentStatus)
   const cancelBookingMutation = useMutation(api.services.bookings.cancelBooking)
+  const markNoShowMutation = useMutation(api.services.bookings.markBookingAsNoShow)
+
+  // Transfer modal state (no-show → reschedule)
+  const [transferModal, setTransferModal] = useState({ open: false, booking: null })
+
+  // Quick eligibility: paid online bookings only (paymongo/wallet/combo)
+  const isOnlinePaid = (b) => {
+    if (b?.payment_status !== 'paid') return false
+    const m = (b?.payment_method || '').toLowerCase()
+    return m === 'paymongo' || m === 'wallet' || m === 'combo'
+  }
+
+  const handleMarkNoShow = async (booking) => {
+    if (!isOnlinePaid(booking)) {
+      window.alert('Only paid online bookings (PayMongo / wallet) can be marked as no-show.')
+      return
+    }
+    const ok = window.confirm(`Mark booking #${booking.booking_code} (${booking.customer_name || 'Customer'}) as NO-SHOW?\n\nThe customer can then transfer it to a new date — with a transfer fee per branch policy.`)
+    if (!ok) return
+    try {
+      await markNoShowMutation({ booking_id: booking._id, marked_by: user._id })
+    } catch (e) {
+      window.alert(e?.message || 'Failed to mark as no-show')
+    }
+  }
 
   const getStatusConfig = (status) => {
     switch (status) {
@@ -154,6 +180,15 @@ const BookingsManagement = ({ onRefresh, user }) => {
           text: 'text-red-700',
           border: 'border-red-200',
           iconColor: 'text-red-500'
+        }
+      case 'no_show':
+        return {
+          label: 'No-Show',
+          icon: UserX,
+          bg: 'bg-amber-50',
+          text: 'text-amber-700',
+          border: 'border-amber-200',
+          iconColor: 'text-amber-500'
         }
       default: // pending
         return {
@@ -2284,6 +2319,7 @@ const BookingsManagement = ({ onRefresh, user }) => {
               <option value="confirmed">Confirmed</option>
               <option value="completed">Completed</option>
               <option value="cancelled">Cancelled</option>
+              <option value="no_show">No-Show</option>
             </select>
 
             {/* Sort By */}
@@ -2800,6 +2836,38 @@ const BookingsManagement = ({ onRefresh, user }) => {
                                         </>
                                       )}
 
+                                      {/* Mark as No-Show — only for paid online bookings still pending/booked/confirmed */}
+                                      {(booking.status === 'booked' || booking.status === 'confirmed' || booking.status === 'pending') && isOnlinePaid(booking) && (
+                                        <button
+                                          onClick={() => {
+                                            handleMarkNoShow(booking)
+                                            setDropdownState({ id: null, position: null })
+                                          }}
+                                          className="w-full px-3 py-2 text-left text-sm text-white hover:bg-[#2A2A2A] transition-colors flex items-center gap-2"
+                                          disabled={loading}
+                                          title="Customer did not attend — eligible for transfer with fee"
+                                        >
+                                          <UserX className="h-4 w-4 text-amber-400" />
+                                          <span>Mark as No-Show</span>
+                                        </button>
+                                      )}
+
+                                      {/* Transfer — only for no_show bookings not yet transferred */}
+                                      {booking.status === 'no_show' && !booking.transferred_to_booking_id && (
+                                        <button
+                                          onClick={() => {
+                                            setTransferModal({ open: true, booking })
+                                            setDropdownState({ id: null, position: null })
+                                          }}
+                                          className="w-full px-3 py-2 text-left text-sm text-white hover:bg-[#2A2A2A] transition-colors flex items-center gap-2"
+                                          disabled={loading}
+                                          title="Reschedule to a new date (transfer fee may apply)"
+                                        >
+                                          <ArrowRightLeft className="h-4 w-4 text-[var(--color-primary)]" />
+                                          <span>Transfer Booking</span>
+                                        </button>
+                                      )}
+
                                       {/* Divider + Edit (only for non-completed/cancelled bookings) */}
                                       {booking.status !== 'completed' && booking.status !== 'cancelled' && (
                                         <>
@@ -3024,6 +3092,14 @@ const BookingsManagement = ({ onRefresh, user }) => {
         onClose={() => setShowSettingsModal(false)}
         branchId={user?.branch_id}
       />
+      {transferModal.open && transferModal.booking && (
+        <TransferBookingModal
+          booking={transferModal.booking}
+          transferredBy={user?._id}
+          onClose={() => setTransferModal({ open: false, booking: null })}
+          onSuccess={() => setTransferModal({ open: false, booking: null })}
+        />
+      )}
       <WalkthroughOverlay steps={bookingsManagementSteps} isVisible={showTutorial} onComplete={() => setShowTutorial(false)} onSkip={() => setShowTutorial(false)} />
     </div>
   )
