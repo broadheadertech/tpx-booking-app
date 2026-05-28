@@ -15,8 +15,8 @@
  *   "breaking" — Breaking/major change (bumps MAJOR)
  */
 
-export const APP_VERSION = '2.14.0';
-export const LAST_DEPLOY = '2026-05-11';
+export const APP_VERSION = '2.15.0';
+export const LAST_DEPLOY = '2026-05-28';
 export const VERSION_INFO = {
   version: APP_VERSION,
   lastDeploy: LAST_DEPLOY,
@@ -28,6 +28,16 @@ export const VERSION_INFO = {
  * Each entry: { version, date, changes: [{ tag, text }] }
  */
 export const CHANGELOG = [
+  {
+    version: '2.15.0',
+    date: '2026-05-28',
+    changes: [
+      { tag: 'feature', text: 'BIR-compliant Official Receipt for POS — sequential per-branch OR numbering (format OR-<BRANCH>-YYYY-NNNNNN, yearly reset), business/PTU/MIN/POS-serial/accreditation header & footer, software-provider block, and the required "valid for 5 years from PTU" + "not valid for input tax" clauses (NON-VAT branches).' },
+      { tag: 'feature', text: 'Per-branch BIR settings (admin → Branches → BIR tab) — TIN, VAT-registered toggle, PTU, MIN, POS serial, accreditation, software provider details, OR branch code. All snapshot onto each transaction so receipts survive future edits.' },
+      { tag: 'feature', text: 'VAT breakdown on receipts — VATable Sales / VAT-Exempt / Zero-Rated / VAT (12%) computed at issuance for VAT-registered branches; SC/PWD purchases automatically routed to VAT-Exempt.' },
+      { tag: 'feature', text: 'Senior Citizen / PWD discount flow (RA 9994 / RA 10754) — POS captures SC/PWD ID + name, strips 12% VAT before the 20% discount when applicable, and prints the SC/PWD block with a signature line.' },
+    ],
+  },
   {
     version: '2.14.0',
     date: '2026-05-11',

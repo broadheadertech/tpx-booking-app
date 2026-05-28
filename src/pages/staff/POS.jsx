@@ -65,7 +65,13 @@ const POS = () => {
     tax_amount: 0,
     booking_fee: 0,
     late_fee: 0,
-    total_amount: 0
+    total_amount: 0,
+    // BIR Compliance
+    discount_type: 'regular',
+    sc_pwd_id_number: '',
+    sc_pwd_name: '',
+    customer_tin: '',
+    customer_business_style: ''
   })
   const [activeModal, setActiveModal] = useState(null)
   const [searchTerm, setSearchTerm] = useState('')
@@ -97,6 +103,12 @@ const POS = () => {
   const [showVoucherPicker, setShowVoucherPicker] = useState(false)
   const [voucherCodeInput, setVoucherCodeInput] = useState('')
   const [applyingVoucher, setApplyingVoucher] = useState(false)
+
+  // SC/PWD discount picker states (BIR compliance — RA 9994 / RA 10754)
+  const [showScPwdPicker, setShowScPwdPicker] = useState(false)
+  const [scPwdType, setScPwdType] = useState('senior') // 'senior' | 'pwd'
+  const [scPwdIdInput, setScPwdIdInput] = useState('')
+  const [scPwdNameInput, setScPwdNameInput] = useState('')
 
   const itemsPerPage = 9 // For card view
   const tableItemsPerPage = 15 // For table view
@@ -1068,7 +1080,13 @@ const POS = () => {
         change_amount: paymentData.change_amount,
         // Combo payment fields (wallet + cash/card)
         wallet_used: paymentData.wallet_used,
-        cash_collected: paymentData.cash_collected
+        cash_collected: paymentData.cash_collected,
+        // BIR Compliance
+        discount_type: currentTransaction.discount_type || 'regular',
+        sc_pwd_id_number: currentTransaction.sc_pwd_id_number?.trim() || undefined,
+        sc_pwd_name: currentTransaction.sc_pwd_name?.trim() || undefined,
+        customer_tin: currentTransaction.customer_tin?.trim() || undefined,
+        customer_business_style: currentTransaction.customer_business_style?.trim() || undefined,
       }
 
       console.log('Final voucher_applied value:', voucherApplied)
@@ -1369,7 +1387,55 @@ const POS = () => {
       setAlertModal({ show: true, title: 'Cannot Remove', message: 'This voucher was applied from an online booking and cannot be removed.', type: 'warning' })
       return
     }
-    setCurrentTransaction(prev => ({ ...prev, voucher_applied: null, discount_amount: 0 }))
+    setCurrentTransaction(prev => ({ ...prev, voucher_applied: null, discount_amount: 0, discount_type: 'regular' }))
+  }
+
+  // Apply SC/PWD discount per RA 9994 / RA 10754.
+  // VAT-registered: strip 12% VAT first, then 20% discount on the net amount (and that share is VAT-exempt).
+  // NON-VAT: 20% discount applied directly on the gross.
+  const handleApplyScPwdDiscount = () => {
+    if (!scPwdIdInput.trim() || !scPwdNameInput.trim()) {
+      setAlertModal({ show: true, title: 'Missing Details', message: 'SC/PWD ID Number and Name are both required.', type: 'warning' })
+      return
+    }
+    if (currentTransaction.voucher_applied) {
+      setAlertModal({ show: true, title: 'Voucher Active', message: 'Remove the applied voucher before applying an SC/PWD discount.', type: 'warning' })
+      return
+    }
+    const gross = Number(currentTransaction.subtotal || 0)
+    if (gross <= 0) {
+      setAlertModal({ show: true, title: 'No Items', message: 'Add items to the cart before applying an SC/PWD discount.', type: 'warning' })
+      return
+    }
+    const isVat = Boolean(currentBranch?.vat_registered)
+    const base = isVat ? gross / 1.12 : gross
+    const discount = Math.round(base * 0.20 * 100) / 100
+    setCurrentTransaction(prev => ({
+      ...prev,
+      discount_amount: discount,
+      discount_type: scPwdType,
+      sc_pwd_id_number: scPwdIdInput.trim(),
+      sc_pwd_name: scPwdNameInput.trim(),
+    }))
+    setShowScPwdPicker(false)
+    setScPwdIdInput('')
+    setScPwdNameInput('')
+    setAlertModal({
+      show: true,
+      title: 'Discount Applied',
+      message: `${scPwdType === 'senior' ? 'Senior Citizen' : 'PWD'} discount of ₱${discount.toFixed(2)} applied.`,
+      type: 'success',
+    })
+  }
+
+  const handleRemoveScPwdDiscount = () => {
+    setCurrentTransaction(prev => ({
+      ...prev,
+      discount_amount: 0,
+      discount_type: 'regular',
+      sc_pwd_id_number: '',
+      sc_pwd_name: '',
+    }))
   }
 
   // Show loading if user is not loaded yet
@@ -3214,7 +3280,8 @@ const POS = () => {
                   <div className="flex justify-between text-green-400">
                     <div className="flex items-center">
                       <span>
-                        Discount
+                        {currentTransaction.discount_type === 'senior' ? 'SC Discount' :
+                          currentTransaction.discount_type === 'pwd' ? 'PWD Discount' : 'Discount'}
                         {currentBooking && currentTransaction.voucher_applied && (
                           <span className="text-blue-400 text-xs ml-1">(from booking)</span>
                         )}
@@ -3229,6 +3296,15 @@ const POS = () => {
                           <X className="w-3 h-3" />
                         </button>
                       )}
+                      {(currentTransaction.discount_type === 'senior' || currentTransaction.discount_type === 'pwd') && (
+                        <button
+                          onClick={handleRemoveScPwdDiscount}
+                          className="ml-2 bg-red-500/10 hover:bg-red-500/20 text-red-400 p-0.5 rounded transition-colors"
+                          title="Remove SC/PWD Discount"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      )}
                     </div>
                     <span>-₱{currentTransaction.discount_amount.toFixed(2)}</span>
                   </div>
@@ -3236,13 +3312,74 @@ const POS = () => {
                   <div>
                     {!currentTransaction.voucher_applied && (
                       <div className="space-y-1.5">
-                        <button
-                          onClick={() => setShowVoucherPicker(!showVoucherPicker)}
-                          className="flex items-center gap-1.5 text-xs text-[var(--color-primary)] hover:text-[var(--color-accent)] transition-colors"
-                        >
-                          <Ticket className="w-3.5 h-3.5" />
-                          {showVoucherPicker ? 'Hide Vouchers' : 'Apply Voucher'}
-                        </button>
+                        <div className="flex items-center gap-3">
+                          <button
+                            onClick={() => { setShowVoucherPicker(!showVoucherPicker); setShowScPwdPicker(false) }}
+                            className="flex items-center gap-1.5 text-xs text-[var(--color-primary)] hover:text-[var(--color-accent)] transition-colors"
+                          >
+                            <Ticket className="w-3.5 h-3.5" />
+                            {showVoucherPicker ? 'Hide Vouchers' : 'Apply Voucher'}
+                          </button>
+                          <button
+                            onClick={() => { setShowScPwdPicker(!showScPwdPicker); setShowVoucherPicker(false) }}
+                            className="flex items-center gap-1.5 text-xs text-[var(--color-primary)] hover:text-[var(--color-accent)] transition-colors"
+                          >
+                            <Receipt className="w-3.5 h-3.5" />
+                            {showScPwdPicker ? 'Hide SC/PWD' : 'SC / PWD'}
+                          </button>
+                        </div>
+                        {showScPwdPicker && (
+                          <div className="space-y-2 p-2.5 bg-[#1A1A1A] rounded-lg border border-[#444444]">
+                            <div className="flex gap-2 text-xs">
+                              <label className="flex items-center gap-1 text-gray-300">
+                                <input
+                                  type="radio"
+                                  name="scPwdType"
+                                  value="senior"
+                                  checked={scPwdType === 'senior'}
+                                  onChange={() => setScPwdType('senior')}
+                                  className="text-[var(--color-primary)]"
+                                />
+                                Senior
+                              </label>
+                              <label className="flex items-center gap-1 text-gray-300">
+                                <input
+                                  type="radio"
+                                  name="scPwdType"
+                                  value="pwd"
+                                  checked={scPwdType === 'pwd'}
+                                  onChange={() => setScPwdType('pwd')}
+                                  className="text-[var(--color-primary)]"
+                                />
+                                PWD
+                              </label>
+                            </div>
+                            <input
+                              type="text"
+                              placeholder="ID Number"
+                              value={scPwdIdInput}
+                              onChange={(e) => setScPwdIdInput(e.target.value)}
+                              className="w-full h-7 px-2 text-xs bg-[#0F0F0F] border border-[#555555] rounded text-white placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-[var(--color-primary)]"
+                            />
+                            <input
+                              type="text"
+                              placeholder="Full Name (as on ID)"
+                              value={scPwdNameInput}
+                              onChange={(e) => setScPwdNameInput(e.target.value)}
+                              className="w-full h-7 px-2 text-xs bg-[#0F0F0F] border border-[#555555] rounded text-white placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-[var(--color-primary)]"
+                            />
+                            <button
+                              onClick={handleApplyScPwdDiscount}
+                              disabled={!scPwdIdInput.trim() || !scPwdNameInput.trim()}
+                              className="w-full px-2.5 h-7 bg-[var(--color-primary)] text-white text-xs rounded hover:bg-[var(--color-accent)] disabled:opacity-50 transition-colors font-medium"
+                            >
+                              Apply 20% Discount
+                            </button>
+                            <p className="text-[10px] text-gray-500 leading-tight">
+                              RA 9994 / RA 10754 — VAT is stripped before the 20% discount when the branch is VAT-registered.
+                            </p>
+                          </div>
+                        )}
                         {showVoucherPicker && (
                           <div className="space-y-2 p-2.5 bg-[#1A1A1A] rounded-lg border border-[#444444]">
                             {/* Manual code input */}

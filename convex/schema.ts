@@ -64,6 +64,23 @@ export default defineSchema({
     suspended_at: v.optional(v.number()),
     suspended_by: v.optional(v.id("users")),
 
+    // BIR Compliance fields (Philippines POS receipt requirements)
+    business_name: v.optional(v.string()),                    // BIR-registered name (vs. brand/trade name)
+    business_style: v.optional(v.string()),                   // Trade/style as registered with BIR
+    registered_address: v.optional(v.string()),               // BIR-registered address
+    tin: v.optional(v.string()),                              // e.g. "123-456-789-00000"
+    vat_registered: v.optional(v.boolean()),                  // true => VAT (12%), false => NON-VAT
+    ptu_number: v.optional(v.string()),                       // Permit to Use
+    ptu_date_issued: v.optional(v.string()),                  // "YYYY-MM-DD"
+    min_number: v.optional(v.string()),                       // Machine Identification Number
+    pos_serial_number: v.optional(v.string()),                // POS hardware serial
+    accreditation_number: v.optional(v.string()),             // BIR POS accreditation
+    software_provider_name: v.optional(v.string()),
+    software_provider_tin: v.optional(v.string()),
+    software_provider_accreditation: v.optional(v.string()),
+    software_provider_date_issued: v.optional(v.string()),
+    or_branch_code: v.optional(v.string()),                   // Short code for OR series, e.g. "MNL"
+
     createdAt: v.number(),
     updatedAt: v.number(),
   })
@@ -938,6 +955,48 @@ export default defineSchema({
     receipt_number: v.string(),
     processed_by: v.id("users"), // Staff member who processed the transaction
     booking_id: v.optional(v.id("bookings")), // Link to original booking (for POS booking payments)
+
+    // BIR Compliance — customer block
+    customer_tin: v.optional(v.string()),
+    customer_business_style: v.optional(v.string()),
+
+    // BIR Compliance — VAT breakdown (populated when branch is VAT-registered)
+    vatable_sales: v.optional(v.number()),
+    vat_exempt_sales: v.optional(v.number()),
+    zero_rated_sales: v.optional(v.number()),
+    vat_amount: v.optional(v.number()),
+
+    // BIR Compliance — SC/PWD discount (RA 9994 / RA 10754)
+    discount_type: v.optional(v.union(
+      v.literal("regular"),
+      v.literal("senior"),
+      v.literal("pwd"),
+      v.literal("employee"),
+      v.literal("voucher"),
+      v.literal("promo")
+    )),
+    sc_pwd_id_number: v.optional(v.string()),
+    sc_pwd_name: v.optional(v.string()),
+
+    // BIR receipt snapshot — frozen at issuance so receipts survive branch edits
+    or_branch_code_snapshot: v.optional(v.string()),
+    business_name_snapshot: v.optional(v.string()),
+    business_style_snapshot: v.optional(v.string()),
+    business_address_snapshot: v.optional(v.string()),
+    business_tin_snapshot: v.optional(v.string()),
+    vat_registered_snapshot: v.optional(v.boolean()),
+    ptu_number_snapshot: v.optional(v.string()),
+    ptu_date_snapshot: v.optional(v.string()),
+    min_number_snapshot: v.optional(v.string()),
+    pos_serial_snapshot: v.optional(v.string()),
+    accreditation_snapshot: v.optional(v.string()),
+    software_provider_snapshot: v.optional(v.object({
+      name: v.optional(v.string()),
+      tin: v.optional(v.string()),
+      accreditation: v.optional(v.string()),
+      date_issued: v.optional(v.string()),
+    })),
+
     createdAt: v.number(),
     updatedAt: v.number(),
   })
@@ -2487,12 +2546,14 @@ export default defineSchema({
 
   // Counter for sequential receipt numbering (NFR11 compliance)
   receiptCounters: defineTable({
-    counter_type: v.string(),  // e.g., "official_receipt"
-    year: v.number(),          // Year for reset
-    last_number: v.number(),   // Last used number
+    counter_type: v.string(),                  // "official_receipt" (royalty) or "pos_or" (POS)
+    year: v.number(),                          // Year for reset
+    branch_id: v.optional(v.id("branches")),   // null for global counters (legacy royalty)
+    last_number: v.number(),
     updated_at: v.number(),
   })
-    .index("by_type_year", ["counter_type", "year"]),
+    .index("by_type_year", ["counter_type", "year"])
+    .index("by_type_year_branch", ["counter_type", "year", "branch_id"]),
 
   // ============================================================================
   // SUPER ADMIN FINANCIAL TABLES
