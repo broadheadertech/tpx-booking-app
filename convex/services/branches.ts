@@ -125,6 +125,22 @@ export const createBranch = mutation({
     booking_start_hour: v.optional(v.number()),
     booking_end_hour: v.optional(v.number()),
     slug: v.optional(v.string()),
+    // BIR Compliance fields (optional at creation; can be filled later via edit)
+    business_name: v.optional(v.string()),
+    business_style: v.optional(v.string()),
+    registered_address: v.optional(v.string()),
+    tin: v.optional(v.string()),
+    vat_registered: v.optional(v.boolean()),
+    ptu_number: v.optional(v.string()),
+    ptu_date_issued: v.optional(v.string()),
+    min_number: v.optional(v.string()),
+    pos_serial_number: v.optional(v.string()),
+    accreditation_number: v.optional(v.string()),
+    software_provider_name: v.optional(v.string()),
+    software_provider_tin: v.optional(v.string()),
+    software_provider_accreditation: v.optional(v.string()),
+    software_provider_date_issued: v.optional(v.string()),
+    or_branch_code: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     // Validate inputs first
@@ -171,6 +187,22 @@ export const createBranch = mutation({
         booking_start_hour: args.booking_start_hour ?? 10, // Default 10am
         booking_end_hour: args.booking_end_hour ?? 20, // Default 8pm (20:00)
         slug: args.slug,
+        // BIR Compliance — optional at creation
+        business_name: args.business_name,
+        business_style: args.business_style,
+        registered_address: args.registered_address,
+        tin: args.tin,
+        vat_registered: args.vat_registered,
+        ptu_number: args.ptu_number,
+        ptu_date_issued: args.ptu_date_issued,
+        min_number: args.min_number,
+        pos_serial_number: args.pos_serial_number,
+        accreditation_number: args.accreditation_number,
+        software_provider_name: args.software_provider_name,
+        software_provider_tin: args.software_provider_tin,
+        software_provider_accreditation: args.software_provider_accreditation,
+        software_provider_date_issued: args.software_provider_date_issued,
+        or_branch_code: args.or_branch_code,
         createdAt: Date.now(),
         updatedAt: Date.now(),
       });
@@ -567,6 +599,9 @@ export const updateBranch = mutation({
     booking_fee_type: v.optional(v.string()),
     late_fee_type: v.optional(v.string()),
     late_fee_grace_period: v.optional(v.number()),
+    enable_transfer_fee: v.optional(v.boolean()),
+    transfer_fee_amount: v.optional(v.number()),
+    transfer_fee_type: v.optional(v.string()),
     // Branch Profile fields
     slug: v.optional(v.string()),
     description: v.optional(v.string()),
@@ -582,6 +617,22 @@ export const updateBranch = mutation({
         website: v.optional(v.string()),
       })
     ),
+    // BIR Compliance fields (Philippines POS receipt requirements)
+    business_name: v.optional(v.string()),
+    business_style: v.optional(v.string()),
+    registered_address: v.optional(v.string()),
+    tin: v.optional(v.string()),
+    vat_registered: v.optional(v.boolean()),
+    ptu_number: v.optional(v.string()),
+    ptu_date_issued: v.optional(v.string()),
+    min_number: v.optional(v.string()),
+    pos_serial_number: v.optional(v.string()),
+    accreditation_number: v.optional(v.string()),
+    software_provider_name: v.optional(v.string()),
+    software_provider_tin: v.optional(v.string()),
+    software_provider_accreditation: v.optional(v.string()),
+    software_provider_date_issued: v.optional(v.string()),
+    or_branch_code: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const { id, ...updates } = args;

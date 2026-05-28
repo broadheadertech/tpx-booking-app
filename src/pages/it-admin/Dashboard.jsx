@@ -31,6 +31,10 @@ import ShopBannerManagement from '../../components/admin/ShopBannerManagement'
 import ShopConfigPanel from '../../components/admin/ShopConfigPanel'
 // IT Admin specific components
 import SubscriptionManager from '../../components/it-admin/SubscriptionManager'
+import SubscriptionPackagesManager from '../../components/it-admin/SubscriptionPackagesManager'
+import BranchFeatureAssignment from '../../components/it-admin/BranchFeatureAssignment'
+import CustomerSubscriptionsManager from '../../components/admin/CustomerSubscriptionsManager'
+import BranchBookingsOverview from '../../components/admin/BranchBookingsOverview'
 import LicenseManager from '../../components/it-admin/LicenseManager'
 import ErrorMonitorDashboard from '../../components/it-admin/ErrorMonitorDashboard'
 import SecurityMonitorDashboard from '../../components/it-admin/SecurityMonitorDashboard'
@@ -240,6 +244,10 @@ function ITAdminDashboard() {
         return <WalletOverviewDashboard />
       case 'customer_analytics':
         return <BranchCustomerAnalytics branchId={user?.branch_id} />
+      case 'customer_subscriptions':
+        return <CustomerSubscriptionsManager />
+      case 'branch_bookings':
+        return <BranchBookingsOverview />
       case 'delivery_orders':
         return <DeliveryOrdersManagement />
       case 'damage_claims':
@@ -251,6 +259,10 @@ function ITAdminDashboard() {
       // IT Admin Platform tabs
       case 'subscriptions':
         return <SubscriptionManager />
+      case 'packages':
+        return <SubscriptionPackagesManager />
+      case 'branch_features':
+        return <BranchFeatureAssignment />
       case 'licenses':
         return <LicenseManager />
       case 'error_monitor':
@@ -407,6 +419,7 @@ function ITAdminDashboard() {
     { id: 'branches', label: 'Branches', icon: 'building' },
     { id: 'users', label: 'Users', icon: 'users' },
     // Commerce category
+    { id: 'branch_bookings', label: 'Bookings', icon: 'calendar', category: 'Commerce' },
     { id: 'default_services', label: 'Services', icon: 'scissors', category: 'Commerce' },
     { id: 'catalog', label: 'Catalog', icon: 'package', category: 'Commerce' },
     { id: 'vouchers', label: 'Vouchers', icon: 'ticket', category: 'Commerce' },
@@ -425,6 +438,7 @@ function ITAdminDashboard() {
     { id: 'branding', label: 'Branding', icon: 'palette', category: 'Marketing' },
     { id: 'emails', label: 'Emails', icon: 'mail', category: 'Marketing' },
     { id: 'customer_analytics', label: 'Customers', icon: 'target', category: 'Marketing' },
+    { id: 'customer_subscriptions', label: 'Memberships', icon: 'crown', category: 'Marketing' },
     // Configs category
     { id: 'shop_config', label: 'Shop Config', icon: 'shopping-cart', category: 'Configs' },
     { id: 'wallet', label: 'Wallet Config', icon: 'wallet', category: 'Configs' },
@@ -434,6 +448,8 @@ function ITAdminDashboard() {
     { id: 'audit_trail', label: 'Audit Trail', icon: 'history', category: 'Reports' },
     // Platform category (IT Admin exclusive)
     { id: 'subscriptions', label: 'Subscriptions', icon: 'credit-card', category: 'Platform' },
+    { id: 'packages', label: 'Packages', icon: 'package', category: 'Platform' },
+    { id: 'branch_features', label: 'Branch Features', icon: 'sliders', category: 'Platform' },
     { id: 'licenses', label: 'Licenses', icon: 'key', category: 'Platform' },
     { id: 'error_monitor', label: 'Errors', icon: 'bug', category: 'Platform' },
     { id: 'security_monitor', label: 'Security', icon: 'shield-alert', category: 'Platform' },

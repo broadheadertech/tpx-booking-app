@@ -12,6 +12,9 @@ const BookingSettingsModal = ({ isOpen, onClose, branchId }) => {
         booking_fee_amount: 0,
         enable_late_fee: false,
         late_fee_amount: 0,
+        enable_transfer_fee: false,
+        transfer_fee_amount: 0,
+        transfer_fee_type: 'fixed',
         booking_start_hour: 10,
         booking_end_hour: 20,
         // Convenience fee settings
@@ -56,6 +59,9 @@ const BookingSettingsModal = ({ isOpen, onClose, branchId }) => {
                 late_fee_amount: branch.late_fee_amount || 0,
                 late_fee_type: branch.late_fee_type || 'fixed',
                 late_fee_grace_period: branch.late_fee_grace_period || 0,
+                enable_transfer_fee: branch.enable_transfer_fee || false,
+                transfer_fee_amount: branch.transfer_fee_amount || 0,
+                transfer_fee_type: branch.transfer_fee_type || 'fixed',
                 booking_start_hour: branch.booking_start_hour || 10,
                 booking_end_hour: branch.booking_end_hour || 20
             }))
@@ -114,6 +120,9 @@ const BookingSettingsModal = ({ isOpen, onClose, branchId }) => {
                 late_fee_amount: parseFloat(formData.late_fee_amount) || 0,
                 late_fee_type: formData.late_fee_type,
                 late_fee_grace_period: parseInt(formData.late_fee_grace_period) || 0,
+                enable_transfer_fee: formData.enable_transfer_fee,
+                transfer_fee_amount: parseFloat(formData.transfer_fee_amount) || 0,
+                transfer_fee_type: formData.transfer_fee_type,
                 booking_start_hour: parseInt(formData.booking_start_hour) || 10,
                 booking_end_hour: parseInt(formData.booking_end_hour) || 20
             })
@@ -361,6 +370,74 @@ const BookingSettingsModal = ({ isOpen, onClose, branchId }) => {
                                             className="w-full px-4 py-2.5 bg-[#0A0A0A] border border-[#333333] rounded-xl text-white placeholder-gray-600 focus:outline-none focus:border-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-primary)] transition-all"
                                         />
                                         <p className="text-[10px] text-gray-500 mt-1">No fee charged if within this time</p>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Transfer Fee Section — charged when a no-show paid online booking is rescheduled */}
+                        <div className="bg-[#0F0F0F]/50 rounded-xl p-5 border border-[#333333]/50 space-y-4">
+                            <div className="flex items-center justify-between">
+                                <div>
+                                    <h4 className="text-base font-medium text-white">Transfer Fee (No-Show)</h4>
+                                    <p className="text-xs text-gray-400 mt-1">Charge when a no-show paid online booking is rescheduled. Waivable when shop is at fault.</p>
+                                </div>
+                                <div className="relative inline-block w-12 mr-2 align-middle select-none transition duration-200 ease-in">
+                                    <input
+                                        type="checkbox"
+                                        name="enable_transfer_fee"
+                                        id="enable_transfer_fee"
+                                        checked={formData.enable_transfer_fee}
+                                        onChange={handleChange}
+                                        className="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 appearance-none cursor-pointer duration-300 ease-in-out"
+                                        style={{
+                                            right: formData.enable_transfer_fee ? '0' : '50%',
+                                            borderColor: formData.enable_transfer_fee ? 'var(--color-primary)' : '#4B5563'
+                                        }}
+                                    />
+                                    <label
+                                        htmlFor="enable_transfer_fee"
+                                        className={`toggle-label block overflow-hidden h-6 rounded-full cursor-pointer transition-colors duration-300 ${formData.enable_transfer_fee ? 'bg-[var(--color-primary)]' : 'bg-gray-700'}`}
+                                    ></label>
+                                </div>
+                            </div>
+
+                            {formData.enable_transfer_fee && (
+                                <div className="pt-4 border-t border-[#333333]/50 animate-in fade-in slide-in-from-top-2 duration-300 space-y-4">
+                                    <div>
+                                        <label className="block text-xs font-medium text-gray-400 mb-1.5">Transfer Fee Type</label>
+                                        <select
+                                            name="transfer_fee_type"
+                                            value={formData.transfer_fee_type}
+                                            onChange={handleChange}
+                                            className="w-full px-4 py-2.5 bg-[#0A0A0A] border border-[#333333] rounded-xl text-white focus:outline-none focus:border-[var(--color-primary)] transition-all text-sm"
+                                        >
+                                            <option value="fixed">Fixed Amount</option>
+                                            <option value="percent">Percent of Booking Price</option>
+                                        </select>
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-xs font-medium text-gray-400 mb-1.5">
+                                            {formData.transfer_fee_type === 'fixed' ? 'Fee Amount' : 'Percent (%)'}
+                                        </label>
+                                        <div className="relative">
+                                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                                <span className="text-gray-500 sm:text-sm">{formData.transfer_fee_type === 'fixed' ? '₱' : '%'}</span>
+                                            </div>
+                                            <input
+                                                type="number"
+                                                name="transfer_fee_amount"
+                                                value={formData.transfer_fee_amount}
+                                                onChange={handleChange}
+                                                placeholder="0"
+                                                step="0.01"
+                                                min="0"
+                                                className="w-full pl-8 pr-4 py-2.5 bg-[#0A0A0A] border border-[#333333] rounded-xl text-white placeholder-gray-600 focus:outline-none focus:border-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-primary)] transition-all"
+                                                required={formData.enable_transfer_fee}
+                                            />
+                                        </div>
+                                        <p className="text-[10px] text-gray-500 mt-1">Only applies to paid online bookings (PayMongo / wallet). Cash bookings are exempt.</p>
                                     </div>
                                 </div>
                             )}

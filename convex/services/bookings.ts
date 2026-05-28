@@ -2525,3 +2525,429 @@ export const getCustomerLastVisit = query({
     return result;
   },
 });
+
+// ============================================================================
+// NO-SHOW + TRANSFER (reschedule of paid online bookings)
+// ============================================================================
+// Only PAID bookings via online payment (paymongo / wallet / combo) qualify —
+// cash payments are settled in-person so a no-show transfer fee doesn't apply.
+// Staff can mark as no-show, then transfer the booking to a new date/time.
+// The new booking gets a transfer_fee (per-branch config) unless explicitly
+// waived with a reason ("shop fault").
+
+const ONLINE_PAYMENT_METHODS = new Set(["paymongo", "wallet", "combo"]);
+
+const isOnlinePaidBooking = (booking: any): boolean => {
+  if (booking.payment_status !== "paid") return false;
+  const m = (booking.payment_method || "").toLowerCase();
+  if (!m) return false;
+  return ONLINE_PAYMENT_METHODS.has(m);
+};
+
+/**
+ * Compute the transfer fee that would apply for a booking, given the branch
+ * config. Returns 0 if transfer fees are disabled.
+ */
+export const previewTransferFee = query({
+  args: { booking_id: v.id("bookings") },
+  handler: async (ctx, args) => {
+    const booking = await ctx.db.get(args.booking_id);
+    if (!booking) return { eligible: false, reason: "Booking not found", fee: 0 };
+
+    if (!isOnlinePaidBooking(booking)) {
+      return {
+        eligible: false,
+        reason: "Transfer fee only applies to paid online bookings (PayMongo / wallet)",
+        fee: 0,
+      };
+    }
+
+    const branch = await ctx.db.get(booking.branch_id);
+    if (!branch?.enable_transfer_fee) {
+      return { eligible: true, fee: 0, fee_enabled: false };
+    }
+    const type = branch.transfer_fee_type || "fixed";
+    const amount = branch.transfer_fee_amount || 0;
+    const fee =
+      type === "percent"
+        ? Math.round(((booking.price || 0) * amount) / 100)
+        : amount;
+    return { eligible: true, fee, fee_enabled: true, fee_type: type, fee_amount: amount };
+  },
+});
+
+/**
+ * Mark a booking as no-show. Only valid for paid online bookings whose
+ * appointment time has passed and that are still in booked/confirmed status.
+ */
+export const markBookingAsNoShow = mutation({
+  args: {
+    booking_id: v.id("bookings"),
+    marked_by: v.id("users"),
+    reason: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const booking = await ctx.db.get(args.booking_id);
+    if (!booking) throwUserError(ERROR_CODES.BOOKING_NOT_FOUND);
+
+    if (!isOnlinePaidBooking(booking)) {
+      throw new Error(
+        "Only paid online bookings (PayMongo / wallet) can be marked as no-show."
+      );
+    }
+    if (!["booked", "confirmed"].includes(booking.status)) {
+      throw new Error(`Cannot mark a ${booking.status} booking as no-show.`);
+    }
+
+    const marker = await ctx.db.get(args.marked_by);
+    const now = Date.now();
+    await ctx.db.patch(args.booking_id, {
+      status: "no_show" as const,
+      no_show_marked_at: now,
+      no_show_marked_by: args.marked_by,
+      no_show_reason: args.reason,
+      updatedAt: now,
+    });
+
+    await logAudit(ctx, {
+      user_id: args.marked_by as string,
+      user_name: marker?.name,
+      user_role: marker?.role,
+      branch_id: booking.branch_id as string,
+      category: "booking",
+      action: "booking.marked_no_show",
+      description: `Marked booking #${booking.booking_code} (${booking.customer_name || "Customer"} on ${booking.date} ${booking.time}) as no-show${args.reason ? ` — ${args.reason}` : ""}`,
+      target_type: "booking",
+      target_id: args.booking_id as string,
+      metadata: {
+        booking_code: booking.booking_code,
+        previous_status: booking.status,
+        reason: args.reason,
+      },
+    });
+
+    return { success: true };
+  },
+});
+
+// ============================================================================
+// ADMIN OVERVIEW — per-branch booking aggregates (must always be branch-scoped
+// to keep query scope bounded and avoid pulling all bookings system-wide).
+// ============================================================================
+
+/**
+ * Lightweight counts for one branch over a date range. Designed to never
+ * page the entire bookings table — always reads via by_branch index and
+ * caps at the supplied window. The admin overview UI uses this for the
+ * summary card row.
+ */
+export const getBranchBookingsSummary = query({
+  args: {
+    branch_id: v.id("branches"),
+    start_date: v.optional(v.string()), // "YYYY-MM-DD"
+    end_date: v.optional(v.string()),   // "YYYY-MM-DD"
+  },
+  handler: async (ctx, args) => {
+    // Build a date-window from args (default: last 30 days)
+    const now = new Date();
+    const defaultEnd = now.toISOString().slice(0, 10);
+    const defaultStart = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000)
+      .toISOString()
+      .slice(0, 10);
+    const start = args.start_date || defaultStart;
+    const end = args.end_date || defaultEnd;
+
+    // Pull this branch's bookings in the window. by_branch_date index keeps
+    // the scan bounded to a single branch's records.
+    const rows = await ctx.db
+      .query("bookings")
+      .withIndex("by_branch_date", (q) =>
+        q.eq("branch_id", args.branch_id).gte("date", start).lte("date", end)
+      )
+      .collect();
+
+    const todayStr = defaultEnd;
+    const weekAgoStr = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
+      .toISOString()
+      .slice(0, 10);
+
+    const byStatus: Record<string, number> = {
+      pending: 0,
+      booked: 0,
+      confirmed: 0,
+      completed: 0,
+      cancelled: 0,
+      no_show: 0,
+    };
+    const byPayment: Record<string, number> = {
+      unpaid: 0,
+      paid: 0,
+      partial: 0,
+      refunded: 0,
+    };
+    let todayCount = 0;
+    let weekCount = 0;
+    let revenueInWindow = 0;
+    let paidOnlineCount = 0;
+    let cashCount = 0;
+
+    for (const b of rows) {
+      byStatus[b.status] = (byStatus[b.status] || 0) + 1;
+      if (b.payment_status) byPayment[b.payment_status] = (byPayment[b.payment_status] || 0) + 1;
+      if (b.date === todayStr) todayCount++;
+      if (b.date >= weekAgoStr) weekCount++;
+      if (b.payment_status === "paid") {
+        revenueInWindow += b.final_price || b.price || 0;
+        const m = (b.payment_method || "").toLowerCase();
+        if (m === "paymongo" || m === "wallet" || m === "combo") paidOnlineCount++;
+        else if (m === "cash") cashCount++;
+      }
+    }
+
+    return {
+      branch_id: args.branch_id,
+      window: { start, end },
+      total: rows.length,
+      today: todayCount,
+      last_7_days: weekCount,
+      by_status: byStatus,
+      by_payment: byPayment,
+      revenue_in_window: revenueInWindow,
+      paid_online_count: paidOnlineCount,
+      cash_count: cashCount,
+    };
+  },
+});
+
+/**
+ * Paginated bookings for one branch with optional date/status filters.
+ * Always branch-scoped; refuses to run without a branch_id so the admin UI
+ * forces a branch selection before any data is fetched.
+ */
+export const getBookingsByBranchFiltered = query({
+  args: {
+    branch_id: v.id("branches"),
+    start_date: v.optional(v.string()),
+    end_date: v.optional(v.string()),
+    status: v.optional(v.string()),
+    payment_status: v.optional(v.string()),
+    limit: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    const limit = Math.min(args.limit || 50, 200);
+
+    // Use by_branch_date when a date range is supplied — far more efficient
+    // for branches with high booking volume.
+    let rowsQuery;
+    if (args.start_date || args.end_date) {
+      const start = args.start_date || "0000-00-00";
+      const end = args.end_date || "9999-12-31";
+      rowsQuery = ctx.db
+        .query("bookings")
+        .withIndex("by_branch_date", (q) =>
+          q.eq("branch_id", args.branch_id).gte("date", start).lte("date", end)
+        );
+    } else {
+      rowsQuery = ctx.db
+        .query("bookings")
+        .withIndex("by_branch", (q) => q.eq("branch_id", args.branch_id))
+        .order("desc");
+    }
+
+    let rows = await rowsQuery.take(limit * 4); // small buffer for filtering
+
+    if (args.status) rows = rows.filter((r) => r.status === args.status);
+    if (args.payment_status) rows = rows.filter((r) => r.payment_status === args.payment_status);
+
+    // Sort newest first by date+time
+    rows.sort((a, b) => {
+      const da = (a.date || "") + (a.time || "");
+      const db = (b.date || "") + (b.time || "");
+      return db.localeCompare(da);
+    });
+
+    const sliced = rows.slice(0, limit);
+
+    // Enrich just what the admin overview needs (lighter than getBookingsByBranch)
+    const enriched = await Promise.all(
+      sliced.map(async (b) => {
+        const [customer, service, barber] = await Promise.all([
+          b.customer ? ctx.db.get(b.customer) : null,
+          b.service ? ctx.db.get(b.service) : null,
+          b.barber ? ctx.db.get(b.barber) : null,
+        ]);
+        return {
+          _id: b._id,
+          booking_code: b.booking_code,
+          date: b.date,
+          time: b.time,
+          status: b.status,
+          payment_status: b.payment_status,
+          payment_method: b.payment_method,
+          price: b.price,
+          final_price: b.final_price,
+          customer_name: b.customer_name || customer?.username || customer?.nickname || "—",
+          customer_email: b.customer_email || customer?.email || "",
+          service_name: service?.name || "—",
+          barber_name: barber?.full_name || "Not assigned",
+        };
+      })
+    );
+
+    return {
+      bookings: enriched,
+      returned: sliced.length,
+      truncated: rows.length > limit,
+    };
+  },
+});
+
+/**
+ * Transfer (reschedule) a no-show booking to a new date/time. Creates a NEW
+ * booking that inherits the customer/service/payment of the original and
+ * carries the transfer fee. The original is marked transferred (status stays
+ * "no_show" for accounting traceability) and the two are linked.
+ */
+export const transferNoShowBooking = mutation({
+  args: {
+    booking_id: v.id("bookings"),
+    new_date: v.string(),
+    new_time: v.string(),
+    new_barber: v.optional(v.id("barbers")),
+    transferred_by: v.id("users"),
+    waive_fee: v.optional(v.boolean()),
+    waive_reason: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const original = await ctx.db.get(args.booking_id);
+    if (!original) throwUserError(ERROR_CODES.BOOKING_NOT_FOUND);
+
+    if (original.status !== "no_show") {
+      throw new Error("Only no-show bookings can be transferred.");
+    }
+    if (original.transferred_to_booking_id) {
+      throw new Error("This booking has already been transferred.");
+    }
+    if (!isOnlinePaidBooking(original)) {
+      throw new Error(
+        "Transfer is only allowed for paid online bookings (PayMongo / wallet)."
+      );
+    }
+    if (args.waive_fee && !args.waive_reason?.trim()) {
+      throw new Error("A reason is required when waiving the transfer fee.");
+    }
+
+    const transferredBy = await ctx.db.get(args.transferred_by);
+
+    // Compute fee using branch config (mirror previewTransferFee)
+    const branch = await ctx.db.get(original.branch_id);
+    let fee = 0;
+    if (branch?.enable_transfer_fee && !args.waive_fee) {
+      const type = branch.transfer_fee_type || "fixed";
+      const amount = branch.transfer_fee_amount || 0;
+      fee =
+        type === "percent"
+          ? Math.round(((original.price || 0) * amount) / 100)
+          : amount;
+    }
+
+    const now = Date.now();
+
+    // Generate booking code for the new booking — append "-T" + counter
+    let newCode = `${original.booking_code}-T`;
+    let suffix = 1;
+    while (
+      await ctx.db
+        .query("bookings")
+        .withIndex("by_booking_code", (q) => q.eq("booking_code", newCode))
+        .first()
+    ) {
+      suffix++;
+      newCode = `${original.booking_code}-T${suffix}`;
+    }
+
+    const transferNote = `Transferred from booking #${original.booking_code} (no-show on ${original.date} ${original.time}).${
+      args.waive_fee
+        ? ` Transfer fee waived: ${args.waive_reason}.`
+        : fee > 0
+        ? ` Transfer fee: ₱${fee}.`
+        : ""
+    }`;
+
+    const newBookingId = await ctx.db.insert("bookings", {
+      booking_code: newCode,
+      branch_id: original.branch_id,
+      customer: original.customer,
+      customer_name: original.customer_name,
+      customer_phone: original.customer_phone,
+      customer_email: original.customer_email,
+      service: original.service,
+      barber: args.new_barber ?? original.barber,
+      date: args.new_date,
+      time: args.new_time,
+      status: "booked" as const,
+      // Payment carries over — the customer already paid for the original
+      payment_status: original.payment_status,
+      payment_method: original.payment_method,
+      paymongo_link_id: original.paymongo_link_id,
+      paymongo_payment_id: original.paymongo_payment_id,
+      price: original.price,
+      voucher_id: original.voucher_id,
+      discount_amount: original.discount_amount,
+      booking_fee: original.booking_fee,
+      final_price: original.final_price,
+      amount_paid: original.amount_paid,
+      notes: [original.notes, transferNote].filter(Boolean).join("\n"),
+      // Transfer linkage + fee
+      transferred_from_booking_id: args.booking_id,
+      transferred_at: now,
+      transfer_fee: fee,
+      transfer_fee_waived: args.waive_fee || undefined,
+      transfer_fee_waive_reason: args.waive_fee ? args.waive_reason : undefined,
+      createdAt: now,
+      updatedAt: now,
+    } as any);
+
+    // Update the original — link to the new booking, keep status no_show
+    await ctx.db.patch(args.booking_id, {
+      transferred_to_booking_id: newBookingId,
+      transferred_at: now,
+      updatedAt: now,
+      notes: [original.notes, `Rescheduled to ${args.new_date} ${args.new_time} (booking #${newCode}).`]
+        .filter(Boolean)
+        .join("\n"),
+    });
+
+    await logAudit(ctx, {
+      user_id: args.transferred_by as string,
+      user_name: transferredBy?.name,
+      user_role: transferredBy?.role,
+      branch_id: original.branch_id as string,
+      category: "booking",
+      action: args.waive_fee ? "booking.transfer_fee_waived" : "booking.transferred",
+      description: args.waive_fee
+        ? `Transferred booking #${original.booking_code} → #${newCode} with fee WAIVED (${args.waive_reason})`
+        : `Transferred booking #${original.booking_code} → #${newCode}${fee > 0 ? ` with ₱${fee} transfer fee` : ""}`,
+      target_type: "booking",
+      target_id: newBookingId as string,
+      metadata: {
+        original_booking_id: args.booking_id,
+        original_booking_code: original.booking_code,
+        new_booking_code: newCode,
+        new_date: args.new_date,
+        new_time: args.new_time,
+        transfer_fee: fee,
+        waived: !!args.waive_fee,
+        waive_reason: args.waive_reason,
+      },
+    });
+
+    return {
+      success: true,
+      new_booking_id: newBookingId,
+      new_booking_code: newCode,
+      transfer_fee: fee,
+      waived: !!args.waive_fee,
+    };
+  },
+});

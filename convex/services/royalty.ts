@@ -1,7 +1,8 @@
 import { v } from "convex/values";
-import { mutation, query, action } from "../_generated/server";
+import { mutation, query, action, internalAction } from "../_generated/server";
 import { Resend } from "resend";
-import { api } from "../_generated/api";
+import { api, internal } from "../_generated/api";
+import { getNextReceiptNumber } from "./receiptNumbering";
 
 const resend = new Resend(process.env.RESEND_API_KEY || "missing_key");
 
@@ -1014,44 +1015,6 @@ export const getRoyaltyPaymentById = query({
 // OFFICIAL RECEIPT FUNCTIONS (Story 5-5)
 // ============================================================================
 
-// Helper: Generate next sequential receipt number (NFR11 compliance)
-async function getNextReceiptNumber(ctx: any): Promise<string> {
-  const year = new Date().getFullYear();
-  const counterType = "official_receipt";
-
-  // Get or create counter for this year
-  const counter = await ctx.db
-    .query("receiptCounters")
-    .withIndex("by_type_year", (q: any) =>
-      q.eq("counter_type", counterType).eq("year", year)
-    )
-    .first();
-
-  let nextNumber: number;
-
-  if (counter) {
-    // Increment existing counter
-    nextNumber = counter.last_number + 1;
-    await ctx.db.patch(counter._id, {
-      last_number: nextNumber,
-      updated_at: Date.now(),
-    });
-  } else {
-    // Create new counter for this year (reset to 1)
-    nextNumber = 1;
-    await ctx.db.insert("receiptCounters", {
-      counter_type: counterType,
-      year: year,
-      last_number: nextNumber,
-      updated_at: Date.now(),
-    });
-  }
-
-  // Format: OR-2026-00001
-  const paddedNumber = String(nextNumber).padStart(5, "0");
-  return `OR-${year}-${paddedNumber}`;
-}
-
 // Mark royalty payment as paid and generate official receipt
 export const markRoyaltyAsPaid = mutation({
   args: {
@@ -1523,5 +1486,274 @@ export const waiveRoyaltyPayment = mutation({
       success: true,
       message: "Royalty payment has been waived",
     };
+  },
+});
+
+// ============================================================================
+// MONTHLY ROYALTY AUTOMATION
+// ============================================================================
+// Auto-generates royalty payments + emails each branch their statement + emails
+// super admins a consolidated summary. Used by:
+//   - Monthly cron (1st at 00:00 UTC = 08:00 PHT) → internal action
+//   - Manual "Run now" button in admin Royalty tab → public action
+// ============================================================================
+
+const runRoyaltyAutomationHandler = async (ctx: any) => {
+  const startedAt = Date.now();
+
+  // Find a system actor (first super_admin) to satisfy created_by/audit args.
+  // Falls back to the first admin if no super_admin exists.
+  const allUsers = await ctx.runQuery(api.services.auth.getAllUsers, {});
+  const superAdmins = (allUsers || []).filter((u: any) => u.role === "super_admin");
+  const itAdmins = (allUsers || []).filter((u: any) => u.role === "it_admin");
+  const fallbackAdmins = (allUsers || []).filter((u: any) => u.role === "admin");
+  const systemUser =
+    superAdmins[0] || itAdmins[0] || fallbackAdmins[0] || null;
+
+  if (!systemUser) {
+    return {
+      success: false,
+      message: "No admin user found to act as system actor",
+      created: 0,
+      emailed: 0,
+    };
+  }
+
+  // 1. Generate royalty for all configured branches (skips if already exists)
+  const generateResult = await ctx.runMutation(
+    api.services.royalty.generateAllRoyaltyPayments,
+    { created_by: systemUser._id }
+  );
+
+  // 2. Email each branch that has a "due" payment for the current period.
+  // We email all due payments, not just the newly created ones, so a re-run
+  // catches branches that were generated previously but not yet notified.
+  const allDue = await ctx.runQuery(api.services.royalty.getAllRoyaltyPayments, {
+    status: "due",
+  });
+
+  // Filter to current period (the one generateAllRoyaltyPayments just targeted)
+  // by taking only the most recent period per branch.
+  const latestByBranch = new Map<string, any>();
+  for (const p of allDue || []) {
+    const existing = latestByBranch.get(p.branch_id);
+    if (!existing || p.period_end > existing.period_end) {
+      latestByBranch.set(p.branch_id, p);
+    }
+  }
+  const currentPeriodDue = Array.from(latestByBranch.values());
+
+  let emailedCount = 0;
+  const emailFailures: Array<{ branch: string; error: string }> = [];
+
+  for (const payment of currentPeriodDue) {
+    try {
+      const r = await ctx.runAction(api.services.royalty.sendRoyaltyDueEmail, {
+        payment_id: payment._id,
+      });
+      if (r?.success) emailedCount++;
+      else emailFailures.push({ branch: payment.branch_name || "Unknown", error: r?.message || "send failed" });
+    } catch (e: any) {
+      emailFailures.push({ branch: payment.branch_name || "Unknown", error: e?.message || "exception" });
+    }
+  }
+
+  // 3. Build + send the admin summary
+  const summaryResult = await ctx.runAction(
+    api.services.royalty.sendRoyaltySummaryEmail,
+    {
+      period_label: currentPeriodDue[0]?.period_label || "current period",
+      branch_emailed_count: emailedCount,
+      branch_failure_count: emailFailures.length,
+    }
+  );
+
+  return {
+    success: true,
+    started_at: startedAt,
+    finished_at: Date.now(),
+    duration_ms: Date.now() - startedAt,
+    generated: generateResult.created,
+    skipped: generateResult.skipped,
+    emailed: emailedCount,
+    email_failures: emailFailures,
+    summary_sent_to: summaryResult?.recipients ?? 0,
+    system_actor: systemUser.email,
+  };
+};
+
+/**
+ * Internal action used by the monthly cron.
+ */
+export const runMonthlyRoyaltyAutomation = internalAction({
+  args: {},
+  handler: async (ctx) => runRoyaltyAutomationHandler(ctx),
+});
+
+/**
+ * Public action — admin can trigger the automation immediately
+ * (e.g. for testing or to re-run after a missed cron).
+ */
+export const runRoyaltyAutomationNow = action({
+  args: {},
+  handler: async (ctx) => runRoyaltyAutomationHandler(ctx),
+});
+
+/**
+ * Send a consolidated royalty summary to all super_admin users (and
+ * it_admin, if present). The branches themselves get their own detailed
+ * statements via sendRoyaltyDueEmail — admins only get the totals.
+ */
+export const sendRoyaltySummaryEmail = action({
+  args: {
+    period_label: v.string(),
+    branch_emailed_count: v.number(),
+    branch_failure_count: v.number(),
+  },
+  handler: async (ctx, args) => {
+    // Collect all currently-due royalty payments for the summary
+    const allDue = await ctx.runQuery(api.services.royalty.getAllRoyaltyPayments, {
+      status: "due",
+    });
+
+    // Keep only the most recent period per branch (matches the "current run")
+    const latestByBranch = new Map<string, any>();
+    for (const p of allDue || []) {
+      const existing = latestByBranch.get(p.branch_id);
+      if (!existing || p.period_end > existing.period_end) {
+        latestByBranch.set(p.branch_id, p);
+      }
+    }
+    const rows = Array.from(latestByBranch.values()).sort(
+      (a: any, b: any) => b.total_due - a.total_due
+    );
+
+    const totalDue = rows.reduce((s: number, r: any) => s + (r.total_due || 0), 0);
+    const totalRevenue = rows.reduce(
+      (s: number, r: any) => s + (r.gross_revenue || 0),
+      0
+    );
+
+    // Find all admin recipients
+    const allUsers = await ctx.runQuery(api.services.auth.getAllUsers, {});
+    const recipients = (allUsers || []).filter(
+      (u: any) =>
+        (u.role === "super_admin" || u.role === "it_admin") && !!u.email
+    );
+
+    if (recipients.length === 0) {
+      return { success: false, message: "No super_admin recipients found", recipients: 0 };
+    }
+
+    // Branding
+    const branding = await ctx.runQuery(api.services.branding.getGlobalBranding, {});
+    const primaryColor = branding?.primary_color || "#F97316";
+    const accentColor = branding?.accent_color || "#EA580C";
+    const brandName = branding?.display_name || "TipunoX";
+
+    const fmtPHP = (n: number) =>
+      (n || 0).toLocaleString("en-PH", { style: "currency", currency: "PHP" });
+
+    const rowsHtml = rows
+      .map(
+        (r: any) => `
+          <tr>
+            <td style="padding:10px 12px;border-bottom:1px solid #333;color:#fff;">${r.branch_name || "—"}</td>
+            <td style="padding:10px 12px;border-bottom:1px solid #333;color:#bbb;">${r.period_label}</td>
+            <td style="padding:10px 12px;border-bottom:1px solid #333;color:#bbb;text-align:right;">${fmtPHP(r.gross_revenue || 0)}</td>
+            <td style="padding:10px 12px;border-bottom:1px solid #333;color:${primaryColor};text-align:right;font-weight:600;">${fmtPHP(r.total_due || 0)}</td>
+          </tr>
+        `
+      )
+      .join("");
+
+    const subject = `Monthly Royalty Summary — ${args.period_label}`;
+    const html = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="UTF-8">
+        <title>${subject}</title>
+      </head>
+      <body style="margin:0;padding:0;background:#0A0A0A;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:#fff;line-height:1.5;">
+        <div style="max-width:680px;margin:0 auto;padding:32px 20px;">
+          <div style="text-align:center;margin-bottom:24px;">
+            <div style="font-size:24px;font-weight:700;color:${primaryColor};">${brandName}</div>
+            <div style="color:#888;font-size:13px;margin-top:4px;">Royalty Automation Summary</div>
+          </div>
+
+          <div style="background:linear-gradient(135deg,#1A1A1A 0%,#2A2A2A 100%);border:1px solid #333;border-radius:14px;padding:28px;">
+            <h2 style="margin:0 0 6px 0;color:${primaryColor};font-size:20px;">${args.period_label}</h2>
+            <p style="margin:0 0 20px 0;color:#aaa;font-size:14px;">
+              ${rows.length} branch${rows.length === 1 ? "" : "es"} • emails sent: ${args.branch_emailed_count}${
+                args.branch_failure_count
+                  ? ` • failed: <span style="color:#fca5a5;">${args.branch_failure_count}</span>`
+                  : ""
+              }
+            </p>
+
+            <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:24px;">
+              <div style="flex:1;min-width:180px;background:${primaryColor}15;border:1px solid ${primaryColor}55;border-radius:10px;padding:16px;">
+                <div style="color:#888;font-size:12px;">Total Royalty Due</div>
+                <div style="color:${primaryColor};font-size:24px;font-weight:700;margin-top:4px;">${fmtPHP(totalDue)}</div>
+              </div>
+              <div style="flex:1;min-width:180px;background:#22c55e15;border:1px solid #22c55e55;border-radius:10px;padding:16px;">
+                <div style="color:#888;font-size:12px;">Total Branch Revenue</div>
+                <div style="color:#22c55e;font-size:24px;font-weight:700;margin-top:4px;">${fmtPHP(totalRevenue)}</div>
+              </div>
+            </div>
+
+            <table style="width:100%;border-collapse:collapse;font-size:14px;">
+              <thead>
+                <tr style="background:#0A0A0A;">
+                  <th style="text-align:left;padding:10px 12px;border-bottom:1px solid #333;color:#888;font-size:12px;text-transform:uppercase;letter-spacing:0.5px;">Branch</th>
+                  <th style="text-align:left;padding:10px 12px;border-bottom:1px solid #333;color:#888;font-size:12px;text-transform:uppercase;letter-spacing:0.5px;">Period</th>
+                  <th style="text-align:right;padding:10px 12px;border-bottom:1px solid #333;color:#888;font-size:12px;text-transform:uppercase;letter-spacing:0.5px;">Revenue</th>
+                  <th style="text-align:right;padding:10px 12px;border-bottom:1px solid #333;color:#888;font-size:12px;text-transform:uppercase;letter-spacing:0.5px;">Royalty Due</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${rowsHtml || `<tr><td colspan="4" style="padding:24px;text-align:center;color:#666;">No payments due for this period.</td></tr>`}
+              </tbody>
+            </table>
+
+            <p style="margin:24px 0 0 0;color:#888;font-size:13px;">
+              Each branch admin has been emailed their own statement directly.
+              Open the admin dashboard → <strong>Finance → Royalty</strong> to review or mark payments as paid.
+            </p>
+          </div>
+
+          <div style="text-align:center;color:#666;font-size:12px;margin-top:24px;">
+            Automated by ${brandName} on ${new Date().toLocaleString("en-PH")}.
+          </div>
+        </div>
+      </body>
+      </html>
+    `;
+
+    const fromAddr = `${brandName} <no-reply@${process.env.RESEND_FROM_DOMAIN || "tipunoxph.com"}>`;
+    const isDev = process.env.NODE_ENV === "development";
+    let sent = 0;
+
+    for (const r of recipients) {
+      try {
+        if (isDev && !process.env.RESEND_API_KEY) {
+          console.log("DEV: would email royalty summary to", r.email);
+          sent++;
+          continue;
+        }
+        const resp = await resend.emails.send({
+          from: fromAddr,
+          to: r.email,
+          subject,
+          html,
+        } as any);
+        if (!resp.error) sent++;
+      } catch (e) {
+        console.error("[Royalty Summary] failed to email", r.email, e);
+      }
+    }
+
+    return { success: sent > 0, recipients: sent, total: recipients.length };
   },
 });

@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import { createPortal } from 'react-dom'
-import { Save, X, AlertCircle, Globe, Link2, Facebook, Instagram, ExternalLink, Image, Twitter, Youtube, Video } from 'lucide-react'
+import { Save, X, AlertCircle, Globe, Link2, Facebook, Instagram, ExternalLink, Image, Twitter, Youtube, Video, Receipt } from 'lucide-react'
 import ImageUploadInput from './ImageUploadInput'
 
 const BranchFormModal = ({
@@ -14,7 +14,7 @@ const BranchFormModal = ({
   loading,
   isEdit = false
 }) => {
-  const [activeSection, setActiveSection] = useState('basic') // 'basic' or 'profile'
+  const [activeSection, setActiveSection] = useState('basic') // 'basic' | 'profile' | 'bir'
 
   if (!isOpen) return null
 
@@ -98,6 +98,18 @@ const BranchFormModal = ({
                 }`}
               >
                 Public Profile
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveSection('bir')}
+                className={`flex-1 px-4 py-3 text-sm font-medium transition-colors flex items-center justify-center gap-1.5 ${
+                  activeSection === 'bir'
+                    ? 'text-white border-b-2 border-[var(--color-primary)]'
+                    : 'text-gray-400 hover:text-white'
+                }`}
+              >
+                <Receipt className="w-4 h-4" />
+                BIR
               </button>
             </div>
           )}
@@ -386,6 +398,202 @@ const BranchFormModal = ({
                           onChange={(e) => handleSocialChange('website', e.target.value)}
                           className="w-full px-3 py-2 bg-[#1A1A1A] border border-[#444444] text-white placeholder-gray-500 rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent text-sm"
                           placeholder="yourbranch.com"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {/* BIR Compliance Section */}
+              {activeSection === 'bir' && isEdit && (
+                <>
+                  <div className="p-3 bg-blue-500/10 border border-blue-500/30 rounded-lg">
+                    <p className="text-xs text-blue-300">
+                      These fields appear on every Official Receipt printed at the POS and are required for BIR compliance under Philippine Revenue Regulations.
+                    </p>
+                  </div>
+
+                  {/* Business Identity */}
+                  <div className="border-t border-[#444444]/30 pt-4">
+                    <h4 className="text-sm font-semibold text-white mb-3">Business Identity</h4>
+                    <div className="space-y-3">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-300 mb-1">Registered Business Name</label>
+                        <input
+                          type="text"
+                          name="business_name"
+                          value={formData.business_name || ''}
+                          onChange={onInputChange}
+                          className="w-full px-3 py-2 bg-[#1A1A1A] border border-[#444444] text-white placeholder-gray-500 rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent text-sm"
+                          placeholder="As registered with BIR"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-300 mb-1">Business Style / Trade Name</label>
+                        <input
+                          type="text"
+                          name="business_style"
+                          value={formData.business_style || ''}
+                          onChange={onInputChange}
+                          className="w-full px-3 py-2 bg-[#1A1A1A] border border-[#444444] text-white placeholder-gray-500 rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent text-sm"
+                          placeholder="DBA / trade name (optional)"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-300 mb-1">Registered Address</label>
+                        <textarea
+                          name="registered_address"
+                          value={formData.registered_address || ''}
+                          onChange={onInputChange}
+                          rows="2"
+                          className="w-full px-3 py-2 bg-[#1A1A1A] border border-[#444444] text-white placeholder-gray-500 rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent text-sm"
+                          placeholder="BIR-registered address (defaults to branch address if blank)"
+                        />
+                      </div>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-300 mb-1">TIN</label>
+                          <input
+                            type="text"
+                            name="tin"
+                            value={formData.tin || ''}
+                            onChange={onInputChange}
+                            className="w-full px-3 py-2 bg-[#1A1A1A] border border-[#444444] text-white placeholder-gray-500 rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent text-sm"
+                            placeholder="000-000-000-00000"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-300 mb-1">OR Branch Code</label>
+                          <input
+                            type="text"
+                            name="or_branch_code"
+                            value={formData.or_branch_code || ''}
+                            onChange={onInputChange}
+                            className="w-full px-3 py-2 bg-[#1A1A1A] border border-[#444444] text-white placeholder-gray-500 rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent text-sm"
+                            placeholder="e.g. MNL"
+                          />
+                        </div>
+                      </div>
+                      <label className="flex items-center gap-2 pt-1">
+                        <input
+                          type="checkbox"
+                          name="vat_registered"
+                          checked={!!formData.vat_registered}
+                          onChange={(e) => onInputChange({ target: { name: 'vat_registered', value: e.target.checked } })}
+                          className="w-4 h-4 rounded border-[#444444] bg-[#1A1A1A] text-[var(--color-primary)] focus:ring-[var(--color-primary)]"
+                        />
+                        <span className="text-sm text-gray-300">VAT-Registered (12%)</span>
+                      </label>
+                    </div>
+                  </div>
+
+                  {/* POS Permit (PTU) */}
+                  <div className="border-t border-[#444444]/30 pt-4">
+                    <h4 className="text-sm font-semibold text-white mb-3">POS Permit (PTU)</h4>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-300 mb-1">PTU Number</label>
+                        <input
+                          type="text"
+                          name="ptu_number"
+                          value={formData.ptu_number || ''}
+                          onChange={onInputChange}
+                          className="w-full px-3 py-2 bg-[#1A1A1A] border border-[#444444] text-white placeholder-gray-500 rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent text-sm"
+                          placeholder="FP000000000000"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-300 mb-1">PTU Date Issued</label>
+                        <input
+                          type="date"
+                          name="ptu_date_issued"
+                          value={formData.ptu_date_issued || ''}
+                          onChange={onInputChange}
+                          className="w-full px-3 py-2 bg-[#1A1A1A] border border-[#444444] text-white placeholder-gray-500 rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent text-sm"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-300 mb-1">MIN (Machine ID)</label>
+                        <input
+                          type="text"
+                          name="min_number"
+                          value={formData.min_number || ''}
+                          onChange={onInputChange}
+                          className="w-full px-3 py-2 bg-[#1A1A1A] border border-[#444444] text-white placeholder-gray-500 rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent text-sm"
+                          placeholder="00000000000000"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-300 mb-1">POS Serial Number</label>
+                        <input
+                          type="text"
+                          name="pos_serial_number"
+                          value={formData.pos_serial_number || ''}
+                          onChange={onInputChange}
+                          className="w-full px-3 py-2 bg-[#1A1A1A] border border-[#444444] text-white placeholder-gray-500 rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent text-sm"
+                          placeholder="SN-XXXXXX"
+                        />
+                      </div>
+                      <div className="col-span-2">
+                        <label className="block text-sm font-medium text-gray-300 mb-1">Accreditation Number</label>
+                        <input
+                          type="text"
+                          name="accreditation_number"
+                          value={formData.accreditation_number || ''}
+                          onChange={onInputChange}
+                          className="w-full px-3 py-2 bg-[#1A1A1A] border border-[#444444] text-white placeholder-gray-500 rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent text-sm"
+                          placeholder="000-000000000-000000"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Software Provider */}
+                  <div className="border-t border-[#444444]/30 pt-4">
+                    <h4 className="text-sm font-semibold text-white mb-3">Software Provider</h4>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="col-span-2">
+                        <label className="block text-sm font-medium text-gray-300 mb-1">Provider Name</label>
+                        <input
+                          type="text"
+                          name="software_provider_name"
+                          value={formData.software_provider_name || ''}
+                          onChange={onInputChange}
+                          className="w-full px-3 py-2 bg-[#1A1A1A] border border-[#444444] text-white placeholder-gray-500 rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent text-sm"
+                          placeholder="e.g. Broadheader Inc."
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-300 mb-1">Provider TIN</label>
+                        <input
+                          type="text"
+                          name="software_provider_tin"
+                          value={formData.software_provider_tin || ''}
+                          onChange={onInputChange}
+                          className="w-full px-3 py-2 bg-[#1A1A1A] border border-[#444444] text-white placeholder-gray-500 rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent text-sm"
+                          placeholder="000-000-000-00000"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-300 mb-1">Accreditation No.</label>
+                        <input
+                          type="text"
+                          name="software_provider_accreditation"
+                          value={formData.software_provider_accreditation || ''}
+                          onChange={onInputChange}
+                          className="w-full px-3 py-2 bg-[#1A1A1A] border border-[#444444] text-white placeholder-gray-500 rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent text-sm"
+                          placeholder="000-000000000-000000"
+                        />
+                      </div>
+                      <div className="col-span-2">
+                        <label className="block text-sm font-medium text-gray-300 mb-1">Provider Accreditation Date</label>
+                        <input
+                          type="date"
+                          name="software_provider_date_issued"
+                          value={formData.software_provider_date_issued || ''}
+                          onChange={onInputChange}
+                          className="w-full px-3 py-2 bg-[#1A1A1A] border border-[#444444] text-white placeholder-gray-500 rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent text-sm"
                         />
                       </div>
                     </div>

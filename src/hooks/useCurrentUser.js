@@ -43,8 +43,33 @@ export function useCurrentUser() {
   const isClerkAuthenticated = clerkSignedIn && clerkConvexUser !== null;
   const isAuthenticated = legacyAuthenticated || isClerkAuthenticated;
 
-  // Get the active user (prefer Clerk if signed in via Clerk)
-  const user = isClerkAuthenticated ? clerkConvexUser : legacyUser;
+  // Get the active (real) user (prefer Clerk if signed in via Clerk)
+  const realUser = isClerkAuthenticated ? clerkConvexUser : legacyUser;
+
+  // ── Impersonation: when the admin is mirroring a branch, swap role &
+  // branch_id on the user object so the rest of the app naturally renders
+  // the branch_admin view. The real user identity (_id, name, email) is
+  // preserved, and the swap is only active for roles that can impersonate.
+  const canImpersonate =
+    realUser?.role === 'admin' ||
+    realUser?.role === 'super_admin' ||
+    realUser?.role === 'it_admin';
+
+  const activeImpersonation = useQuery(
+    api.services.impersonation.getActiveImpersonation,
+    realUser?._id && canImpersonate ? { user_id: realUser._id } : "skip"
+  );
+
+  const user = (realUser && activeImpersonation)
+    ? {
+        ...realUser,
+        role: 'branch_admin',
+        branch_id: activeImpersonation.target_branch_id,
+        _real_role: realUser.role,
+        _real_branch_id: realUser.branch_id,
+        _impersonation: activeImpersonation,
+      }
+    : realUser;
 
   // Determine which auth method is active
   const authMethod = isClerkAuthenticated ? 'clerk' : (legacyAuthenticated ? 'legacy' : null);
@@ -78,6 +103,9 @@ export function useCurrentUser() {
 
   return {
     user,
+    realUser,
+    impersonation: activeImpersonation || null,
+    isImpersonating: !!activeImpersonation,
     loading,
     isAuthenticated,
     authMethod,
