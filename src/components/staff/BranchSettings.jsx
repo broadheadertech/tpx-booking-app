@@ -7,12 +7,14 @@ import {
   Bell,
   Clock,
   Info,
-  HelpCircle
+  HelpCircle,
+  Receipt
 } from 'lucide-react'
 import BranchProfileSettings from './BranchProfileSettings'
 import PaymentSettings from './PaymentSettings'
 import BranchWalletView from './BranchWalletView'
 import BranchScheduleSettings from './BranchScheduleSettings'
+import BranchBIRSettings from './BranchBIRSettings'
 import SystemInfoPanel from './SystemInfoPanel'
 import WalkthroughOverlay from '../common/WalkthroughOverlay'
 import { branchSettingsSteps } from '../../config/walkthroughSteps'
@@ -30,6 +32,7 @@ const BranchSettings = ({ user, onRefresh }) => {
     { id: 'payments', label: 'Payment Settings', icon: CreditCard, description: 'Payment methods & fees' },
     { id: 'wallet', label: 'Wallet Settings', icon: Wallet, description: 'Customer wallet configuration' },
     { id: 'schedule', label: 'Schedule', icon: Clock, description: 'Operating hours & closures' },
+    { id: 'bir', label: 'BIR Compliance', icon: Receipt, description: 'TIN, PTU, MIN, accreditation' },
     { id: 'system', label: 'System Info', icon: Info, description: 'Version & changelog' },
   ]
 
@@ -43,6 +46,8 @@ const BranchSettings = ({ user, onRefresh }) => {
         return <BranchWalletView />
       case 'schedule':
         return <BranchScheduleSettings />
+      case 'bir':
+        return <BranchBIRSettings user={user} />
       case 'system':
         return <SystemInfoPanel />
       default:
