@@ -5,6 +5,7 @@ import { api } from "../_generated/api";
 import { throwUserError, ERROR_CODES, validateInput } from "../utils/errors";
 import { toStorageFormat } from "../lib/points";
 import { logAudit } from "./auditLogs";
+import { getNextPosOrNumber } from "./receiptNumbering";
 // Helper function to get or create a walk-in customer
 async function getOrCreateWalkInCustomer(ctx: any, branch_id: Id<"branches">, customerName?: string, customerPhone?: string): Promise<Id<"users"> | undefined> {
   // Retry mechanism for walk-in customer creation
@@ -160,6 +161,20 @@ export const createTransaction = mutation({
       v.literal("cancelled")
     )),
     estimated_delivery: v.optional(v.string()),
+    // BIR Compliance — customer block
+    customer_tin: v.optional(v.string()),
+    customer_business_style: v.optional(v.string()),
+    // BIR Compliance — SC/PWD discount (RA 9994 / RA 10754)
+    discount_type: v.optional(v.union(
+      v.literal("regular"),
+      v.literal("senior"),
+      v.literal("pwd"),
+      v.literal("employee"),
+      v.literal("voucher"),
+      v.literal("promo")
+    )),
+    sc_pwd_id_number: v.optional(v.string()),
+    sc_pwd_name: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     // TODO: Add Clerk auth guard after full Clerk migration
@@ -360,12 +375,49 @@ export const createTransaction = mutation({
       console.log("[TRANSACTION] Combo payment processed:", comboResult);
     }
 
-    // Generate unique transaction ID and receipt number
+    // Generate unique transaction ID and BIR-compliant sequential OR number
     const timestamp = Date.now();
     const transactionId = `TXN-${timestamp}`;
-    const receiptNumber = `RCP-${timestamp}`;
+    const receiptNumber = await getNextPosOrNumber(ctx, args.branch_id);
 
     console.log('[TRANSACTION] Generated IDs:', { transactionId, receiptNumber });
+
+    // BIR snapshot: freeze branch business/permit data at issuance so the receipt
+    // remains correct even if the branch's BIR settings are edited later.
+    const branchDoc: any = await ctx.db.get(args.branch_id);
+    const isVatRegistered = Boolean(branchDoc?.vat_registered);
+
+    // SC/PWD validation: ID + name required for senior / pwd discounts
+    if ((args.discount_type === "senior" || args.discount_type === "pwd")
+        && (!args.sc_pwd_id_number || !args.sc_pwd_name)) {
+      throwUserError(
+        ERROR_CODES.INVALID_INPUT,
+        "SC/PWD ID required",
+        "Senior Citizen and PWD discounts require an ID number and name on the receipt."
+      );
+    }
+
+    // VAT breakdown — only when branch is VAT-registered.
+    // SC/PWD purchases are VAT-exempt per RA 9994 / RA 10754.
+    let vatable_sales: number | undefined;
+    let vat_exempt_sales: number | undefined;
+    let zero_rated_sales: number | undefined;
+    let vat_amount: number | undefined;
+    if (isVatRegistered) {
+      const grossSales = Number(args.subtotal || 0);
+      const isExempt = args.discount_type === "senior" || args.discount_type === "pwd";
+      if (isExempt) {
+        vat_exempt_sales = Math.round(grossSales * 100) / 100;
+        vatable_sales = 0;
+        vat_amount = 0;
+      } else {
+        const netOfVat = grossSales / 1.12;
+        vatable_sales = Math.round(netOfVat * 100) / 100;
+        vat_amount = Math.round((grossSales - netOfVat) * 100) / 100;
+        vat_exempt_sales = 0;
+      }
+      zero_rated_sales = 0;
+    }
 
     // Extract control flags that shouldn't be stored in the database
     // Delivery fields are included in transactionFields and will be stored
@@ -386,6 +438,31 @@ export const createTransaction = mutation({
       services: args.services || [],
       // barber can be undefined for retail transactions
       barber: args.barber || undefined,
+      // BIR VAT breakdown
+      vatable_sales,
+      vat_exempt_sales,
+      zero_rated_sales,
+      vat_amount,
+      // BIR snapshot — captured at issuance
+      or_branch_code_snapshot: (branchDoc?.or_branch_code || branchDoc?.branch_code) ?? undefined,
+      business_name_snapshot: branchDoc?.business_name ?? undefined,
+      business_style_snapshot: branchDoc?.business_style ?? undefined,
+      business_address_snapshot: branchDoc?.registered_address ?? branchDoc?.address ?? undefined,
+      business_tin_snapshot: branchDoc?.tin ?? undefined,
+      vat_registered_snapshot: isVatRegistered,
+      ptu_number_snapshot: branchDoc?.ptu_number ?? undefined,
+      ptu_date_snapshot: branchDoc?.ptu_date_issued ?? undefined,
+      min_number_snapshot: branchDoc?.min_number ?? undefined,
+      pos_serial_snapshot: branchDoc?.pos_serial_number ?? undefined,
+      accreditation_snapshot: branchDoc?.accreditation_number ?? undefined,
+      software_provider_snapshot: branchDoc?.software_provider_name
+        ? {
+            name: branchDoc.software_provider_name,
+            tin: branchDoc.software_provider_tin,
+            accreditation: branchDoc.software_provider_accreditation,
+            date_issued: branchDoc.software_provider_date_issued,
+          }
+        : undefined,
       createdAt: timestamp,
       updatedAt: timestamp,
     };

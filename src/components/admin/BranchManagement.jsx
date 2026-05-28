@@ -23,7 +23,23 @@ export default function BranchManagement() {
     phone: '',
     email: '',
     booking_start_hour: 10,
-    booking_end_hour: 20
+    booking_end_hour: 20,
+    // BIR Compliance fields
+    business_name: '',
+    business_style: '',
+    registered_address: '',
+    tin: '',
+    vat_registered: false,
+    ptu_number: '',
+    ptu_date_issued: '',
+    min_number: '',
+    pos_serial_number: '',
+    accreditation_number: '',
+    software_provider_name: '',
+    software_provider_tin: '',
+    software_provider_accreditation: '',
+    software_provider_date_issued: '',
+    or_branch_code: ''
   })
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -99,7 +115,22 @@ export default function BranchManagement() {
       phone: '',
       email: '',
       booking_start_hour: 10,
-      booking_end_hour: 20
+      booking_end_hour: 20,
+      business_name: '',
+      business_style: '',
+      registered_address: '',
+      tin: '',
+      vat_registered: false,
+      ptu_number: '',
+      ptu_date_issued: '',
+      min_number: '',
+      pos_serial_number: '',
+      accreditation_number: '',
+      software_provider_name: '',
+      software_provider_tin: '',
+      software_provider_accreditation: '',
+      software_provider_date_issued: '',
+      or_branch_code: ''
     })
     setError('')
   }
@@ -117,7 +148,22 @@ export default function BranchManagement() {
       phone: branch.phone,
       email: branch.email,
       booking_start_hour: branch.booking_start_hour ?? 10,
-      booking_end_hour: branch.booking_end_hour ?? 20
+      booking_end_hour: branch.booking_end_hour ?? 20,
+      business_name: branch.business_name ?? '',
+      business_style: branch.business_style ?? '',
+      registered_address: branch.registered_address ?? '',
+      tin: branch.tin ?? '',
+      vat_registered: branch.vat_registered ?? false,
+      ptu_number: branch.ptu_number ?? '',
+      ptu_date_issued: branch.ptu_date_issued ?? '',
+      min_number: branch.min_number ?? '',
+      pos_serial_number: branch.pos_serial_number ?? '',
+      accreditation_number: branch.accreditation_number ?? '',
+      software_provider_name: branch.software_provider_name ?? '',
+      software_provider_tin: branch.software_provider_tin ?? '',
+      software_provider_accreditation: branch.software_provider_accreditation ?? '',
+      software_provider_date_issued: branch.software_provider_date_issued ?? '',
+      or_branch_code: branch.or_branch_code ?? ''
     })
     setShowEditModal(true)
   }

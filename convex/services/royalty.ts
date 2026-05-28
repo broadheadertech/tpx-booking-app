@@ -2,6 +2,7 @@ import { v } from "convex/values";
 import { mutation, query, action, internalAction } from "../_generated/server";
 import { Resend } from "resend";
 import { api, internal } from "../_generated/api";
+import { getNextReceiptNumber } from "./receiptNumbering";
 
 const resend = new Resend(process.env.RESEND_API_KEY || "missing_key");
 
@@ -1013,44 +1014,6 @@ export const getRoyaltyPaymentById = query({
 // ============================================================================
 // OFFICIAL RECEIPT FUNCTIONS (Story 5-5)
 // ============================================================================
-
-// Helper: Generate next sequential receipt number (NFR11 compliance)
-async function getNextReceiptNumber(ctx: any): Promise<string> {
-  const year = new Date().getFullYear();
-  const counterType = "official_receipt";
-
-  // Get or create counter for this year
-  const counter = await ctx.db
-    .query("receiptCounters")
-    .withIndex("by_type_year", (q: any) =>
-      q.eq("counter_type", counterType).eq("year", year)
-    )
-    .first();
-
-  let nextNumber: number;
-
-  if (counter) {
-    // Increment existing counter
-    nextNumber = counter.last_number + 1;
-    await ctx.db.patch(counter._id, {
-      last_number: nextNumber,
-      updated_at: Date.now(),
-    });
-  } else {
-    // Create new counter for this year (reset to 1)
-    nextNumber = 1;
-    await ctx.db.insert("receiptCounters", {
-      counter_type: counterType,
-      year: year,
-      last_number: nextNumber,
-      updated_at: Date.now(),
-    });
-  }
-
-  // Format: OR-2026-00001
-  const paddedNumber = String(nextNumber).padStart(5, "0");
-  return `OR-${year}-${paddedNumber}`;
-}
 
 // Mark royalty payment as paid and generate official receipt
 export const markRoyaltyAsPaid = mutation({
