@@ -15,7 +15,7 @@
  *   "breaking" — Breaking/major change (bumps MAJOR)
  */
 
-export const APP_VERSION = '2.16.0';
+export const APP_VERSION = '2.17.0';
 export const LAST_DEPLOY = '2026-06-02';
 export const VERSION_INFO = {
   version: APP_VERSION,
@@ -28,6 +28,20 @@ export const VERSION_INFO = {
  * Each entry: { version, date, changes: [{ tag, text }] }
  */
 export const CHANGELOG = [
+  {
+    version: '2.17.0',
+    date: '2026-06-02',
+    changes: [
+      { tag: 'feature', text: 'Reprint receipts — new "Reprint" button in the POS header (mobile + desktop) opens a searchable list of recent branch transactions; tap any to re-open and print its receipt. Reprints keep the original date/time and cashier. Makes testing the thermal printer easy without ringing up a new sale.' },
+    ],
+  },
+  {
+    version: '2.16.1',
+    date: '2026-06-02',
+    changes: [
+      { tag: 'fix', text: '58mm thermal receipt printing — receipt was printing at 58mm/80mm width and getting clipped on the right and pushed off-center. Constrained the printed receipt to the ~48mm printable area, centered it on the paper, added word-wrapping, and right-sized the TOTAL DUE line so nothing is cut off.' },
+    ],
+  },
   {
     version: '2.16.0',
     date: '2026-06-02',
