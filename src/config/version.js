@@ -15,8 +15,8 @@
  *   "breaking" — Breaking/major change (bumps MAJOR)
  */
 
-export const APP_VERSION = '2.15.1';
-export const LAST_DEPLOY = '2026-05-29';
+export const APP_VERSION = '2.16.0';
+export const LAST_DEPLOY = '2026-06-02';
 export const VERSION_INFO = {
   version: APP_VERSION,
   lastDeploy: LAST_DEPLOY,
@@ -28,6 +28,14 @@ export const VERSION_INFO = {
  * Each entry: { version, date, changes: [{ tag, text }] }
  */
 export const CHANGELOG = [
+  {
+    version: '2.16.0',
+    date: '2026-06-02',
+    changes: [
+      { tag: 'feature', text: 'YTD Visit Ranking — Customer Analytics now ranks clients by number of completed visits this year (bookings + walk-ins), merged by phone number (with email as fallback when no number is on file), with a year selector, visit-count badges, and contact shortcuts, to identify who to reward with year-end vouchers.' },
+      { tag: 'fix', text: 'Customer Analytics at-risk list no longer crashes — the Clock icon used in the "Last Visit" column was referenced but never imported.' },
+    ],
+  },
   {
     version: '2.15.1',
     date: '2026-05-29',

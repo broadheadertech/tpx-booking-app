@@ -406,6 +406,199 @@ export const getAtRiskCustomers = query({
   },
 });
 
+/**
+ * Year-To-Date (YTD) visit ranking of clients for a branch.
+ *
+ * Counts COMPLETED visits within the given year (defaults to the current year):
+ *  - completed bookings (registered customers + POS walk-in bookings)
+ *  - completed queue walk-ins (walkIns table)
+ *
+ * Clients are merged by normalized phone number, so a registered customer's
+ * bookings and any walk-ins recorded under the same phone count as one client.
+ * Use this to identify the most frequent clients for year-end voucher rewards.
+ */
+export const getYtdVisitRanking = query({
+  args: {
+    branchId: v.id("branches"),
+    year: v.optional(v.number()),
+    limit: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    const year = args.year ?? new Date().getFullYear();
+    const yearStart = `${year}-01-01`;
+    const nextYearStart = `${year + 1}-01-01`;
+    const startTs = new Date(year, 0, 1).getTime();
+    const endTs = new Date(year + 1, 0, 1).getTime();
+
+    // Normalize a phone to its trailing digits for identity matching
+    // (ignores country-code / leading-zero variance, e.g. +63 vs 0).
+    const normalizePhone = (raw?: string | null): string => {
+      const digits = (raw || "").replace(/\D/g, "");
+      return digits.length > 10 ? digits.slice(-10) : digits;
+    };
+
+    // Normalize an email for identity matching (used when no phone exists).
+    const normalizeEmail = (raw?: string | null): string =>
+      (raw || "").toLowerCase().trim();
+
+    type Entry = {
+      name: string;
+      phone: string;
+      email: string;
+      customerId: Id<"users"> | null;
+      isRegistered: boolean;
+      visits: number;
+      bookingVisits: number;
+      walkinVisits: number;
+      lastVisit: number;
+    };
+    const map = new Map<string, Entry>();
+
+    const bump = (
+      key: string,
+      info: {
+        name?: string;
+        phone?: string;
+        email?: string;
+        customerId?: Id<"users"> | null;
+        isRegistered?: boolean;
+        when: number;
+        kind: "booking" | "walkin";
+      }
+    ) => {
+      let entry = map.get(key);
+      if (!entry) {
+        entry = {
+          name: info.name || "Unknown",
+          phone: info.phone || "",
+          email: info.email || "",
+          customerId: info.customerId ?? null,
+          isRegistered: !!info.isRegistered,
+          visits: 0,
+          bookingVisits: 0,
+          walkinVisits: 0,
+          lastVisit: 0,
+        };
+        map.set(key, entry);
+      }
+      entry.visits += 1;
+      if (info.kind === "booking") entry.bookingVisits += 1;
+      else entry.walkinVisits += 1;
+      if (info.when > entry.lastVisit) entry.lastVisit = info.when;
+      // Prefer a registered identity for display + contact
+      if (info.isRegistered) {
+        entry.isRegistered = true;
+        if (info.customerId) entry.customerId = info.customerId;
+        if (info.name) entry.name = info.name;
+      } else if (!entry.name || entry.name === "Unknown") {
+        entry.name = info.name || entry.name;
+      }
+      if (!entry.phone && info.phone) entry.phone = info.phone;
+      if (!entry.email && info.email) entry.email = info.email;
+    };
+
+    // ---- Completed bookings within the year (by date string) ----
+    const bookings = await ctx.db
+      .query("bookings")
+      .withIndex("by_branch_date", (q) =>
+        q
+          .eq("branch_id", args.branchId)
+          .gte("date", yearStart)
+          .lt("date", nextYearStart)
+      )
+      .collect();
+
+    for (const b of bookings) {
+      if (b.status !== "completed") continue;
+      const when = b.completed_at || b.createdAt || b._creationTime;
+
+      if (b.customer) {
+        const user = await ctx.db.get(b.customer);
+        const phone = normalizePhone(user?.mobile_number);
+        const email = normalizeEmail(user?.email || b.customer_email);
+        // Track by phone first, then email, then the account id
+        const key = phone || (email ? `email:${email}` : `cust:${b.customer}`);
+        bump(key, {
+          name: user?.nickname || user?.username || b.customer_name || "Unknown",
+          phone: user?.mobile_number || b.customer_phone || "",
+          email: user?.email || b.customer_email || "",
+          customerId: b.customer,
+          isRegistered: !user?.is_guest,
+          when,
+          kind: "booking",
+        });
+      } else {
+        const phone = normalizePhone(b.customer_phone);
+        const email = normalizeEmail(b.customer_email);
+        const nameKey = (b.customer_name || "").toLowerCase().trim();
+        // Track by phone first, then email, then name
+        const key =
+          phone ||
+          (email ? `email:${email}` : nameKey ? `name:${nameKey}` : `bk:${b._id}`);
+        bump(key, {
+          name: b.customer_name || "Walk-in",
+          phone: b.customer_phone || "",
+          email: b.customer_email || "",
+          customerId: null,
+          isRegistered: false,
+          when,
+          kind: "booking",
+        });
+      }
+    }
+
+    // ---- Completed queue walk-ins within the year (by completedAt) ----
+    const walkIns = await ctx.db
+      .query("walkIns")
+      .withIndex("by_branch_status", (q) =>
+        q.eq("branch_id", args.branchId).eq("status", "completed")
+      )
+      .collect();
+
+    for (const w of walkIns) {
+      const when = w.completedAt || w.createdAt;
+      if (when < startTs || when >= endTs) continue;
+      const phone = normalizePhone(w.number);
+      const nameKey = (w.name || "").toLowerCase().trim();
+      const key = phone || (nameKey ? `name:${nameKey}` : `walkin:${w._id}`);
+      bump(key, {
+        name: w.name || "Walk-in",
+        phone: w.number || "",
+        email: "",
+        customerId: null,
+        isRegistered: false,
+        when,
+        kind: "walkin",
+      });
+    }
+
+    const ranked = Array.from(map.values()).sort((a, b) => {
+      if (b.visits !== a.visits) return b.visits - a.visits;
+      return b.lastVisit - a.lastVisit;
+    });
+
+    const limited = args.limit ? ranked.slice(0, args.limit) : ranked;
+
+    return {
+      year,
+      total_clients: ranked.length,
+      total_visits: ranked.reduce((sum, e) => sum + e.visits, 0),
+      ranking: limited.map((e, i) => ({
+        rank: i + 1,
+        customer_id: e.customerId,
+        name: e.name,
+        phone: e.phone,
+        email: e.email,
+        is_registered: e.isRegistered,
+        visits: e.visits,
+        booking_visits: e.bookingVisits,
+        walkin_visits: e.walkinVisits,
+        last_visit: e.lastVisit,
+      })),
+    };
+  },
+});
+
 // ============================================================================
 // SCHEDULED JOB - Daily Status Update
 // ============================================================================
