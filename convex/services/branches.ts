@@ -4,6 +4,7 @@ import { Doc, Id } from "../_generated/dataModel";
 import { throwUserError, ERROR_CODES } from "../utils/errors";
 import { api, internal } from "../_generated/api";
 import { logAudit } from "./auditLogs";
+import { getCurrentUser } from "../lib/clerkAuth";
 
 // Generate a unique branch code
 function generateBranchCode(name: string): string {
@@ -640,6 +641,21 @@ export const updateBranch = mutation({
     const branch = await ctx.db.get(id);
     if (!branch) {
       throwUserError(ERROR_CODES.RESOURCE_NOT_FOUND, "Branch not found", "The branch you are trying to update does not exist.");
+    }
+
+    // Role guard: super_admin / it_admin can edit any branch; branch_admin can only edit their own.
+    const caller = await getCurrentUser(ctx);
+    if (caller) {
+      const role = caller.role;
+      const isPrivileged = role === "super_admin" || role === "it_admin";
+      const isOwnBranchAdmin = role === "branch_admin" && String(caller.branch_id) === String(id);
+      if (!isPrivileged && !isOwnBranchAdmin) {
+        throwUserError(
+          ERROR_CODES.PERMISSION_DENIED,
+          "Not authorized",
+          "You do not have permission to update this branch."
+        );
+      }
     }
 
     if (updates.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(updates.email)) {
