@@ -126,6 +126,7 @@ export const createBranch = mutation({
     booking_start_hour: v.optional(v.number()),
     booking_end_hour: v.optional(v.number()),
     slug: v.optional(v.string()),
+    branch_type: v.optional(v.union(v.literal("tipuno_x"), v.literal("tipuno_x_plus"))),
     // BIR Compliance fields (optional at creation; can be filled later via edit)
     business_name: v.optional(v.string()),
     business_style: v.optional(v.string()),
@@ -204,6 +205,7 @@ export const createBranch = mutation({
         software_provider_accreditation: args.software_provider_accreditation,
         software_provider_date_issued: args.software_provider_date_issued,
         or_branch_code: args.or_branch_code,
+        branch_type: args.branch_type ?? "tipuno_x",
         createdAt: Date.now(),
         updatedAt: Date.now(),
       });
@@ -586,6 +588,7 @@ export const updateBranch = mutation({
   args: {
     id: v.id("branches"),
     name: v.optional(v.string()),
+    branch_type: v.optional(v.union(v.literal("tipuno_x"), v.literal("tipuno_x_plus"))),
     address: v.optional(v.string()),
     phone: v.optional(v.string()),
     email: v.optional(v.string()),

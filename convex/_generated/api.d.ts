@@ -71,6 +71,7 @@ import type * as services_itAdmin from "../services/itAdmin.js";
 import type * as services_licenses from "../services/licenses.js";
 import type * as services_loyaltyAnalytics from "../services/loyaltyAnalytics.js";
 import type * as services_loyaltyConfig from "../services/loyaltyConfig.js";
+import type * as services_machinePTU from "../services/machinePTU.js";
 import type * as services_mainQueue from "../services/mainQueue.js";
 import type * as services_maintenanceConfig from "../services/maintenanceConfig.js";
 import type * as services_membershipCards from "../services/membershipCards.js";
@@ -185,6 +186,7 @@ declare const fullApi: ApiFromModules<{
   "services/licenses": typeof services_licenses;
   "services/loyaltyAnalytics": typeof services_loyaltyAnalytics;
   "services/loyaltyConfig": typeof services_loyaltyConfig;
+  "services/machinePTU": typeof services_machinePTU;
   "services/mainQueue": typeof services_mainQueue;
   "services/maintenanceConfig": typeof services_maintenanceConfig;
   "services/membershipCards": typeof services_membershipCards;

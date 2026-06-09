@@ -387,6 +387,14 @@ export const createTransaction = mutation({
     const branchDoc: any = await ctx.db.get(args.branch_id);
     const isVatRegistered = Boolean(branchDoc?.vat_registered);
 
+    // Accreditation: a branch prints a VALID BIR invoice only when its machine
+    // PTU is APPROVED. Otherwise the receipt is non-accredited (disclaimer).
+    const machinePtu: any = await ctx.db
+      .query("machine_ptu")
+      .withIndex("by_branch", (q: any) => q.eq("branch_id", args.branch_id))
+      .first();
+    const isAccredited = machinePtu?.status === "approved";
+
     // SC/PWD validation: ID + name required for senior / pwd discounts
     if ((args.discount_type === "senior" || args.discount_type === "pwd")
         && (!args.sc_pwd_id_number || !args.sc_pwd_name)) {
@@ -450,17 +458,22 @@ export const createTransaction = mutation({
       business_address_snapshot: branchDoc?.registered_address ?? branchDoc?.address ?? undefined,
       business_tin_snapshot: branchDoc?.tin ?? undefined,
       vat_registered_snapshot: isVatRegistered,
-      ptu_number_snapshot: branchDoc?.ptu_number ?? undefined,
-      ptu_date_snapshot: branchDoc?.ptu_date_issued ?? undefined,
-      min_number_snapshot: branchDoc?.min_number ?? undefined,
-      pos_serial_snapshot: branchDoc?.pos_serial_number ?? undefined,
-      accreditation_snapshot: branchDoc?.accreditation_number ?? undefined,
-      software_provider_snapshot: branchDoc?.software_provider_name
+      // Machine accreditation block — sourced from the APPROVED machine PTU.
+      // When not accredited, the machine/permit lines are omitted and the
+      // receipt prints the non-accredited disclaimer instead.
+      is_bir_accredited_snapshot: isAccredited,
+      ptu_number_snapshot: isAccredited ? (machinePtu?.ptu_number ?? undefined) : undefined,
+      ptu_date_snapshot: isAccredited ? (machinePtu?.ptu_date ?? undefined) : undefined,
+      accreditation_date_snapshot: isAccredited ? (machinePtu?.accreditation_date ?? undefined) : undefined,
+      min_number_snapshot: isAccredited ? (machinePtu?.min ?? undefined) : undefined,
+      pos_serial_snapshot: isAccredited ? (machinePtu?.serial_number ?? undefined) : undefined,
+      accreditation_snapshot: isAccredited ? (machinePtu?.accreditation_number ?? undefined) : undefined,
+      software_provider_snapshot: isAccredited && machinePtu?.software_provider_name
         ? {
-            name: branchDoc.software_provider_name,
-            tin: branchDoc.software_provider_tin,
-            accreditation: branchDoc.software_provider_accreditation,
-            date_issued: branchDoc.software_provider_date_issued,
+            name: machinePtu.software_provider_name,
+            tin: machinePtu.software_provider_tin,
+            accreditation: machinePtu.software_provider_accreditation,
+            date_issued: machinePtu.software_provider_date_issued,
           }
         : undefined,
       createdAt: timestamp,

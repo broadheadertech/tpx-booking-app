@@ -142,6 +142,20 @@ const BranchFormModal = ({
                   </div>
 
                   <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-2">Branch Type *</label>
+                    <select
+                      name="branch_type"
+                      value={formData.branch_type || 'tipuno_x'}
+                      onChange={onInputChange}
+                      className="w-full px-3 py-2 bg-[#1A1A1A] border border-[#444444] text-white rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent"
+                    >
+                      <option value="tipuno_x">TipunoX</option>
+                      <option value="tipuno_x_plus">TipunoX Plus</option>
+                    </select>
+                    <p className="text-xs text-gray-500 mt-1">Determines which client membership plans apply and where they can be redeemed.</p>
+                  </div>
+
+                  <div>
                     <label className="block text-sm font-medium text-gray-300 mb-2">Address *</label>
                     <textarea
                       name="address"

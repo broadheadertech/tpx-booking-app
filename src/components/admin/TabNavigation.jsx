@@ -92,6 +92,7 @@ const TabNavigation = ({ tabs, activeTab, onTabChange }) => {
       wallet_analytics: Activity,
       customer_analytics: Target,
       customer_subscriptions: Crown,
+      machine_ptu_approvals: FileText,
       default_services: Scissors,
       branch_bookings: Calendar,
       shop_config: ShoppingCart,

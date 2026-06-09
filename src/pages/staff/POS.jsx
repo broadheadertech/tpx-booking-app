@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react'
-import { ArrowLeft, User, UserPlus, QrCode, CreditCard, Receipt, Trash2, Plus, Minus, Search, Scissors, Package, Gift, Calculator, CheckCircle, Grid3X3, List, ChevronLeft, ChevronRight, X, AlertCircle, Banknote, Store, Calendar, Clock, ChevronDown, ChevronUp, Filter, ShoppingBag, History, HelpCircle, Ticket, Printer } from 'lucide-react'
+import { ArrowLeft, User, UserPlus, QrCode, CreditCard, Receipt, Trash2, Plus, Minus, Search, Scissors, Package, Gift, Calculator, CheckCircle, Grid3X3, List, ChevronLeft, ChevronRight, X, AlertCircle, Banknote, Store, Calendar, Clock, ChevronDown, ChevronUp, Filter, ShoppingBag, History, HelpCircle, Ticket, Printer, Crown } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { useQuery, useMutation } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
@@ -155,6 +155,7 @@ const POS = () => {
 
   // Convex mutations
   const createTransaction = useMutation(api.services.transactions.createTransaction)
+  const redeemMembership = useMutation(api.services.customerSubscriptions.redeemEntitlement)
   const updateBookingPaymentStatus = useMutation(api.services.bookings.updatePaymentStatus)
   const updateBookingStatus = useMutation(api.services.bookings.updateBooking)
   const createUser = useMutation(api.services.auth.createUser)
@@ -195,6 +196,16 @@ const POS = () => {
   const customerWalletBalance = useQuery(
     api.services.wallet.getCustomerWalletBalance,
     customerIdForWallet ? { user_id: customerIdForWallet } : "skip"
+  )
+
+  // Active membership/subscription for the selected customer (for redemptions).
+  // Scoped to this branch's brand — a TipunoX Plus membership only applies at
+  // TipunoX Plus branches, and vice-versa.
+  const activeSubscription = useQuery(
+    api.services.customerSubscriptions.getActiveSubscription,
+    customerIdForWallet
+      ? { customer_id: customerIdForWallet, branch_type: currentBranch?.branch_type || "tipuno_x" }
+      : "skip"
   )
 
   // Filter active services and products
@@ -760,6 +771,8 @@ const POS = () => {
       // Normal behavior when no booking is attached - add to cart
       const existingIndex = prev.services.findIndex(item => item.service_id === service._id)
       if (existingIndex >= 0) {
+        // Don't inflate a redeemed (free) line — keep it at qty 1
+        if (prev.services[existingIndex]?.redeemed) return prev
         // Immutable update - create new array with new object
         const updatedServices = prev.services.map((item, idx) =>
           idx === existingIndex
@@ -786,6 +799,8 @@ const POS = () => {
     setCurrentTransaction(prev => {
       const existingIndex = prev.products.findIndex(item => item.product_id === product._id)
       if (existingIndex >= 0) {
+        // Don't inflate a redeemed (free) line — keep it at qty 1
+        if (prev.products[existingIndex]?.redeemed) return prev
         // Create new array with new object to avoid mutation
         const updatedProducts = prev.products.map((item, idx) =>
           idx === existingIndex
@@ -815,6 +830,9 @@ const POS = () => {
         // Remove item - create new array without the item
         return { ...prev, [type]: prev[type].filter((_, idx) => idx !== index) }
       }
+      // Redeemed (free) lines are fixed at qty 1 — block increases so the
+      // membership allocation stays 1:1 with the line. Decrease still removes.
+      if (prev[type][index]?.redeemed && change > 0) return prev
       // Update quantity - create new array with new object
       const items = prev[type].map((item, idx) =>
         idx === index
@@ -823,6 +841,86 @@ const POS = () => {
       )
       return { ...prev, [type]: items }
     })
+  }
+
+  // ── Membership redemption ────────────────────────────────────────────────
+  // How many free services/products remain after accounting for lines already
+  // marked redeemed in the current cart.
+  const membershipRemaining = React.useMemo(() => {
+    if (!activeSubscription) return { services: 0, products: 0, active: false }
+    const redeemedServices = currentTransaction.services.filter((s) => s.redeemed).length
+    const redeemedProducts = currentTransaction.products.filter((p) => p.redeemed).length
+    return {
+      active: true,
+      services: Math.max(0, (activeSubscription.services_remaining || 0) - redeemedServices),
+      products: Math.max(0, (activeSubscription.products_remaining || 0) - redeemedProducts),
+    }
+  }, [activeSubscription, currentTransaction.services, currentTransaction.products])
+
+  // Toggle a cart line as "free with membership" (sets unit price to 0, keeps
+  // the original price for the redemption record). Constrained to qty 1.
+  const toggleRedeem = (type, index) => {
+    const redemptionType = type === 'services' ? 'service' : 'product'
+    const cap = activeSubscription?.tier?.[`${redemptionType}_max_value`]
+    setCurrentTransaction((prev) => {
+      const items = prev[type].map((item, idx) => {
+        if (idx !== index) return item
+        if (item.redeemed) {
+          // Un-redeem — restore original price
+          const { redeemed, original_price, ...rest } = item
+          return { ...rest, price: original_price ?? item.price }
+        }
+        // Redeem — validate first
+        if (item.quantity !== 1) {
+          setAlertModal({ show: true, title: 'Set quantity to 1', message: 'Membership redemption applies to a single item. Set the line quantity to 1 first.', type: 'warning' })
+          return item
+        }
+        if (cap && item.price > cap) {
+          setAlertModal({ show: true, title: 'Exceeds membership cap', message: `This item (₱${item.price}) is over the plan's ₱${cap} cap for a free ${redemptionType}.`, type: 'warning' })
+          return item
+        }
+        return { ...item, redeemed: true, original_price: item.price, price: 0 }
+      })
+      return { ...prev, [type]: items }
+    })
+  }
+
+  // Small per-line redeem chip (rendered inside each cart line).
+  const renderRedeemControl = (type, index, item) => {
+    if (!membershipRemaining.active) return null
+    const remaining = type === 'services' ? membershipRemaining.services : membershipRemaining.products
+    const eligible = item.redeemed || (item.quantity === 1 && remaining > 0)
+    if (!eligible) return null
+    return (
+      <button
+        onClick={() => toggleRedeem(type, index)}
+        className={`mt-1 inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold border transition-colors ${
+          item.redeemed
+            ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40'
+            : 'bg-[var(--color-primary)]/15 text-[var(--color-primary)] border-[var(--color-primary)]/40 hover:bg-[var(--color-primary)]/25'
+        }`}
+        title={item.redeemed ? 'Remove membership redemption' : 'Use a free membership credit'}
+      >
+        <Crown className="w-3 h-3" />
+        {item.redeemed ? 'FREE • Member' : 'Redeem free'}
+      </button>
+    )
+  }
+
+  // Membership banner shown above the cart when the customer has an active plan.
+  const renderMembershipBanner = () => {
+    if (!membershipRemaining.active) return null
+    return (
+      <div className="flex items-center gap-2 p-2.5 mb-3 rounded-lg bg-gradient-to-r from-[var(--color-primary)]/15 to-emerald-500/10 border border-[var(--color-primary)]/30">
+        <Crown className="w-4 h-4 text-[var(--color-primary)] flex-shrink-0" />
+        <div className="min-w-0 flex-1">
+          <p className="text-xs font-semibold text-white truncate">{activeSubscription.tier?.name || 'Member'}</p>
+          <p className="text-[10px] text-gray-400">
+            {membershipRemaining.services} free service{membershipRemaining.services === 1 ? '' : 's'} · {membershipRemaining.products} free product{membershipRemaining.products === 1 ? '' : 's'} left this period
+          </p>
+        </div>
+      </div>
+    )
   }
 
   // Remove item from transaction
@@ -1065,8 +1163,14 @@ const POS = () => {
         branch_id: resolvedBranchId, // Ensure branch_id is provided (barber branch preferred)
         transaction_type: posMode, // 'service' or 'retail'
         barber: posMode === 'service' ? selectedBarber._id : undefined, // Barber only for service mode
-        services: posMode === 'service' ? currentTransaction.services : [], // Empty array for retail
-        products: currentTransaction.products.length > 0 ? currentTransaction.products : undefined,
+        // Strip UI-only fields (redeemed/original_price) — schema validates strictly.
+        // Redeemed lines carry price 0 here so the sale records them as free.
+        services: posMode === 'service'
+          ? currentTransaction.services.map(s => ({ service_id: s.service_id, service_name: s.service_name, price: s.price, quantity: s.quantity }))
+          : [], // Empty array for retail
+        products: currentTransaction.products.length > 0
+          ? currentTransaction.products.map(p => ({ product_id: p.product_id, product_name: p.product_name, price: p.price, quantity: p.quantity }))
+          : undefined,
         subtotal: currentTransaction.subtotal,
         discount_amount: currentTransaction.discount_amount,
         voucher_applied: voucherApplied,
@@ -1125,6 +1229,38 @@ const POS = () => {
       })
 
       console.log('[POS] Transaction created successfully:', result)
+
+      // Record any membership redemptions against the customer's subscription,
+      // linked to this transaction. Best-effort — a failure here must not void
+      // the completed sale, so we catch and warn per line.
+      const customerIdForRedeem = currentTransaction.customer?._id || currentBooking?.customer
+      if (customerIdForRedeem && result?.transactionId) {
+        const redeemedLines = [
+          ...currentTransaction.services.filter((s) => s.redeemed).map((s) => ({
+            redemption_type: 'service', item_id: String(s.service_id), item_name: s.service_name, item_price: s.original_price || 0,
+          })),
+          ...currentTransaction.products.filter((p) => p.redeemed).map((p) => ({
+            redemption_type: 'product', item_id: String(p.product_id), item_name: p.product_name, item_price: p.original_price || 0,
+          })),
+        ]
+        for (const line of redeemedLines) {
+          try {
+            await redeemMembership({
+              customer_id: customerIdForRedeem,
+              redemption_type: line.redemption_type,
+              item_id: line.item_id,
+              item_name: line.item_name,
+              item_price: line.item_price,
+              redeemed_by: user._id,
+              branch_id: currentBranch?._id || user?.branch_id || undefined,
+              transaction_id: result.transactionId,
+            })
+          } catch (redeemErr) {
+            console.warn('[POS] Membership redemption failed for', line.item_name, redeemErr)
+            showAlert({ title: 'Membership note', message: `Couldn't record the free ${line.redemption_type} "${line.item_name}": ${redeemErr?.message || 'error'}. The sale was completed.`, type: 'warning' })
+          }
+        }
+      }
       console.log('[POS] Booking update info:', { booking_updated: result.booking_updated, booking_id: result.booking_id, parsedBookingId })
 
       // Send email notification to the barber about the new POS transaction (only for service mode)
@@ -1933,11 +2069,15 @@ const POS = () => {
               </div>
 
               <div className="p-4 space-y-3">
+                {renderMembershipBanner()}
                 {currentTransaction.services.map((service, index) => (
                   <div key={`service-${index}`} className="flex items-center justify-between p-3 bg-[#1A1A1A] rounded-lg">
                     <div className="flex-1 min-w-0">
                       <p className="font-semibold text-white text-sm">{service.service_name}</p>
-                      <p className="text-xs text-gray-400">₱{service.price} each</p>
+                      {service.redeemed
+                        ? <p className="text-xs"><span className="text-emerald-400 font-semibold">FREE</span> <span className="text-gray-500 line-through ml-1">₱{service.original_price}</span></p>
+                        : <p className="text-xs text-gray-400">₱{service.price} each</p>}
+                      {renderRedeemControl('services', index, service)}
                     </div>
                     <div className="flex items-center space-x-2 ml-3">
                       <button
@@ -1961,7 +2101,10 @@ const POS = () => {
                   <div key={`product-${index}`} className="flex items-center justify-between p-3 bg-[var(--color-primary)]/10 rounded-lg border border-[var(--color-primary)]/20">
                     <div className="flex-1 min-w-0">
                       <p className="font-semibold text-white text-sm">{product.product_name}</p>
-                      <p className="text-xs text-gray-400">₱{product.price} each</p>
+                      {product.redeemed
+                        ? <p className="text-xs"><span className="text-emerald-400 font-semibold">FREE</span> <span className="text-gray-500 line-through ml-1">₱{product.original_price}</span></p>
+                        : <p className="text-xs text-gray-400">₱{product.price} each</p>}
+                      {renderRedeemControl('products', index, product)}
                     </div>
                     <div className="flex items-center space-x-2 ml-3">
                       <button
@@ -3117,12 +3260,16 @@ const POS = () => {
               </div>
 
               <div className="space-y-3 max-h-64 overflow-y-auto custom-scrollbar">
+                {renderMembershipBanner()}
                 {/* Services */}
                 {currentTransaction.services.map((service, index) => (
                   <div key={`service-${index}`} className="flex items-center justify-between p-3 bg-[#1A1A1A] rounded-lg border border-[#555555]/30">
                     <div className="flex-1">
                       <p className="font-semibold text-white">{service.service_name}</p>
-                      <p className="text-sm text-gray-400">₱{service.price} each</p>
+                      {service.redeemed
+                        ? <p className="text-sm"><span className="text-emerald-400 font-semibold">FREE</span> <span className="text-gray-500 line-through ml-1">₱{service.original_price}</span></p>
+                        : <p className="text-sm text-gray-400">₱{service.price} each</p>}
+                      {renderRedeemControl('services', index, service)}
                     </div>
                     <div className="flex items-center space-x-2">
                       <button
@@ -3147,7 +3294,10 @@ const POS = () => {
                   <div key={`product-${index}`} className="flex items-center justify-between p-3 bg-[var(--color-primary)]/10 rounded-lg border border-[var(--color-primary)]/20">
                     <div className="flex-1">
                       <p className="font-semibold text-white">{product.product_name}</p>
-                      <p className="text-sm text-gray-400">₱{product.price} each</p>
+                      {product.redeemed
+                        ? <p className="text-sm"><span className="text-emerald-400 font-semibold">FREE</span> <span className="text-gray-500 line-through ml-1">₱{product.original_price}</span></p>
+                        : <p className="text-sm text-gray-400">₱{product.price} each</p>}
+                      {renderRedeemControl('products', index, product)}
                     </div>
                     <div className="flex items-center space-x-2">
                       <button

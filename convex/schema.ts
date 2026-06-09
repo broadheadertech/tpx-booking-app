@@ -7,6 +7,11 @@ export default defineSchema({
   branches: defineTable({
     branch_code: v.string(),
     name: v.string(),
+    // Brand / edition of this branch. Drives which customer-subscription tiers
+    // apply and where memberships can be redeemed. Defaults to "tipuno_x".
+    branch_type: v.optional(
+      v.union(v.literal("tipuno_x"), v.literal("tipuno_x_plus"))
+    ),
     address: v.string(),
     phone: v.string(),
     email: v.string(),
@@ -985,8 +990,12 @@ export default defineSchema({
     business_address_snapshot: v.optional(v.string()),
     business_tin_snapshot: v.optional(v.string()),
     vat_registered_snapshot: v.optional(v.boolean()),
+    // Machine accreditation status at issuance — true only when the branch has
+    // an APPROVED Machine PTU. Drives accredited vs non-accredited receipt format.
+    is_bir_accredited_snapshot: v.optional(v.boolean()),
     ptu_number_snapshot: v.optional(v.string()),
     ptu_date_snapshot: v.optional(v.string()),
+    accreditation_date_snapshot: v.optional(v.string()),
     min_number_snapshot: v.optional(v.string()),
     pos_serial_snapshot: v.optional(v.string()),
     accreditation_snapshot: v.optional(v.string()),
@@ -3828,6 +3837,49 @@ export default defineSchema({
     .index("by_display_order", ["display_order"]),
 
   // Branch license keys
+  // BIR Machine PTU (Permit to Use) — one POS machine registration per branch,
+  // gated by a universal super/IT-admin approval. A branch is "BIR-accredited"
+  // (prints valid INVOICE) only when its machine PTU is approved.
+  machine_ptu: defineTable({
+    branch_id: v.id("branches"),
+    // Machine registration details (entered per branch)
+    min: v.optional(v.string()),                       // Machine Identification Number
+    serial_number: v.optional(v.string()),             // POS hardware serial
+    ptu_number: v.optional(v.string()),                // Permit to Use number
+    ptu_date: v.optional(v.string()),                  // "YYYY-MM-DD"
+    accreditation_number: v.optional(v.string()),
+    accreditation_date: v.optional(v.string()),        // "YYYY-MM-DD"
+    software_provider_name: v.optional(v.string()),
+    software_provider_tin: v.optional(v.string()),
+    software_provider_accreditation: v.optional(v.string()),
+    software_provider_date_issued: v.optional(v.string()),
+    notes: v.optional(v.string()),
+    // Approval workflow
+    status: v.union(
+      v.literal("draft"),        // being set up by branch, not yet submitted
+      v.literal("pending"),      // submitted, awaiting universal approval
+      v.literal("approved"),     // accredited — receipts print valid INVOICE
+      v.literal("rejected"),     // returned to branch with a reason
+      v.literal("revoked")       // previously approved, accreditation pulled
+    ),
+    submitted_at: v.optional(v.number()),
+    submitted_by: v.optional(v.id("users")),
+    approved_at: v.optional(v.number()),
+    approved_by: v.optional(v.id("users")),
+    approval_notes: v.optional(v.string()),
+    rejected_at: v.optional(v.number()),
+    rejected_by: v.optional(v.id("users")),
+    rejection_reason: v.optional(v.string()),
+    revoked_at: v.optional(v.number()),
+    revoked_by: v.optional(v.id("users")),
+    revoke_reason: v.optional(v.string()),
+    created_by: v.id("users"),
+    created_at: v.number(),
+    updated_at: v.number(),
+  })
+    .index("by_branch", ["branch_id"])
+    .index("by_status", ["status"]),
+
   licenses: defineTable({
     branch_id: v.id("branches"),
     license_key: v.string(),
@@ -4115,6 +4167,11 @@ export default defineSchema({
   customer_subscription_tiers: defineTable({
     name: v.string(),                                  // "Bronze", "Silver", "Gold"
     slug: v.string(),                                  // URL-safe key, unique
+    // Which branch brand this tier belongs to. A customer can hold one active
+    // membership per brand; redemption is allowed only at same-brand branches.
+    branch_type: v.optional(
+      v.union(v.literal("tipuno_x"), v.literal("tipuno_x_plus"))
+    ),
     description: v.optional(v.string()),
     is_active: v.boolean(),
     display_order: v.optional(v.number()),
