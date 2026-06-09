@@ -24,6 +24,7 @@ export default function BranchManagement() {
     email: '',
     booking_start_hour: 10,
     booking_end_hour: 20,
+    branch_type: 'tipuno_x',
     // BIR Compliance fields
     business_name: '',
     business_style: '',
@@ -116,6 +117,7 @@ export default function BranchManagement() {
       email: '',
       booking_start_hour: 10,
       booking_end_hour: 20,
+      branch_type: 'tipuno_x',
       business_name: '',
       business_style: '',
       registered_address: '',
@@ -149,6 +151,7 @@ export default function BranchManagement() {
       email: branch.email,
       booking_start_hour: branch.booking_start_hour ?? 10,
       booking_end_hour: branch.booking_end_hour ?? 20,
+      branch_type: branch.branch_type ?? 'tipuno_x',
       business_name: branch.business_name ?? '',
       business_style: branch.business_style ?? '',
       registered_address: branch.registered_address ?? '',

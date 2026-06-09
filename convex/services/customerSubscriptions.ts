@@ -32,15 +32,33 @@ function addPeriod(start: number, period: string): number {
   return d.getTime();
 }
 
+// Branch brand / edition. A customer may hold one active membership per brand;
+// redemption is allowed only at branches of the matching brand.
+const BRANCH_TYPE = v.union(v.literal("tipuno_x"), v.literal("tipuno_x_plus"));
+function normalizeBranchType(t?: string | null): "tipuno_x" | "tipuno_x_plus" {
+  return t === "tipuno_x_plus" ? "tipuno_x_plus" : "tipuno_x";
+}
+function brandLabel(t: string): string {
+  return normalizeBranchType(t) === "tipuno_x_plus" ? "TipunoX Plus" : "TipunoX";
+}
+
 // ============================================================================
 // TIER CRUD (admin only)
 // ============================================================================
 
 export const listTiers = query({
-  args: { include_inactive: v.optional(v.boolean()) },
+  args: {
+    include_inactive: v.optional(v.boolean()),
+    branch_type: v.optional(BRANCH_TYPE),
+  },
   handler: async (ctx, args) => {
     let rows = await ctx.db.query("customer_subscription_tiers").collect();
     if (!args.include_inactive) rows = rows.filter((r) => r.is_active);
+    if (args.branch_type) {
+      rows = rows.filter(
+        (r) => normalizeBranchType(r.branch_type) === args.branch_type
+      );
+    }
     return rows.sort(
       (a, b) => (a.display_order ?? 999) - (b.display_order ?? 999)
     );
@@ -65,6 +83,7 @@ export const createTier = mutation({
   args: {
     name: v.string(),
     slug: v.string(),
+    branch_type: v.optional(BRANCH_TYPE),
     description: v.optional(v.string()),
     service_allocations: v.number(),
     product_allocations: v.number(),
@@ -98,6 +117,7 @@ export const createTier = mutation({
     const id = await ctx.db.insert("customer_subscription_tiers", {
       name: args.name.trim(),
       slug: args.slug.trim(),
+      branch_type: normalizeBranchType(args.branch_type),
       description: args.description?.trim(),
       is_active: true,
       display_order: args.display_order,
@@ -135,6 +155,7 @@ export const updateTier = mutation({
     tier_id: v.id("customer_subscription_tiers"),
     updated_by: v.id("users"),
     name: v.optional(v.string()),
+    branch_type: v.optional(BRANCH_TYPE),
     description: v.optional(v.string()),
     service_allocations: v.optional(v.number()),
     product_allocations: v.optional(v.number()),
@@ -156,7 +177,7 @@ export const updateTier = mutation({
 
     const patch: Record<string, any> = { updated_at: Date.now() };
     for (const key of [
-      "name", "description", "service_allocations", "product_allocations",
+      "name", "branch_type", "description", "service_allocations", "product_allocations",
       "service_max_value", "product_max_value", "period_type",
       "price", "currency", "perks", "display_order", "is_active",
     ] as const) {
@@ -249,20 +270,25 @@ export const applyForSubscription = mutation({
     const customer = await ctx.db.get(args.customer_id);
     if (!customer) throw new Error("Customer not found.");
 
-    // Prevent duplicate active/pending subscriptions for the same customer
-    const existing = await ctx.db
+    // One active/pending membership PER BRAND. A customer may hold a TipunoX
+    // and a TipunoX Plus membership simultaneously, but not two of the same.
+    const newBrand = normalizeBranchType(tier.branch_type);
+    const activeOrPending = await ctx.db
       .query("customer_subscriptions")
       .withIndex("by_customer", (q) => q.eq("customer_id", args.customer_id))
       .filter((q) =>
         q.or(q.eq(q.field("status"), "active"), q.eq(q.field("status"), "pending"))
       )
-      .first();
-    if (existing) {
-      throw new Error(
-        existing.status === "active"
-          ? "Customer already has an active subscription. Cancel it first."
-          : "Customer already has a pending application."
-      );
+      .collect();
+    for (const ex of activeOrPending) {
+      const exTier = await ctx.db.get(ex.tier_id);
+      if (normalizeBranchType(exTier?.branch_type) === newBrand) {
+        throw new Error(
+          ex.status === "active"
+            ? `Customer already has an active ${brandLabel(newBrand)} membership. Cancel it first.`
+            : `Customer already has a pending ${brandLabel(newBrand)} application.`
+        );
+      }
     }
 
     const now = Date.now();
@@ -457,15 +483,45 @@ export const redeemEntitlement = mutation({
     notes: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const sub = await ctx.db
+    // Resolve the redeeming branch's brand so we pick the matching membership
+    // and enforce same-brand redemption (TipunoX vs TipunoX Plus).
+    let wantBrand: "tipuno_x" | "tipuno_x_plus" | null = null;
+    if (args.branch_id) {
+      const branch = await ctx.db.get(args.branch_id);
+      wantBrand = normalizeBranchType((branch as any)?.branch_type);
+    }
+
+    const activeSubs = await ctx.db
       .query("customer_subscriptions")
       .withIndex("by_customer", (q) =>
         q.eq("customer_id", args.customer_id).eq("status", "active")
       )
-      .first();
-    if (!sub) throw new Error("Customer has no active subscription.");
+      .collect();
+    if (activeSubs.length === 0) throw new Error("Customer has no active subscription.");
 
-    const tier = await ctx.db.get(sub.tier_id);
+    let sub = activeSubs[0];
+    let tier = await ctx.db.get(sub.tier_id);
+
+    if (wantBrand) {
+      let matched = null as typeof sub | null;
+      let matchedTier = null as typeof tier;
+      for (const s of activeSubs) {
+        const t = await ctx.db.get(s.tier_id);
+        if (normalizeBranchType(t?.branch_type) === wantBrand) {
+          matched = s;
+          matchedTier = t;
+          break;
+        }
+      }
+      if (!matched) {
+        throw new Error(
+          `Customer has no active ${brandLabel(wantBrand)} membership for this branch.`
+        );
+      }
+      sub = matched;
+      tier = matchedTier;
+    }
+
     if (!tier) throw new Error("Tier no longer exists.");
 
     // Period sanity — staff might be redeeming on a stale period that the
@@ -557,17 +613,34 @@ export const redeemEntitlement = mutation({
 // ============================================================================
 
 export const getActiveSubscription = query({
-  args: { customer_id: v.id("users") },
+  args: {
+    customer_id: v.id("users"),
+    // When provided, return only the active membership whose tier matches this
+    // brand (POS passes the current branch's type). Without it, returns any.
+    branch_type: v.optional(BRANCH_TYPE),
+  },
   handler: async (ctx, args) => {
-    const sub = await ctx.db
+    const subs = await ctx.db
       .query("customer_subscriptions")
       .withIndex("by_customer", (q) =>
         q.eq("customer_id", args.customer_id).eq("status", "active")
       )
-      .first();
-    if (!sub) return null;
-    const tier = await ctx.db.get(sub.tier_id);
-    return { ...sub, tier };
+      .collect();
+    if (subs.length === 0) return null;
+
+    if (args.branch_type) {
+      const want = normalizeBranchType(args.branch_type);
+      for (const s of subs) {
+        const tier = await ctx.db.get(s.tier_id);
+        if (normalizeBranchType(tier?.branch_type) === want) {
+          return { ...s, tier };
+        }
+      }
+      return null; // no membership for this branch's brand
+    }
+
+    const tier = await ctx.db.get(subs[0].tier_id);
+    return { ...subs[0], tier };
   },
 });
 
@@ -693,5 +766,134 @@ export const dailySubscriptionMaintenance = internalMutation({
       `[CustomerSubscriptions] Maintenance: ${renewed} renewed, ${expired} expired`
     );
     return { renewed, expired };
+  },
+});
+
+// ============================================================================
+// ANALYTICS — super-admin overview
+// ============================================================================
+
+/** Normalize a tier price to an equivalent MONTHLY figure for MRR. */
+function monthlyEquivalent(price: number, period: string): number {
+  if (period === "annual") return price / 12;
+  if (period === "quarterly") return price / 3;
+  return price; // monthly
+}
+
+/**
+ * Aggregate metrics for the super-admin Memberships overview:
+ * status counts, MRR/ARR, per-tier active distribution, redemptions in the
+ * last 30 days, renewals due in the next 7 days, and 30-day churn.
+ */
+export const getSubscriptionAnalytics = query({
+  args: {},
+  handler: async (ctx) => {
+    const now = Date.now();
+    const THIRTY_DAYS = 30 * 24 * 60 * 60 * 1000;
+    const SEVEN_DAYS = 7 * 24 * 60 * 60 * 1000;
+
+    const allSubs = await ctx.db.query("customer_subscriptions").collect();
+    const tiers = await ctx.db.query("customer_subscription_tiers").collect();
+    const tierById = new Map(tiers.map((t) => [t._id, t]));
+
+    const statusCounts = {
+      pending: 0,
+      active: 0,
+      paused: 0,
+      cancelled: 0,
+      expired: 0,
+    };
+    let mrr = 0;
+    let upcomingRenewals = 0;
+    let churn30d = 0;
+
+    // Per-tier active distribution (seed every tier so 0-member tiers show too)
+    const perTier = new Map<
+      string,
+      {
+        tier_id: string;
+        name: string;
+        branch_type: string;
+        period_type: string;
+        price: number;
+        active: number;
+        mrr: number;
+      }
+    >();
+    for (const t of tiers) {
+      perTier.set(t._id as string, {
+        tier_id: t._id as string,
+        name: t.name,
+        branch_type: normalizeBranchType(t.branch_type),
+        period_type: t.period_type,
+        price: t.price,
+        active: 0,
+        mrr: 0,
+      });
+    }
+
+    for (const s of allSubs) {
+      statusCounts[s.status] = (statusCounts[s.status] || 0) + 1;
+
+      if (s.status === "active") {
+        const tier = tierById.get(s.tier_id);
+        if (tier) {
+          const m = monthlyEquivalent(tier.price, tier.period_type);
+          mrr += m;
+          const pt = perTier.get(s.tier_id as string);
+          if (pt) {
+            pt.active += 1;
+            pt.mrr += m;
+          }
+        }
+        if (
+          s.current_period_end &&
+          s.current_period_end >= now &&
+          s.current_period_end <= now + SEVEN_DAYS
+        ) {
+          upcomingRenewals += 1;
+        }
+      }
+
+      if (s.status === "cancelled" || s.status === "expired") {
+        const when = s.cancelled_at || s.ends_at || s.updated_at;
+        if (when && when >= now - THIRTY_DAYS) churn30d += 1;
+      }
+    }
+
+    // Redemptions in the last 30 days (no global time index — scan + filter;
+    // table is small in practice and this is an admin-only query).
+    const allRedemptions = await ctx.db
+      .query("customer_subscription_redemptions")
+      .collect();
+    const redemptions30d = { total: 0, service: 0, product: 0, value: 0 };
+    for (const r of allRedemptions) {
+      if (r.redeemed_at < now - THIRTY_DAYS) continue;
+      redemptions30d.total += 1;
+      redemptions30d.value += r.item_price || 0;
+      if (r.redemption_type === "service") redemptions30d.service += 1;
+      else redemptions30d.product += 1;
+    }
+
+    const round2 = (n: number) => Math.round(n * 100) / 100;
+
+    return {
+      totals: {
+        ...statusCounts,
+        total: allSubs.length,
+      },
+      active_members: statusCounts.active,
+      mrr: round2(mrr),
+      arr: round2(mrr * 12),
+      upcoming_renewals_7d: upcomingRenewals,
+      churn_30d: churn30d,
+      redemptions_30d: {
+        ...redemptions30d,
+        value: round2(redemptions30d.value),
+      },
+      per_tier: Array.from(perTier.values())
+        .map((t) => ({ ...t, mrr: round2(t.mrr) }))
+        .sort((a, b) => b.active - a.active),
+    };
   },
 });

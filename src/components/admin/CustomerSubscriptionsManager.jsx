@@ -19,6 +19,9 @@ import {
   CheckCircle2,
   Ban,
   Eye,
+  TrendingUp,
+  RefreshCw,
+  Gift,
 } from "lucide-react";
 
 const formatPHP = (n) =>
@@ -42,6 +45,7 @@ const STATUS_COLORS = {
 const TierModal = ({ tier, onClose, onSubmit, busy }) => {
   const [name, setName] = useState(tier?.name || "");
   const [slug, setSlug] = useState(tier?.slug || "");
+  const [branchType, setBranchType] = useState(tier?.branch_type || "tipuno_x");
   const [description, setDescription] = useState(tier?.description || "");
   const [serviceAlloc, setServiceAlloc] = useState(tier?.service_allocations ?? 1);
   const [productAlloc, setProductAlloc] = useState(tier?.product_allocations ?? 0);
@@ -63,6 +67,7 @@ const TierModal = ({ tier, onClose, onSubmit, busy }) => {
     onSubmit({
       name: name.trim(),
       slug: slug.trim(),
+      branch_type: branchType,
       description: description.trim() || undefined,
       service_allocations: parseInt(serviceAlloc) || 0,
       product_allocations: parseInt(productAlloc) || 0,
@@ -113,6 +118,19 @@ const TierModal = ({ tier, onClose, onSubmit, busy }) => {
                 className="w-full bg-[#252525] border border-[#333] rounded-lg px-3 py-2 text-white text-sm disabled:opacity-60"
               />
             </div>
+          </div>
+
+          <div>
+            <label className="block text-xs text-gray-400 mb-1">Brand</label>
+            <select
+              value={branchType}
+              onChange={(e) => setBranchType(e.target.value)}
+              className="w-full bg-[#252525] border border-[#333] rounded-lg px-3 py-2 text-white text-sm"
+            >
+              <option value="tipuno_x">TipunoX</option>
+              <option value="tipuno_x_plus">TipunoX Plus</option>
+            </select>
+            <p className="text-[11px] text-gray-500 mt-1">Only {branchType === "tipuno_x_plus" ? "TipunoX Plus" : "TipunoX"} branches will offer and redeem this plan.</p>
           </div>
 
           <div>
@@ -453,6 +471,10 @@ const CustomerSubscriptionsManager = () => {
     statusFilter === "all" ? {} : { status: statusFilter }
   );
   const customers = useQuery(api.services.auth.getAllUsers);
+  const analytics = useQuery(
+    api.services.customerSubscriptions.getSubscriptionAnalytics,
+    {}
+  );
 
   const createTier = useMutation(api.services.customerSubscriptions.createTier);
   const updateTier = useMutation(api.services.customerSubscriptions.updateTier);
@@ -606,6 +628,80 @@ const CustomerSubscriptionsManager = () => {
         </div>
       </div>
 
+      {/* ANALYTICS OVERVIEW */}
+      {view === "subscriptions" && analytics && (
+        <div className="space-y-3">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            {/* Active members */}
+            <div className="bg-gradient-to-br from-[#1A1A1A] to-[#252525] rounded-xl p-4 border border-emerald-500/30">
+              <div className="flex items-center justify-between mb-1.5">
+                <Users className="w-5 h-5 text-emerald-400" />
+                <span className="text-[10px] text-gray-500">{analytics.totals.pending} pending</span>
+              </div>
+              <p className="text-2xl font-bold text-emerald-400">{analytics.active_members}</p>
+              <p className="text-xs text-gray-400 mt-0.5">Active Members</p>
+            </div>
+
+            {/* MRR */}
+            <div className="bg-gradient-to-br from-[#1A1A1A] to-[#252525] rounded-xl p-4 border border-[var(--color-primary)]/30">
+              <div className="flex items-center justify-between mb-1.5">
+                <TrendingUp className="w-5 h-5 text-[var(--color-primary)]" />
+                <span className="text-[10px] text-gray-500">ARR {formatPHP(analytics.arr)}</span>
+              </div>
+              <p className="text-2xl font-bold text-white">{formatPHP(analytics.mrr)}</p>
+              <p className="text-xs text-gray-400 mt-0.5">Monthly Recurring Revenue</p>
+            </div>
+
+            {/* Redemptions 30d */}
+            <div className="bg-gradient-to-br from-[#1A1A1A] to-[#252525] rounded-xl p-4 border border-blue-500/30">
+              <div className="flex items-center justify-between mb-1.5">
+                <Gift className="w-5 h-5 text-blue-400" />
+                <span className="text-[10px] text-gray-500">worth {formatPHP(analytics.redemptions_30d.value)}</span>
+              </div>
+              <p className="text-2xl font-bold text-blue-400">{analytics.redemptions_30d.total}</p>
+              <p className="text-xs text-gray-400 mt-0.5">
+                Redemptions (30d) · {analytics.redemptions_30d.service} svc · {analytics.redemptions_30d.product} prod
+              </p>
+            </div>
+
+            {/* Renewals / churn */}
+            <div className="bg-gradient-to-br from-[#1A1A1A] to-[#252525] rounded-xl p-4 border border-amber-500/30">
+              <div className="flex items-center justify-between mb-1.5">
+                <RefreshCw className="w-5 h-5 text-amber-400" />
+                <span className="text-[10px] text-red-400">{analytics.churn_30d} churned (30d)</span>
+              </div>
+              <p className="text-2xl font-bold text-amber-400">{analytics.upcoming_renewals_7d}</p>
+              <p className="text-xs text-gray-400 mt-0.5">Renewals due (7d)</p>
+            </div>
+          </div>
+
+          {/* Active members by tier */}
+          {analytics.per_tier.some((t) => t.active > 0) && (
+            <div className="bg-[#1A1A1A] border border-[#333] rounded-xl p-4">
+              <h4 className="text-sm font-semibold text-gray-300 mb-3">Active members by tier</h4>
+              <div className="space-y-2">
+                {analytics.per_tier.map((t) => {
+                  const maxActive = Math.max(...analytics.per_tier.map((x) => x.active), 1);
+                  return (
+                    <div key={t.tier_id} className="flex items-center gap-3">
+                      <span className="text-xs text-gray-400 w-24 truncate">{t.name}</span>
+                      <div className="flex-1 h-5 bg-[#252525] rounded overflow-hidden">
+                        <div
+                          className="h-full bg-[var(--color-primary)]/60 rounded"
+                          style={{ width: `${(t.active / maxActive) * 100}%` }}
+                        />
+                      </div>
+                      <span className="text-xs text-white w-8 text-right">{t.active}</span>
+                      <span className="text-[10px] text-gray-500 w-20 text-right">{formatPHP(t.mrr)}/mo</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
       {error && (
         <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-3 flex items-start gap-2">
           <AlertTriangle className="w-4 h-4 text-red-400 mt-0.5" />
@@ -643,6 +739,13 @@ const CustomerSubscriptionsManager = () => {
                     <h3 className="text-white font-semibold flex items-center gap-2">
                       <Crown className="w-4 h-4 text-[var(--color-primary)]" />
                       {t.name}
+                      <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded border ${
+                        (t.branch_type || 'tipuno_x') === 'tipuno_x_plus'
+                          ? 'bg-amber-500/15 text-amber-300 border-amber-500/40'
+                          : 'bg-blue-500/15 text-blue-300 border-blue-500/40'
+                      }`}>
+                        {(t.branch_type || 'tipuno_x') === 'tipuno_x_plus' ? 'TipunoX Plus' : 'TipunoX'}
+                      </span>
                     </h3>
                     <p className="text-xs text-gray-500">{t.slug}</p>
                   </div>

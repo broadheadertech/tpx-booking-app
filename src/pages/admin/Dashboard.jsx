@@ -17,6 +17,7 @@ import SuperAdminPLDashboard from '../../components/admin/SuperAdminPLDashboard'
 import BranchPLDashboard from '../../components/admin/BranchPLDashboard'
 import ImpersonateBranchPanel from '../../components/admin/ImpersonateBranchPanel'
 import CustomerSubscriptionsManager from '../../components/admin/CustomerSubscriptionsManager'
+import MachinePTUApprovals from '../../components/admin/MachinePTUApprovals'
 import BranchBookingsOverview from '../../components/admin/BranchBookingsOverview'
 import SuperAdminBalanceSheet from '../../components/admin/SuperAdminBalanceSheet'
 import AuditTrailViewer from '../../components/admin/AuditTrailViewer'
@@ -266,6 +267,13 @@ function AdminDashboard() {
           <div className="text-center text-gray-400">You do not have access to customer subscriptions.</div>
         )
 
+      case 'machine_ptu_approvals':
+        return user?.role === 'super_admin' || user?.role === 'it_admin' ? (
+          <MachinePTUApprovals />
+        ) : (
+          <div className="text-center text-gray-400">You do not have access to machine PTU approvals.</div>
+        )
+
       case 'branch_bookings':
         return user?.role === 'super_admin' || user?.role === 'it_admin' || user?.role === 'admin' ? (
           <BranchBookingsOverview />
@@ -407,6 +415,7 @@ function AdminDashboard() {
       { id: 'shop_config', label: 'Shop Config', icon: 'shopping-cart', category: 'Configs' },
       { id: 'wallet', label: 'Wallet Config', icon: 'wallet', category: 'Configs' },
       { id: 'loyalty', label: 'Loyalty Config', icon: 'star', category: 'Configs' },
+      { id: 'machine_ptu_approvals', label: 'Machine PTU', icon: 'file-text', category: 'Configs' },
       // Reports category
       { id: 'reports', label: 'Reports', icon: 'chart', category: 'Reports' },
       { id: 'audit_trail', label: 'Audit Trail', icon: 'history', category: 'Reports' },

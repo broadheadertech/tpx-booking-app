@@ -15,8 +15,8 @@
  *   "breaking" — Breaking/major change (bumps MAJOR)
  */
 
-export const APP_VERSION = '2.17.0';
-export const LAST_DEPLOY = '2026-06-02';
+export const APP_VERSION = '2.20.0';
+export const LAST_DEPLOY = '2026-06-03';
 export const VERSION_INFO = {
   version: APP_VERSION,
   lastDeploy: LAST_DEPLOY,
@@ -28,6 +28,30 @@ export const VERSION_INFO = {
  * Each entry: { version, date, changes: [{ tag, text }] }
  */
 export const CHANGELOG = [
+  {
+    version: '2.20.0',
+    date: '2026-06-03',
+    changes: [
+      { tag: 'feature', text: 'BIR Machine PTU + accreditation — new per-branch "POS Machine PTU" setup (MIN, serial, PTU, accreditation, software provider) in BIR Compliance settings, with Submit-for-Approval. New universal "Machine PTU" approval queue for super/IT admin to approve, reject, or revoke. A branch is BIR-accredited only once approved.' },
+      { tag: 'feature', text: 'BIR-standard receipt — receipts now print as "INVOICE" (RR 7-2024 / EOPT standard). Accredited branches print the full machine block (MIN, Serial, PTU + date, Accreditation + date, software provider); non-accredited branches print "NOT BIR ACCREDITED — NOT VALID FOR CLAIM OF INPUT TAX". Accreditation status is snapshotted on each transaction so reprints stay accurate.' },
+    ],
+  },
+  {
+    version: '2.19.0',
+    date: '2026-06-03',
+    changes: [
+      { tag: 'feature', text: 'Branch types (TipunoX / TipunoX Plus) — branches now have a Brand type set in the branch form. Client subscription tiers are tagged to a brand, so each brand offers its own membership plans.' },
+      { tag: 'feature', text: 'Brand-scoped memberships — a client can hold one active membership per brand (up to two), and a membership can only be redeemed at branches of the matching brand. POS shows/redeems only the membership for the current branch\'s brand; Memberships tiers carry a brand badge and selector.' },
+    ],
+  },
+  {
+    version: '2.18.0',
+    date: '2026-06-03',
+    changes: [
+      { tag: 'feature', text: 'Client Subscriptions — POS redemption: when a customer with an active membership is selected, POS shows a membership banner with remaining free services/products and a "Redeem free" chip on each cart line (sets it to ₱0, guarded by per-item value caps and remaining allocations). Redemptions are recorded against the subscription and linked to the transaction at checkout.' },
+      { tag: 'feature', text: 'Client Subscriptions — super-admin analytics: the Memberships tab now leads with an overview (active members, MRR/ARR, 30-day redemptions & value, renewals due in 7 days, 30-day churn) plus an active-members-by-tier breakdown, backed by a new getSubscriptionAnalytics query.' },
+    ],
+  },
   {
     version: '2.17.0',
     date: '2026-06-02',

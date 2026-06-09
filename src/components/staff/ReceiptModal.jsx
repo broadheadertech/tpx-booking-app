@@ -1,6 +1,8 @@
 import Modal from '../common/Modal'
 import { Printer, Download, CheckCircle } from 'lucide-react'
 import { useAppModal } from '../../context/AppModalContext'
+import { useQuery } from 'convex/react'
+import { api } from '../../../convex/_generated/api'
 
 const ReceiptModal = ({
   isOpen,
@@ -10,6 +12,12 @@ const ReceiptModal = ({
   staffInfo
 }) => {
   const { showAlert } = useAppModal()
+  // The branch is BIR-accredited only when it has an APPROVED machine PTU.
+  // Reprints rely on the transaction's snapshot; live receipts use this query.
+  const approvedMachine = useQuery(
+    api.services.machinePTU.getApprovedMachinePTU,
+    branchInfo?._id ? { branch_id: branchInfo._id } : 'skip'
+  )
   if (!transactionData) return null
 
   const formatDate = (timestamp) => {
@@ -60,18 +68,27 @@ const ReceiptModal = ({
     vatRegistered: typeof transactionData.vat_registered_snapshot === 'boolean'
       ? transactionData.vat_registered_snapshot
       : Boolean(branchInfo?.vat_registered),
-    ptuNumber: transactionData.ptu_number_snapshot || branchInfo?.ptu_number || '',
-    ptuDate: transactionData.ptu_date_snapshot || branchInfo?.ptu_date_issued || '',
-    minNumber: transactionData.min_number_snapshot || branchInfo?.min_number || '',
-    posSerial: transactionData.pos_serial_snapshot || branchInfo?.pos_serial_number || '',
-    accreditation: transactionData.accreditation_snapshot || branchInfo?.accreditation_number || '',
-    softwareProvider: transactionData.software_provider_snapshot || {
-      name: branchInfo?.software_provider_name,
-      tin: branchInfo?.software_provider_tin,
-      accreditation: branchInfo?.software_provider_accreditation,
-      date_issued: branchInfo?.software_provider_date_issued,
-    },
+    // Machine accreditation block — from the approved machine PTU (snapshot for
+    // reprints, live query otherwise). NOT from the branch's legacy BIR fields.
+    ptuNumber: transactionData.ptu_number_snapshot || approvedMachine?.ptu_number || '',
+    ptuDate: transactionData.ptu_date_snapshot || approvedMachine?.ptu_date || '',
+    accreditationDate: transactionData.accreditation_date_snapshot || approvedMachine?.accreditation_date || '',
+    minNumber: transactionData.min_number_snapshot || approvedMachine?.min || '',
+    posSerial: transactionData.pos_serial_snapshot || approvedMachine?.serial_number || '',
+    accreditation: transactionData.accreditation_snapshot || approvedMachine?.accreditation_number || '',
+    softwareProvider: transactionData.software_provider_snapshot || (approvedMachine ? {
+      name: approvedMachine.software_provider_name,
+      tin: approvedMachine.software_provider_tin,
+      accreditation: approvedMachine.software_provider_accreditation,
+      date_issued: approvedMachine.software_provider_date_issued,
+    } : {}),
   }
+
+  // Accredited iff the transaction was issued under an approved machine PTU
+  // (snapshot wins for historical reprints; else the branch's current status).
+  const isAccredited = typeof transactionData.is_bir_accredited_snapshot === 'boolean'
+    ? transactionData.is_bir_accredited_snapshot
+    : !!approvedMachine
 
   const generateReceiptHTML = () => {
     const receiptNumber = transactionData.receipt_number || transactionData.transaction_id || 'N/A'
@@ -238,7 +255,7 @@ const ReceiptModal = ({
   ${headerLines}
   <div class="line"></div>
 
-  <div class="center bold" style="font-size: 15px; margin: 1mm 0;">OFFICIAL RECEIPT</div>
+  <div class="center bold" style="font-size: 15px; margin: 1mm 0;">INVOICE</div>
   <div class="center bold" style="font-size: 13px; margin-bottom: 1.5mm;">${escapeHtml(receiptNumber)}</div>
   <div class="line"></div>
 
@@ -302,23 +319,27 @@ const ReceiptModal = ({
   <div style="font-size: 11px;">____________________________</div>
   <div class="line"></div>
 
+  ${isAccredited ? `
   <div style="font-size: 10px;">
-    ${bir.posSerial ? `<div>POS S/N: ${escapeHtml(bir.posSerial)}</div>` : ''}
+    ${bir.posSerial ? `<div>Serial No: ${escapeHtml(bir.posSerial)}</div>` : ''}
     ${bir.minNumber ? `<div>MIN: ${escapeHtml(bir.minNumber)}</div>` : ''}
     ${bir.ptuNumber ? `<div>PTU No: ${escapeHtml(bir.ptuNumber)}${bir.ptuDate ? ` (${escapeHtml(bir.ptuDate)})` : ''}</div>` : ''}
-    ${bir.accreditation ? `<div>Accred No: ${escapeHtml(bir.accreditation)}</div>` : ''}
+    ${bir.accreditation ? `<div>Accred No: ${escapeHtml(bir.accreditation)}${bir.accreditationDate ? ` (${escapeHtml(bir.accreditationDate)})` : ''}</div>` : ''}
     ${softwareHtml}
   </div>
   <div class="line"></div>
-
-  <div class="center" style="font-size: 10px; line-height: 1.3;">
-    THIS INVOICE/RECEIPT SHALL BE VALID FOR FIVE (5) YEARS FROM THE DATE OF THE PERMIT TO USE.
-  </div>
   ${!bir.vatRegistered ? `
   <div class="center bold" style="font-size: 10px; margin-top: 1.5mm; line-height: 1.3;">
     THIS DOCUMENT IS NOT VALID FOR CLAIM OF INPUT TAX.
   </div>
   ` : ''}
+  ` : `
+  <div class="center bold" style="font-size: 11px; margin-top: 1mm; line-height: 1.35;">*** NOT YET BIR REGISTERED ***</div>
+  <div class="center" style="font-size: 9px; margin-top: 0.5mm; line-height: 1.3;">(No approved Permit to Use)</div>
+  <div class="center bold" style="font-size: 10px; margin-top: 1mm; line-height: 1.3;">THIS DOCUMENT IS NOT VALID FOR CLAIM OF INPUT TAX.</div>
+  <div class="center" style="font-size: 9px; margin-top: 1mm; line-height: 1.3;">This serves as an internal sales document only. Please ask for your BIR-registered invoice.</div>
+  <div class="line"></div>
+  `}
 
   <div class="center bold" style="margin-top: 2mm; font-size: 13px;">Thank you!</div>
   <div class="center" style="font-size: 11px;">Please come again.</div>
@@ -378,7 +399,7 @@ const ReceiptModal = ({
     if (bir.tin) lines.push(center(`${bir.vatRegistered ? 'VAT REG TIN' : 'NON-VAT REG TIN'}: ${bir.tin}`))
     if (branchInfo?.phone) lines.push(center(`Tel: ${branchInfo.phone}`))
     lines.push(separator)
-    lines.push(center('OFFICIAL RECEIPT'))
+    lines.push(center('INVOICE'))
     const receiptNumber = transactionData.receipt_number || transactionData.transaction_id || 'N/A'
     lines.push(center(receiptNumber))
     lines.push(separator)
@@ -470,23 +491,30 @@ const ReceiptModal = ({
     lines.push('__________________________')
     lines.push(dashedLine)
 
-    if (bir.posSerial) lines.push(`POS S/N: ${bir.posSerial}`)
-    if (bir.minNumber) lines.push(`MIN: ${bir.minNumber}`)
-    if (bir.ptuNumber) lines.push(`PTU: ${bir.ptuNumber}${bir.ptuDate ? ` (${bir.ptuDate})` : ''}`)
-    if (bir.accreditation) lines.push(`Accred: ${bir.accreditation}`)
-    if (bir.softwareProvider?.name) {
-      lines.push(`Software: ${bir.softwareProvider.name}`)
-      if (bir.softwareProvider.tin) lines.push(`  TIN: ${bir.softwareProvider.tin}`)
-      if (bir.softwareProvider.accreditation) lines.push(`  Accred: ${bir.softwareProvider.accreditation}`)
-      if (bir.softwareProvider.date_issued) lines.push(`  Date: ${bir.softwareProvider.date_issued}`)
-    }
-    lines.push(dashedLine)
-    lines.push(center('VALID FOR 5 YEARS FROM'))
-    lines.push(center('THE DATE OF PERMIT TO USE.'))
-    if (!bir.vatRegistered) {
-      lines.push('')
+    if (isAccredited) {
+      if (bir.posSerial) lines.push(`Serial No: ${bir.posSerial}`)
+      if (bir.minNumber) lines.push(`MIN: ${bir.minNumber}`)
+      if (bir.ptuNumber) lines.push(`PTU: ${bir.ptuNumber}${bir.ptuDate ? ` (${bir.ptuDate})` : ''}`)
+      if (bir.accreditation) lines.push(`Accred: ${bir.accreditation}${bir.accreditationDate ? ` (${bir.accreditationDate})` : ''}`)
+      if (bir.softwareProvider?.name) {
+        lines.push(`Software: ${bir.softwareProvider.name}`)
+        if (bir.softwareProvider.tin) lines.push(`  TIN: ${bir.softwareProvider.tin}`)
+        if (bir.softwareProvider.accreditation) lines.push(`  Accred: ${bir.softwareProvider.accreditation}`)
+        if (bir.softwareProvider.date_issued) lines.push(`  Date: ${bir.softwareProvider.date_issued}`)
+      }
+      lines.push(dashedLine)
+      if (!bir.vatRegistered) {
+        lines.push(center('NOT VALID FOR CLAIM OF'))
+        lines.push(center('INPUT TAX.'))
+      }
+    } else {
+      lines.push(center('*** NOT YET BIR REGISTERED ***'))
+      lines.push(center('(No approved Permit to Use)'))
       lines.push(center('NOT VALID FOR CLAIM OF'))
       lines.push(center('INPUT TAX.'))
+      lines.push(center('Ask for your BIR-registered'))
+      lines.push(center('invoice.'))
+      lines.push(dashedLine)
     }
     lines.push('')
     lines.push(center('Thank you!'))

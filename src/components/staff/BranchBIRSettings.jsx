@@ -44,6 +44,68 @@ const BranchBIRSettings = ({ user }) => {
 
   const updateBranch = useMutation(api.services.branches.updateBranch)
 
+  // ── Machine PTU (BIR accreditation, approval-gated) ──────────────────────
+  const machine = useQuery(
+    api.services.machinePTU.getMachinePTUByBranch,
+    user?.branch_id ? { branch_id: user.branch_id } : 'skip'
+  )
+  const upsertMachine = useMutation(api.services.machinePTU.upsertMachinePTU)
+  const submitMachine = useMutation(api.services.machinePTU.submitMachinePTU)
+  const [machineForm, setMachineForm] = useState({
+    min: '', serial_number: '', ptu_number: '', ptu_date: '',
+    accreditation_number: '', accreditation_date: '',
+    software_provider_name: '', software_provider_tin: '',
+    software_provider_accreditation: '', software_provider_date_issued: '',
+  })
+  const [machineSaving, setMachineSaving] = useState(false)
+
+  useEffect(() => {
+    if (machine) {
+      setMachineForm({
+        min: machine.min || '',
+        serial_number: machine.serial_number || '',
+        ptu_number: machine.ptu_number || '',
+        ptu_date: machine.ptu_date || '',
+        accreditation_number: machine.accreditation_number || '',
+        accreditation_date: machine.accreditation_date || '',
+        software_provider_name: machine.software_provider_name || '',
+        software_provider_tin: machine.software_provider_tin || '',
+        software_provider_accreditation: machine.software_provider_accreditation || '',
+        software_provider_date_issued: machine.software_provider_date_issued || '',
+      })
+    }
+  }, [machine])
+
+  const handleMachineChange = (e) =>
+    setMachineForm((p) => ({ ...p, [e.target.name]: e.target.value }))
+
+  const handleMachineSave = async () => {
+    if (!user?._id || !user?.branch_id) return
+    setMachineSaving(true)
+    try {
+      await upsertMachine({ branch_id: user.branch_id, actor_id: user._id, ...machineForm })
+      setMessage({ type: 'success', text: 'Machine PTU saved as draft.' })
+    } catch (e) {
+      setMessage({ type: 'error', text: e?.message || 'Save failed' })
+    } finally {
+      setMachineSaving(false)
+    }
+  }
+
+  const handleMachineSubmit = async () => {
+    if (!user?._id || !user?.branch_id) return
+    setMachineSaving(true)
+    try {
+      await upsertMachine({ branch_id: user.branch_id, actor_id: user._id, ...machineForm })
+      await submitMachine({ branch_id: user.branch_id, actor_id: user._id })
+      setMessage({ type: 'success', text: 'Submitted for approval. An admin will review your machine PTU.' })
+    } catch (e) {
+      setMessage({ type: 'error', text: e?.message || 'Submit failed' })
+    } finally {
+      setMachineSaving(false)
+    }
+  }
+
   useEffect(() => {
     if (branch) {
       setFormData({
@@ -131,7 +193,7 @@ const BranchBIRSettings = ({ user }) => {
       <div>
         <h2 className="text-xl font-semibold text-white">BIR Compliance</h2>
         <p className="text-sm text-gray-500 mt-1">
-          These details print on every Official Receipt issued at this branch. Required for BIR compliance.
+          These details print on every INVOICE issued at this branch. Required for BIR compliance.
         </p>
       </div>
 
@@ -145,6 +207,90 @@ const BranchBIRSettings = ({ user }) => {
           {message.text}
         </div>
       )}
+
+      {/* POS Machine PTU — BIR accreditation (approval-gated) */}
+      <div className="bg-[#1A1A1A] rounded-xl p-6 border border-[#333]">
+        <div className="flex items-start justify-between gap-3 mb-4 flex-wrap">
+          <div>
+            <h3 className="text-white font-medium flex items-center gap-2">
+              <Cpu className="w-5 h-5 text-[var(--color-primary)]" />
+              POS Machine PTU (BIR Accreditation)
+            </h3>
+            <p className="text-xs text-gray-500 mt-1">Receipts print as a valid INVOICE only after this machine's Permit to Use is approved.</p>
+          </div>
+          {(() => {
+            const s = machine?.status || 'none'
+            const map = {
+              approved: ['Accredited', 'bg-emerald-500/15 text-emerald-300 border-emerald-500/40'],
+              pending: ['Pending approval', 'bg-amber-500/15 text-amber-300 border-amber-500/40'],
+              rejected: ['Rejected', 'bg-red-500/15 text-red-300 border-red-500/40'],
+              revoked: ['Revoked', 'bg-orange-500/15 text-orange-300 border-orange-500/40'],
+              draft: ['Draft (not submitted)', 'bg-gray-500/15 text-gray-400 border-gray-500/40'],
+              none: ['Not set up', 'bg-gray-500/15 text-gray-400 border-gray-500/40'],
+            }
+            const [label, cls] = map[s] || map.none
+            return <span className={`text-xs font-semibold px-2.5 py-1 rounded-full border ${cls}`}>{label}</span>
+          })()}
+        </div>
+
+        {machine?.status === 'rejected' && machine?.rejection_reason && (
+          <div className="mb-4 p-3 rounded-lg bg-red-500/10 border border-red-500/30 text-red-300 text-sm">Rejected: {machine.rejection_reason} — fix the details and resubmit.</div>
+        )}
+        {machine?.status === 'approved' && (
+          <div className="mb-4 p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-sm">This branch is BIR-accredited. Editing any field below resets it to draft and requires re-approval.</div>
+        )}
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label className={labelClass}>MIN (Machine Identification No.)</label>
+            <input name="min" value={machineForm.min} onChange={handleMachineChange} className={inputClass} placeholder="e.g. 12345678901234" />
+          </div>
+          <div>
+            <label className={labelClass}>Machine Serial Number</label>
+            <input name="serial_number" value={machineForm.serial_number} onChange={handleMachineChange} className={inputClass} />
+          </div>
+          <div>
+            <label className={labelClass}>PTU Number</label>
+            <input name="ptu_number" value={machineForm.ptu_number} onChange={handleMachineChange} className={inputClass} />
+          </div>
+          <div>
+            <label className={labelClass}>PTU Date Issued</label>
+            <input type="date" name="ptu_date" value={machineForm.ptu_date} onChange={handleMachineChange} className={inputClass} />
+          </div>
+          <div>
+            <label className={labelClass}>Accreditation Number</label>
+            <input name="accreditation_number" value={machineForm.accreditation_number} onChange={handleMachineChange} className={inputClass} />
+          </div>
+          <div>
+            <label className={labelClass}>Accreditation Date</label>
+            <input type="date" name="accreditation_date" value={machineForm.accreditation_date} onChange={handleMachineChange} className={inputClass} />
+          </div>
+          <div>
+            <label className={labelClass}>Software Provider Name</label>
+            <input name="software_provider_name" value={machineForm.software_provider_name} onChange={handleMachineChange} className={inputClass} />
+          </div>
+          <div>
+            <label className={labelClass}>Software Provider TIN</label>
+            <input name="software_provider_tin" value={machineForm.software_provider_tin} onChange={handleMachineChange} className={inputClass} />
+          </div>
+          <div>
+            <label className={labelClass}>Software Provider Accreditation</label>
+            <input name="software_provider_accreditation" value={machineForm.software_provider_accreditation} onChange={handleMachineChange} className={inputClass} />
+          </div>
+          <div>
+            <label className={labelClass}>Software Provider Date Issued</label>
+            <input type="date" name="software_provider_date_issued" value={machineForm.software_provider_date_issued} onChange={handleMachineChange} className={inputClass} />
+          </div>
+        </div>
+
+        <div className="flex items-center gap-3 mt-5">
+          <button type="button" onClick={handleMachineSave} disabled={machineSaving} className="px-4 py-2.5 rounded-lg border border-[#444] text-gray-300 hover:bg-[#252525] text-sm font-medium disabled:opacity-50">Save Draft</button>
+          <button type="button" onClick={handleMachineSubmit} disabled={machineSaving || machine?.status === 'pending' || machine?.status === 'approved'} className="px-4 py-2.5 rounded-lg bg-[var(--color-primary)] text-white text-sm font-medium hover:opacity-90 disabled:opacity-50 flex items-center gap-2">
+            {machineSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle className="w-4 h-4" />}
+            {machine?.status === 'pending' ? 'Awaiting Approval' : machine?.status === 'approved' ? 'Approved' : 'Submit for Approval'}
+          </button>
+        </div>
+      </div>
 
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* Business Identity */}
