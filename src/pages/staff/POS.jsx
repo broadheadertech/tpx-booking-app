@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react'
-import { ArrowLeft, User, UserPlus, QrCode, CreditCard, Receipt, Trash2, Plus, Minus, Search, Scissors, Package, Gift, Calculator, CheckCircle, Grid3X3, List, ChevronLeft, ChevronRight, X, AlertCircle, Banknote, Store, Calendar, Clock, ChevronDown, ChevronUp, Filter, ShoppingBag, History, HelpCircle, Ticket } from 'lucide-react'
+import { ArrowLeft, User, UserPlus, QrCode, CreditCard, Receipt, Trash2, Plus, Minus, Search, Scissors, Package, Gift, Calculator, CheckCircle, Grid3X3, List, ChevronLeft, ChevronRight, X, AlertCircle, Banknote, Store, Calendar, Clock, ChevronDown, ChevronUp, Filter, ShoppingBag, History, HelpCircle, Ticket, Printer } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { useQuery, useMutation } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
@@ -10,6 +10,7 @@ import PaymentConfirmationModal from '../../components/staff/PaymentConfirmation
 import CollectPaymentModal from '../../components/staff/CollectPaymentModal'
 import CustomerSelectionModal from '../../components/staff/CustomerSelectionModal'
 import ReceiptModal from '../../components/staff/ReceiptModal'
+import ReprintReceiptsModal from '../../components/staff/ReprintReceiptsModal'
 import Modal from '../../components/common/Modal'
 import { sendWelcomeEmail, isEmailServiceConfigured, sendBarberBookingNotification } from '../../services/emailService'
 import { APP_VERSION } from '../../config/version'
@@ -1475,6 +1476,14 @@ const POS = () => {
               </div>
 
               <button
+                onClick={() => setActiveModal('reprintReceipts')}
+                className="w-9 h-9 bg-[#0A0A0A] rounded-lg flex items-center justify-center border border-[#1A1A1A]/50"
+                title="Reprint a receipt"
+              >
+                <Printer className="w-4 h-4 text-gray-400" />
+              </button>
+
+              <button
                 onClick={() => setShowMobileCart(!showMobileCart)}
                 className="relative w-9 h-9 bg-[var(--color-primary)]/20 rounded-lg flex items-center justify-center border border-[var(--color-primary)]/30"
               >
@@ -2176,6 +2185,15 @@ const POS = () => {
           />
         )}
 
+        {activeModal === 'reprintReceipts' && (
+          <ReprintReceiptsModal
+            isOpen={true}
+            onClose={() => setActiveModal(null)}
+            branchInfo={currentBranch}
+            staffInfo={user}
+          />
+        )}
+
         {activeModal === 'cancelBooking' && (
           <Modal isOpen={true} onClose={() => setActiveModal(null)} title="Cancel Booking" size="sm">
             <div className="text-center py-4">
@@ -2347,6 +2365,15 @@ const POS = () => {
                   <ArrowLeft className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-[var(--color-primary)] group-hover:text-[var(--color-primary)] transition-colors duration-200" />
                   <span className="hidden sm:inline text-[var(--color-primary)] group-hover:text-[var(--color-primary)] font-semibold text-xs transition-colors duration-200">Back</span>
                 </Link>
+
+                <button
+                  onClick={() => setActiveModal('reprintReceipts')}
+                  className="bg-white/5 backdrop-blur-sm rounded-lg flex items-center space-x-1 px-2 sm:px-3 py-1.5 hover:bg-white/10 transition-all duration-200 border border-white/10 group"
+                  title="Reprint a receipt"
+                >
+                  <Printer className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-gray-400 group-hover:text-white transition-colors duration-200" />
+                  <span className="hidden sm:inline text-gray-400 group-hover:text-white font-semibold text-xs transition-colors duration-200">Reprint</span>
+                </button>
 
                 <button
                   onClick={() => setShowTutorial(true)}
@@ -3640,6 +3667,15 @@ const POS = () => {
             setCompletedTransaction(null)
           }}
           transactionData={completedTransaction}
+          branchInfo={currentBranch}
+          staffInfo={user}
+        />
+      )}
+
+      {activeModal === 'reprintReceipts' && (
+        <ReprintReceiptsModal
+          isOpen={true}
+          onClose={() => setActiveModal(null)}
           branchInfo={currentBranch}
           staffInfo={user}
         />

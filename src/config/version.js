@@ -15,8 +15,8 @@
  *   "breaking" — Breaking/major change (bumps MAJOR)
  */
 
-export const APP_VERSION = '2.15.0';
-export const LAST_DEPLOY = '2026-05-28';
+export const APP_VERSION = '2.17.0';
+export const LAST_DEPLOY = '2026-06-02';
 export const VERSION_INFO = {
   version: APP_VERSION,
   lastDeploy: LAST_DEPLOY,
@@ -28,6 +28,36 @@ export const VERSION_INFO = {
  * Each entry: { version, date, changes: [{ tag, text }] }
  */
 export const CHANGELOG = [
+  {
+    version: '2.17.0',
+    date: '2026-06-02',
+    changes: [
+      { tag: 'feature', text: 'Reprint receipts — new "Reprint" button in the POS header (mobile + desktop) opens a searchable list of recent branch transactions; tap any to re-open and print its receipt. Reprints keep the original date/time and cashier. Makes testing the thermal printer easy without ringing up a new sale.' },
+    ],
+  },
+  {
+    version: '2.16.1',
+    date: '2026-06-02',
+    changes: [
+      { tag: 'fix', text: '58mm thermal receipt printing — receipt was printing at 58mm/80mm width and getting clipped on the right and pushed off-center. Constrained the printed receipt to the ~48mm printable area, centered it on the paper, added word-wrapping, and right-sized the TOTAL DUE line so nothing is cut off.' },
+    ],
+  },
+  {
+    version: '2.16.0',
+    date: '2026-06-02',
+    changes: [
+      { tag: 'feature', text: 'YTD Visit Ranking — Customer Analytics now ranks clients by number of completed visits this year (bookings + walk-ins), merged by phone number (with email as fallback when no number is on file), with a year selector, visit-count badges, and contact shortcuts, to identify who to reward with year-end vouchers.' },
+      { tag: 'fix', text: 'Customer Analytics at-risk list no longer crashes — the Clock icon used in the "Last Visit" column was referenced but never imported.' },
+    ],
+  },
+  {
+    version: '2.15.1',
+    date: '2026-05-29',
+    changes: [
+      { tag: 'feature', text: 'Branch Admin BIR settings — new "BIR Compliance" sub-tab under Settings in the staff dashboard so BAs can manage their own branch\'s TIN, PTU, MIN, accreditation, and software-provider details without needing super-admin access.' },
+      { tag: 'fix', text: 'updateBranch now enforces a role guard — super_admin / it_admin can edit any branch, branch_admin can only edit their own. Closes a gap where any authenticated user could PATCH any branch.' },
+    ],
+  },
   {
     version: '2.15.0',
     date: '2026-05-28',

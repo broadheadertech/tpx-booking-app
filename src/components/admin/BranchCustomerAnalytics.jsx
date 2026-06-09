@@ -18,6 +18,10 @@ import {
   Target,
   HelpCircle,
   Search,
+  Clock,
+  Gift,
+  Award,
+  Calendar,
 } from 'lucide-react'
 import WalkthroughOverlay from '../common/WalkthroughOverlay'
 import { customerAnalyticsSteps } from '../../config/walkthroughSteps'
@@ -46,6 +50,9 @@ const BranchCustomerAnalytics = ({ branchId }) => {
   const [selectedStatus, setSelectedStatus] = useState('all')
   const [showAtRiskList, setShowAtRiskList] = useState(true)
   const [showTopCustomers, setShowTopCustomers] = useState(true)
+  const [showYtdRanking, setShowYtdRanking] = useState(true)
+  const currentYear = new Date().getFullYear()
+  const [ytdYear, setYtdYear] = useState(currentYear)
   const [selectedCustomerId, setSelectedCustomerId] = useState(null)
   const [customerSearch, setCustomerSearch] = useState('')
 
@@ -82,6 +89,12 @@ const BranchCustomerAnalytics = ({ branchId }) => {
   const topCustomers = useQuery(
     api.services.customerBranchActivity.getTopCustomers,
     activeBranchId ? { branchId: activeBranchId, limit: 10 } : 'skip'
+  )
+
+  // Get YTD visit ranking (completed bookings + walk-ins this year) for vouchers
+  const ytdRanking = useQuery(
+    api.services.customerBranchActivity.getYtdVisitRanking,
+    activeBranchId ? { branchId: activeBranchId, year: ytdYear, limit: 50 } : 'skip'
   )
 
   // Get customers by status filter
@@ -126,6 +139,12 @@ const BranchCustomerAnalytics = ({ branchId }) => {
     if (days === 0) return 'Today'
     if (days === 1) return '1 day ago'
     return `${days} days ago`
+  }
+
+  // Format a timestamp as a short date
+  const formatDate = (ts) => {
+    if (!ts) return '—'
+    return new Date(ts).toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' })
   }
 
   // Get status color
@@ -630,6 +649,199 @@ const BranchCustomerAnalytics = ({ branchId }) => {
         </div>
       )}
       </>
+      )}
+
+      {/* YTD Visit Ranking — most frequent clients for year-end vouchers */}
+      {activeBranchId && (
+        <div className="bg-gradient-to-br from-[#1A1A1A] to-[#252525] rounded-xl border border-[#333] overflow-hidden">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-4">
+            <button
+              onClick={() => setShowYtdRanking(!showYtdRanking)}
+              className="flex items-center gap-3 text-left"
+            >
+              <Gift className="w-5 h-5 text-[var(--color-primary)]" />
+              <div>
+                <h3 className="text-lg font-semibold text-white flex items-center gap-2">
+                  YTD Visit Ranking
+                  {ytdRanking && (
+                    <span className="text-[var(--color-primary)]">({ytdRanking.total_clients})</span>
+                  )}
+                </h3>
+                <p className="text-gray-500 text-xs">
+                  Most frequent clients this year — candidates for year-end vouchers
+                </p>
+              </div>
+              {showYtdRanking ? (
+                <ChevronUp className="w-5 h-5 text-gray-400 ml-1" />
+              ) : (
+                <ChevronDown className="w-5 h-5 text-gray-400 ml-1" />
+              )}
+            </button>
+
+            <div className="flex items-center gap-2">
+              <Calendar className="w-4 h-4 text-gray-400" />
+              <select
+                value={ytdYear}
+                onChange={(e) => setYtdYear(Number(e.target.value))}
+                className="bg-[#1A1A1A] border border-[#333] rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-[var(--color-primary)]"
+              >
+                {[currentYear, currentYear - 1, currentYear - 2].map((y) => (
+                  <option key={y} value={y}>{y}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          {showYtdRanking && (
+            <div className="border-t border-[#333]">
+              {/* Summary bar */}
+              {ytdRanking && (
+                <div className="flex flex-wrap gap-6 px-4 py-3 bg-[#252525]/50 border-b border-[#333]">
+                  <div>
+                    <p className="text-xs text-gray-500">Clients</p>
+                    <p className="text-white font-semibold">{ytdRanking.total_clients}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500">Total Visits ({ytdRanking.year})</p>
+                    <p className="text-white font-semibold">{ytdRanking.total_visits}</p>
+                  </div>
+                </div>
+              )}
+
+              {ytdRanking === undefined ? (
+                <div className="p-8 flex items-center justify-center">
+                  <RefreshCw className="w-6 h-6 text-[var(--color-primary)] animate-spin" />
+                </div>
+              ) : ytdRanking.ranking.length === 0 ? (
+                <div className="p-8 text-center">
+                  <Award className="w-12 h-12 text-gray-500 mx-auto mb-3" />
+                  <p className="text-gray-400">No completed visits recorded for {ytdRanking.year} yet.</p>
+                </div>
+              ) : (
+                <div className="overflow-x-auto max-h-[600px]">
+                  <table className="w-full">
+                    <thead className="bg-[#252525] sticky top-0">
+                      <tr>
+                        <th className="text-left text-xs font-semibold text-gray-400 uppercase tracking-wider px-4 py-3">Rank</th>
+                        <th className="text-left text-xs font-semibold text-gray-400 uppercase tracking-wider px-4 py-3">Client</th>
+                        <th className="text-left text-xs font-semibold text-gray-400 uppercase tracking-wider px-4 py-3">Visits</th>
+                        <th className="text-left text-xs font-semibold text-gray-400 uppercase tracking-wider px-4 py-3">Last Visit</th>
+                        <th className="text-left text-xs font-semibold text-gray-400 uppercase tracking-wider px-4 py-3">Contact</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-[#333]">
+                      {ytdRanking.ranking.map((c) => (
+                        <tr
+                          key={`${c.rank}-${c.customer_id || c.phone || c.name}`}
+                          className={`hover:bg-[#252525]/50 transition-colors ${c.customer_id ? 'cursor-pointer' : ''}`}
+                          onClick={() => c.customer_id && setSelectedCustomerId(c.customer_id)}
+                        >
+                          <td className="px-4 py-3">
+                            <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm ${
+                              c.rank === 1 ? 'bg-yellow-500/20 text-yellow-400' :
+                              c.rank === 2 ? 'bg-gray-400/20 text-gray-300' :
+                              c.rank === 3 ? 'bg-orange-500/20 text-orange-400' :
+                              'bg-[#333] text-gray-400'
+                            }`}>
+                              {c.rank}
+                            </div>
+                          </td>
+                          <td className="px-4 py-3">
+                            <div className="flex items-center gap-3">
+                              <div className="w-8 h-8 rounded-full bg-[var(--color-primary)]/20 flex items-center justify-center">
+                                <span className="text-[var(--color-primary)] font-semibold text-sm">
+                                  {c.name?.charAt(0)?.toUpperCase() || '?'}
+                                </span>
+                              </div>
+                              <div>
+                                <div className="flex items-center gap-2">
+                                  <p className="text-white font-medium text-sm">{c.name || 'Unknown'}</p>
+                                  {!c.is_registered && (
+                                    <span className="px-1.5 py-0.5 text-[10px] font-medium bg-orange-500/20 text-orange-400 rounded">
+                                      Walk-in
+                                    </span>
+                                  )}
+                                </div>
+                                {/* Tracking key: phone first, email as fallback */}
+                                {c.phone ? (
+                                  <>
+                                    <p className="text-gray-300 text-xs font-mono flex items-center gap-1">
+                                      <Phone className="w-3 h-3 text-gray-500" />
+                                      {c.phone}
+                                    </p>
+                                    {c.email && (
+                                      <p className="text-gray-500 text-xs flex items-center gap-1">
+                                        <Mail className="w-3 h-3 text-gray-600" />
+                                        {c.email}
+                                      </p>
+                                    )}
+                                  </>
+                                ) : c.email ? (
+                                  <p className="text-gray-300 text-xs flex items-center gap-1">
+                                    <Mail className="w-3 h-3 text-gray-500" />
+                                    {c.email}
+                                  </p>
+                                ) : (
+                                  <p className="text-red-400/70 text-xs flex items-center gap-1">
+                                    <AlertTriangle className="w-3 h-3" />
+                                    No phone or email — can't track
+                                  </p>
+                                )}
+                              </div>
+                            </div>
+                          </td>
+                          <td className="px-4 py-3">
+                            <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[var(--color-primary)]/15 border border-[var(--color-primary)]/30">
+                              <span className="text-[var(--color-primary)] text-sm font-bold">{c.visits}</span>
+                              <span className="text-[var(--color-primary)]/80 text-xs">
+                                {c.visits === 1 ? 'visit' : 'visits'}
+                              </span>
+                            </div>
+                            <p className="text-gray-500 text-[11px] mt-1">
+                              {c.booking_visits} booked
+                              {c.walkin_visits > 0 ? ` · ${c.walkin_visits} walk-in` : ''}
+                            </p>
+                          </td>
+                          <td className="px-4 py-3">
+                            <div className="flex items-center gap-2">
+                              <Clock className="w-4 h-4 text-gray-400" />
+                              <span className="text-gray-300 text-sm">{formatDate(c.last_visit)}</span>
+                            </div>
+                          </td>
+                          <td className="px-4 py-3">
+                            <div className="flex items-center gap-2">
+                              {c.phone && (
+                                <a
+                                  href={`tel:${c.phone}`}
+                                  onClick={(e) => e.stopPropagation()}
+                                  className="p-1.5 rounded-lg bg-blue-500/20 text-blue-400 hover:bg-blue-500/30 transition-colors"
+                                  title={c.phone}
+                                >
+                                  <Phone className="w-4 h-4" />
+                                </a>
+                              )}
+                              {c.email && (
+                                <a
+                                  href={`mailto:${c.email}`}
+                                  onClick={(e) => e.stopPropagation()}
+                                  className="p-1.5 rounded-lg bg-purple-500/20 text-purple-400 hover:bg-purple-500/30 transition-colors"
+                                  title={c.email}
+                                >
+                                  <Mail className="w-4 h-4" />
+                                </a>
+                              )}
+                              {!c.phone && !c.email && <span className="text-gray-600 text-xs">—</span>}
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
       )}
 
       {/* All Customers List (Super Admin Only) */}

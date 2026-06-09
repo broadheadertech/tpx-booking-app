@@ -206,19 +206,22 @@ const ReceiptModal = ({
   <style>
     @page { size: 58mm auto; margin: 0; }
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    html, body {
-      width: 58mm; min-width: 58mm; max-width: 58mm;
-      font-family: 'Courier New', Courier, monospace;
-      font-size: 13px; line-height: 1.35;
-      padding: 2mm 4mm;
-      color: #000; background: #fff;
-      -webkit-print-color-adjust: exact; print-color-adjust: exact;
+    html {
+      width: 58mm;
+      background: #fff;
     }
-    @media print {
-      html, body {
-        width: 100% !important; max-width: 100% !important;
-        margin: 0 !important; padding: 2mm 4mm !important;
-      }
+    body {
+      /* A 58mm thermal roll only has ~48mm of PRINTABLE width. Keep the
+         receipt inside that and centre it on the paper, otherwise the right
+         edge is clipped and the whole thing looks pushed to one side. */
+      width: 48mm; max-width: 48mm;
+      margin: 0 auto;
+      padding: 2mm 1mm;
+      font-family: 'Courier New', Courier, monospace;
+      font-size: 12px; line-height: 1.3;
+      color: #000; background: #fff;
+      overflow-wrap: break-word; word-break: break-word;
+      -webkit-print-color-adjust: exact; print-color-adjust: exact;
     }
     .center { text-align: center; width: 100%; display: block; }
     .bold { font-weight: bold; }
@@ -227,7 +230,7 @@ const ReceiptModal = ({
     .line2 { border-bottom: 2px solid #000; margin: 2mm 0; width: 100%; display: block; }
     table { width: 100%; border-collapse: collapse; margin: 1mm 0; }
     td { padding: 2px 0; vertical-align: top; }
-    td:first-child { padding-right: 5mm; }
+    td:first-child { padding-right: 2mm; }
     td:last-child { text-align: right; }
   </style>
 </head>
@@ -269,7 +272,7 @@ const ReceiptModal = ({
   ${vatHtml}
   ${scPwdHtml}
 
-  <table style="font-size: 16px; margin: 1.5mm 0;">
+  <table style="font-size: 14px; margin: 1.5mm 0;">
     <tr><td class="bold">TOTAL DUE:</td><td class="right bold">${formatCurrency(total)}</td></tr>
   </table>
   <div class="line2"></div>
