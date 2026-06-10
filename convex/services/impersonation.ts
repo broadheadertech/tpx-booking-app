@@ -9,7 +9,12 @@ import { logAudit } from "./auditLogs";
 // real actor is always traceable.
 // ============================================================================
 
-const ALLOWED_ROLES = new Set(["admin", "super_admin", "it_admin"]);
+// Who may "login as" another role.
+const ALLOWED_ROLES = new Set(["super_admin", "it_admin"]);
+// Roles that can be impersonated.
+const TARGET_ROLES = new Set(["super_admin", "branch_admin", "staff", "barber"]);
+// Impersonated roles that operate within a specific branch.
+const BRANCH_SCOPED_ROLES = new Set(["branch_admin", "staff", "barber"]);
 
 /**
  * Get the currently active impersonation session for a user, if any.
@@ -78,18 +83,31 @@ export const listAllImpersonationSessions = query({
 export const startImpersonation = mutation({
   args: {
     user_id: v.id("users"),
-    target_branch_id: v.id("branches"),
+    target_role: v.optional(v.string()),       // defaults to branch_admin (legacy)
+    target_branch_id: v.optional(v.id("branches")),
   },
   handler: async (ctx, args) => {
     const user = await ctx.db.get(args.user_id);
     if (!user) throw new Error("User not found");
 
     if (!user.role || !ALLOWED_ROLES.has(user.role)) {
-      throw new Error("Only admin, super_admin, or it_admin can mirror a branch");
+      throw new Error("Only super_admin or it_admin can log in as another role");
     }
 
-    const targetBranch = await ctx.db.get(args.target_branch_id);
-    if (!targetBranch) throw new Error("Target branch not found");
+    const targetRole = args.target_role || "branch_admin";
+    if (!TARGET_ROLES.has(targetRole)) {
+      throw new Error(`Cannot act as role "${targetRole}".`);
+    }
+
+    // Branch-scoped roles require a target branch; super_admin does not.
+    let targetBranch: any = null;
+    if (BRANCH_SCOPED_ROLES.has(targetRole)) {
+      if (!args.target_branch_id) {
+        throw new Error(`Acting as ${targetRole} requires a target branch.`);
+      }
+      targetBranch = await ctx.db.get(args.target_branch_id);
+      if (!targetBranch) throw new Error("Target branch not found");
+    }
 
     const now = Date.now();
 
@@ -108,32 +126,35 @@ export const startImpersonation = mutation({
       });
     }
 
+    const targetBranchName = targetBranch?.name || undefined;
     const sessionId = await ctx.db.insert("impersonation_sessions", {
       impersonator_id: args.user_id,
       impersonator_name: user.name || user.email || "Unknown",
       impersonator_role: user.role,
+      target_role: targetRole,
       target_branch_id: args.target_branch_id,
-      target_branch_name: targetBranch.name || "Unknown branch",
+      target_branch_name: targetBranchName,
       started_at: now,
       is_active: true,
       action_count: 0,
     });
 
+    const where = targetBranchName ? ` at ${targetBranchName}` : "";
     await logAudit(ctx, {
       user_id: args.user_id,
       user_name: user.name,
       user_role: user.role,
       branch_id: args.target_branch_id,
-      branch_name: targetBranch.name,
+      branch_name: targetBranchName,
       category: "auth",
       action: "impersonation.started",
-      description: `${user.name || user.email} started mirroring branch ${targetBranch.name}`,
-      target_type: "branch",
-      target_id: args.target_branch_id,
-      metadata: { session_id: sessionId },
+      description: `${user.name || user.email} started acting as ${targetRole}${where}`,
+      target_type: "impersonation",
+      target_id: sessionId as string,
+      metadata: { session_id: sessionId, target_role: targetRole },
     });
 
-    return { session_id: sessionId, started_at: now };
+    return { session_id: sessionId, started_at: now, target_role: targetRole };
   },
 });
 

@@ -15,8 +15,8 @@
  *   "breaking" — Breaking/major change (bumps MAJOR)
  */
 
-export const APP_VERSION = '2.20.0';
-export const LAST_DEPLOY = '2026-06-03';
+export const APP_VERSION = '2.22.0';
+export const LAST_DEPLOY = '2026-06-10';
 export const VERSION_INFO = {
   version: APP_VERSION,
   lastDeploy: LAST_DEPLOY,
@@ -28,6 +28,20 @@ export const VERSION_INFO = {
  * Each entry: { version, date, changes: [{ tag, text }] }
  */
 export const CHANGELOG = [
+  {
+    version: '2.22.0',
+    date: '2026-06-10',
+    changes: [
+      { tag: 'feature', text: 'Login As (role impersonation) — super/IT admin can now act as a Super Admin, Branch Admin, Staff, or Barber (role + branch) from the "Login As" tab, not just mirror a branch. The app renders that role\'s view, a persistent banner shows who you\'re acting as, and every action stays audited under your real identity. Generalizes the old Branch Mirror.' },
+    ],
+  },
+  {
+    version: '2.21.0',
+    date: '2026-06-09',
+    changes: [
+      { tag: 'feature', text: 'POS graceful offline — POS now detects loss of connectivity (browser offline + Convex websocket) and shows a persistent offline banner. The checkout button is disabled and both payment entry points are hard-blocked while offline, with a clear "the sale was NOT recorded" message, so a cashier never mistakes a failed sale for a completed one. Re-enables automatically on reconnect.' },
+    ],
+  },
   {
     version: '2.20.0',
     date: '2026-06-03',

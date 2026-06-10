@@ -11,6 +11,8 @@ import CollectPaymentModal from '../../components/staff/CollectPaymentModal'
 import CustomerSelectionModal from '../../components/staff/CustomerSelectionModal'
 import ReceiptModal from '../../components/staff/ReceiptModal'
 import ReprintReceiptsModal from '../../components/staff/ReprintReceiptsModal'
+import OfflineBanner from '../../components/common/OfflineBanner'
+import { useOnlineStatus } from '../../hooks/useOnlineStatus'
 import Modal from '../../components/common/Modal'
 import { sendWelcomeEmail, isEmailServiceConfigured, sendBarberBookingNotification } from '../../services/emailService'
 import { APP_VERSION } from '../../config/version'
@@ -51,6 +53,7 @@ const BarberAvatar = ({ barber, className = "w-12 h-12" }) => {
 const POS = () => {
   const { showAlert, showPrompt } = useAppModal()
   const { user, loading } = useCurrentUser()
+  const isOnline = useOnlineStatus()
   const [selectedBarber, setSelectedBarber] = useState(null)
   const [currentTransaction, setCurrentTransaction] = useState({
     customer: null,
@@ -980,6 +983,15 @@ const POS = () => {
 
   // Open payment confirmation modal
   const openPaymentModal = () => {
+    if (!isOnline) {
+      setAlertModal({
+        show: true,
+        title: 'No Internet Connection',
+        message: 'You appear to be offline. Reconnect before processing a sale — nothing has been charged or recorded.',
+        type: 'error'
+      })
+      return
+    }
     if (!user || !user._id) {
       setAlertModal({
         show: true,
@@ -1060,6 +1072,16 @@ const POS = () => {
 
   // Process payment after confirmation
   const processPayment = async (paymentData) => {
+    // Hard stop if offline — never attempt a server write we can't confirm.
+    if (!isOnline) {
+      setAlertModal({
+        show: true,
+        title: 'No Internet Connection',
+        message: 'The sale was NOT recorded because you are offline. Please reconnect and try again — nothing has been charged.',
+        type: 'error'
+      })
+      return
+    }
     try {
       // Resolve branch to use for the transaction (barber branch takes precedence)
       const resolvedBranchId = selectedBarber?.branch_id || user?.branch_id
@@ -1593,6 +1615,7 @@ const POS = () => {
 
     return (
       <div className="min-h-screen bg-gradient-to-br from-[#1A1A1A] via-[#2A2A2A] to-[#1A1A1A] pb-32">
+        <OfflineBanner />
         {/* Mobile Header - Compact */}
         <div className="sticky top-0 z-50 bg-[#050505] border-b border-[#1A1A1A]/30" style={{ paddingTop: 'env(safe-area-inset-top)' }}>
           <div className="px-3 py-2">
@@ -2234,6 +2257,7 @@ const POS = () => {
             <button
               onClick={openPaymentModal}
               disabled={
+                !isOnline ||
                 (posMode === 'service' && !selectedBarber) ||
                 (posMode === 'service' && currentTransaction.services.length === 0) ||
                 (posMode === 'retail' && currentTransaction.products.length === 0)
@@ -2422,6 +2446,7 @@ const POS = () => {
   // Desktop Layout (existing code)
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#1A1A1A] via-[#2A2A2A] to-[#1A1A1A]">
+      <OfflineBanner />
       {/* Subtle background pattern */}
       <div className="absolute inset-0">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(255,140,66,0.03),transparent_50%)]"></div>
@@ -3713,6 +3738,7 @@ const POS = () => {
                     <button
                       onClick={openPaymentModal}
                       disabled={
+                        !isOnline ||
                         (posMode === 'service' && !selectedBarber) ||
                         (posMode === 'service' && currentTransaction.services.length === 0) ||
                         (posMode === 'retail' && currentTransaction.products.length === 0)

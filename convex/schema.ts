@@ -4271,8 +4271,12 @@ export default defineSchema({
     impersonator_id: v.id("users"),
     impersonator_name: v.string(),
     impersonator_role: v.string(),
-    target_branch_id: v.id("branches"),
-    target_branch_name: v.string(),
+    // Role being acted as (super_admin / branch_admin / staff / barber).
+    // Optional for backward compatibility with older branch-only mirror sessions.
+    target_role: v.optional(v.string()),
+    // Branch is only required for branch-level roles; super_admin needs none.
+    target_branch_id: v.optional(v.id("branches")),
+    target_branch_name: v.optional(v.string()),
     started_at: v.number(),
     ended_at: v.optional(v.number()),
     is_active: v.boolean(),

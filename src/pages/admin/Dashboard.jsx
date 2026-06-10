@@ -420,7 +420,7 @@ function AdminDashboard() {
       { id: 'reports', label: 'Reports', icon: 'chart', category: 'Reports' },
       { id: 'audit_trail', label: 'Audit Trail', icon: 'history', category: 'Reports' },
       { id: 'system_logs', label: 'System Logs', icon: 'activity', category: 'Reports' },
-      { id: 'mirror', label: 'Branch Mirror', icon: 'user-cog', category: 'Reports' },
+      { id: 'mirror', label: 'Login As', icon: 'user-cog', category: 'Reports' },
       // Simple tab
       { id: 'settings', label: 'Settings', icon: 'settings' },
     ]
