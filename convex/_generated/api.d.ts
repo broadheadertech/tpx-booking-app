@@ -84,6 +84,7 @@ import type * as services_paymongo from "../services/paymongo.js";
 import type * as services_payroll from "../services/payroll.js";
 import type * as services_points from "../services/points.js";
 import type * as services_portfolio from "../services/portfolio.js";
+import type * as services_posReadings from "../services/posReadings.js";
 import type * as services_productCatalog from "../services/productCatalog.js";
 import type * as services_productOrders from "../services/productOrders.js";
 import type * as services_products from "../services/products.js";
@@ -199,6 +200,7 @@ declare const fullApi: ApiFromModules<{
   "services/payroll": typeof services_payroll;
   "services/points": typeof services_points;
   "services/portfolio": typeof services_portfolio;
+  "services/posReadings": typeof services_posReadings;
   "services/productCatalog": typeof services_productCatalog;
   "services/productOrders": typeof services_productOrders;
   "services/products": typeof services_products;

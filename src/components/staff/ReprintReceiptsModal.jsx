@@ -1,7 +1,7 @@
 import { useState } from 'react'
-import { useQuery } from 'convex/react'
+import { useQuery, useMutation } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
-import { Search, Printer, RefreshCw, Receipt as ReceiptIcon } from 'lucide-react'
+import { Search, Printer, RefreshCw, Receipt as ReceiptIcon, Ban } from 'lucide-react'
 import Modal from '../common/Modal'
 import ReceiptModal from './ReceiptModal'
 
@@ -22,6 +22,34 @@ const ReprintReceiptsModal = ({ isOpen, onClose, branchInfo, staffInfo }) => {
     api.services.transactions.getTransactionsByBranch,
     isOpen && branchInfo?._id ? { branch_id: branchInfo._id, limit: 50 } : 'skip'
   )
+  const logPosEvent = useMutation(api.services.posReadings.logPosEvent)
+  const voidTxn = useMutation(api.services.posReadings.voidTransaction)
+
+  // Void a completed transaction (cashier cancellation).
+  const handleVoid = async (t, e) => {
+    e.stopPropagation()
+    const reason = window.prompt(`Void ${t.receipt_number || t.transaction_id}?\nThis cancels the sale and records it on the reading.\n\nReason:`)
+    if (!reason) return
+    try {
+      await voidTxn({ transaction_id: t._id, actor_id: staffInfo?._id, reason })
+      window.alert('Transaction voided.')
+    } catch (err) {
+      window.alert(err?.message || 'Void failed')
+    }
+  }
+
+  // Open a past receipt for reprint, and count it as a BIR reprint event.
+  const reprint = (t) => {
+    setSelected(t)
+    if (branchInfo?._id) {
+      logPosEvent({
+        branch_id: branchInfo._id,
+        event_type: 'transaction_reprint',
+        performed_by: staffInfo?._id,
+        note: t.receipt_number || t.transaction_id,
+      }).catch(() => {})
+    }
+  }
   const transactions = data?.transactions || []
 
   const filtered = transactions.filter((t) => {
@@ -104,27 +132,37 @@ const ReprintReceiptsModal = ({ isOpen, onClose, branchInfo, staffInfo }) => {
             </div>
           ) : (
             filtered.map((t) => (
-              <button
+              <div
                 key={t._id}
-                onClick={() => setSelected(t)}
-                className="w-full flex items-center justify-between gap-3 px-4 py-3 text-left hover:bg-[#252525] transition-colors"
+                className={`w-full flex items-center justify-between gap-3 px-4 py-3 ${t.voided ? 'opacity-60' : 'hover:bg-[#252525]'} transition-colors`}
               >
-                <div className="min-w-0">
-                  <p className="text-white text-sm font-medium font-mono truncate">
+                <button
+                  onClick={() => !t.voided && reprint(t)}
+                  disabled={t.voided}
+                  className="flex-1 min-w-0 text-left disabled:cursor-default"
+                >
+                  <p className="text-white text-sm font-medium font-mono truncate flex items-center gap-2">
                     {t.receipt_number || t.transaction_id}
+                    {t.voided && <span className="px-1.5 py-0.5 text-[10px] font-semibold bg-red-500/20 text-red-300 rounded">VOIDED</span>}
                   </p>
                   <p className="text-gray-500 text-xs truncate">
                     {(t.customer_name || t.customer_display || 'Walk-in Customer')} • {formatWhen(t._creationTime)}
                   </p>
+                </button>
+                <div className="flex items-center gap-2 flex-shrink-0">
+                  <span className={`text-sm font-semibold ${t.voided ? 'text-gray-500 line-through' : 'text-green-400'}`}>{formatPeso(t.total_amount)}</span>
+                  {!t.voided && (
+                    <>
+                      <button onClick={() => reprint(t)} className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium bg-[var(--color-primary)]/15 text-[var(--color-primary)] border border-[var(--color-primary)]/30 hover:bg-[var(--color-primary)]/25">
+                        <Printer className="w-3.5 h-3.5" /> Reprint
+                      </button>
+                      <button onClick={(e) => handleVoid(t, e)} className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium bg-red-500/15 text-red-300 border border-red-500/30 hover:bg-red-500/25">
+                        <Ban className="w-3.5 h-3.5" /> Void
+                      </button>
+                    </>
+                  )}
                 </div>
-                <div className="flex items-center gap-3 flex-shrink-0">
-                  <span className="text-green-400 text-sm font-semibold">{formatPeso(t.total_amount)}</span>
-                  <span className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium bg-[var(--color-primary)]/15 text-[var(--color-primary)] border border-[var(--color-primary)]/30">
-                    <Printer className="w-3.5 h-3.5" />
-                    Reprint
-                  </span>
-                </div>
-              </button>
+              </div>
             ))
           )}
         </div>

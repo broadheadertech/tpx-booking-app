@@ -15,8 +15,8 @@
  *   "breaking" — Breaking/major change (bumps MAJOR)
  */
 
-export const APP_VERSION = '2.20.0';
-export const LAST_DEPLOY = '2026-06-03';
+export const APP_VERSION = '2.25.0';
+export const LAST_DEPLOY = '2026-06-11';
 export const VERSION_INFO = {
   version: APP_VERSION,
   lastDeploy: LAST_DEPLOY,
@@ -28,6 +28,49 @@ export const VERSION_INFO = {
  * Each entry: { version, date, changes: [{ tag, text }] }
  */
 export const CHANGELOG = [
+  {
+    version: '2.25.0',
+    date: '2026-06-11',
+    changes: [
+      { tag: 'feature', text: 'Void transaction — staff can void a completed sale from the Reprint list (with a reason). The sale is excluded from X/Z sales totals, branch-product stock is restored, it shows a VOIDED badge, and it counts under "Cancelled Transaction Count" on the reading. Audited.' },
+      { tag: 'feature', text: 'No Sale — new "No Sale" button in POS opens the drawer without a sale and records a No-Sale event, surfaced in the X/Z reading\'s "No Sales Transaction" count.' },
+    ],
+  },
+  {
+    version: '2.24.0',
+    date: '2026-06-11',
+    changes: [
+      { tag: 'feature', text: 'Real X/Z reading transaction-detail counts — POS now logs line voids (item removed from cart) and receipt reprints as pos_events, tallied into each reading\'s period. The Z/X reading\'s Line Voids and Transaction Reprint counts are now actual numbers instead of 0. Infrastructure (pos_events) is in place to add cancelled-transaction, no-sale, and price-override counts when those flows exist.' },
+    ],
+  },
+  {
+    version: '2.23.1',
+    date: '2026-06-11',
+    changes: [
+      { tag: 'improve', text: 'X/Z Reading now matches the standard BIR End-of-Day layout: header with SN/MIN, Reset Counter (Non-Resettable), Z-Counter, Store Code, Terminal No., System Log + Computer Date/Time, Beginning/Ending SI; Transaction Summary (Gross, Returns, Sub-Total, SC/PWD/Others/VAT-Adjustment discounts, Net Sales); Tender Summary; Transaction Details counts (items sold, voids, SC/PWD counts, etc.); and VAT Computations.' },
+    ],
+  },
+  {
+    version: '2.23.0',
+    date: '2026-06-11',
+    changes: [
+      { tag: 'feature', text: 'BIR X / Z Readings — new "Readings" button in POS opens X-Reading (interim running sales, no reset) and Z-Reading (end-of-day close). Z permanently records the period in a z_readings table, increments the per-branch Z-counter, and rolls into the accumulated grand total. Both print a 58mm thermal slip with gross/VAT/exempt/zero-rated, SC/PWD discounts, net sales, payment breakdown, beginning/ending OR, and accumulated grand totals. Per branch.' },
+    ],
+  },
+  {
+    version: '2.22.0',
+    date: '2026-06-10',
+    changes: [
+      { tag: 'feature', text: 'Login As (role impersonation) — super/IT admin can now act as a Super Admin, Branch Admin, Staff, or Barber (role + branch) from the "Login As" tab, not just mirror a branch. The app renders that role\'s view, a persistent banner shows who you\'re acting as, and every action stays audited under your real identity. Generalizes the old Branch Mirror.' },
+    ],
+  },
+  {
+    version: '2.21.0',
+    date: '2026-06-09',
+    changes: [
+      { tag: 'feature', text: 'POS graceful offline — POS now detects loss of connectivity (browser offline + Convex websocket) and shows a persistent offline banner. The checkout button is disabled and both payment entry points are hard-blocked while offline, with a clear "the sale was NOT recorded" message, so a cashier never mistakes a failed sale for a completed one. Re-enables automatically on reconnect.' },
+    ],
+  },
   {
     version: '2.20.0',
     date: '2026-06-03',

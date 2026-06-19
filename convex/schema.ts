@@ -1006,6 +1006,13 @@ export default defineSchema({
       date_issued: v.optional(v.string()),
     })),
 
+    // Void — a completed transaction cancelled by staff. Excluded from X/Z
+    // sales totals and counted under "Cancelled Transaction Count".
+    voided: v.optional(v.boolean()),
+    voided_at: v.optional(v.number()),
+    voided_by: v.optional(v.id("users")),
+    void_reason: v.optional(v.string()),
+
     createdAt: v.number(),
     updatedAt: v.number(),
   })
@@ -1019,6 +1026,76 @@ export default defineSchema({
     .index("by_processed_by", ["processed_by"])
     .index("by_branch", ["branch_id"])
     .index("by_branch_date", ["branch_id", "createdAt"]),
+
+  // BIR Z-Reading (end-of-day close). Each Z permanently records a branch's
+  // daily sales, increments the per-branch Z-counter, and rolls into the
+  // accumulated grand total. X-readings are computed on the fly (no row here).
+  z_readings: defineTable({
+    branch_id: v.id("branches"),
+    z_counter: v.number(),                 // sequential per branch (1, 2, 3, …)
+    reading_datetime: v.number(),          // when the Z was performed
+    business_date: v.string(),             // "YYYY-MM-DD" of the closed day
+    period_start: v.number(),              // previous Z cutoff (0 if first ever)
+    period_end: v.number(),                // this Z's cutoff (= reading_datetime)
+    transaction_count: v.number(),
+    beginning_or_number: v.optional(v.string()),
+    ending_or_number: v.optional(v.string()),
+    gross_sales: v.number(),
+    net_sales: v.number(),
+    vatable_sales: v.number(),
+    vat_exempt_sales: v.number(),
+    zero_rated_sales: v.number(),
+    vat_amount: v.number(),
+    total_discounts: v.number(),
+    sc_discount: v.number(),
+    pwd_discount: v.number(),
+    regular_discount: v.optional(v.number()),     // "Others (Regular)"
+    returns_total: v.optional(v.number()),        // refunded sales in period
+    items_sold_count: v.optional(v.number()),
+    sc_txn_count: v.optional(v.number()),
+    pwd_txn_count: v.optional(v.number()),
+    store_code: v.optional(v.string()),
+    terminal_no: v.optional(v.string()),
+    machine_min: v.optional(v.string()),
+    machine_serial: v.optional(v.string()),
+    // BIR transaction-detail event counts for the period (voids, reprints, etc.)
+    detail_counts: v.optional(v.object({
+      line_void: v.number(),
+      transaction_reprint: v.number(),
+      cancelled_transaction: v.number(),
+      no_sale: v.number(),
+      price_override: v.number(),
+      cash_deposit_reprint: v.number(),
+      withdrawal_reprint: v.number(),
+    })),
+    payment_breakdown: v.array(v.object({ method: v.string(), amount: v.number(), count: v.number() })),
+    accumulated_grand_total_beginning: v.number(),
+    accumulated_grand_total_ending: v.number(),
+    is_bir_accredited: v.optional(v.boolean()),
+    performed_by: v.id("users"),
+    performed_by_name: v.optional(v.string()),
+    created_at: v.number(),
+  })
+    .index("by_branch", ["branch_id", "z_counter"])
+    .index("by_branch_date", ["branch_id", "business_date"]),
+
+  // Discrete POS events counted into X/Z readings (line voids, reprints, etc.).
+  pos_events: defineTable({
+    branch_id: v.id("branches"),
+    event_type: v.union(
+      v.literal("line_void"),
+      v.literal("transaction_reprint"),
+      v.literal("cancelled_transaction"),
+      v.literal("no_sale"),
+      v.literal("price_override"),
+      v.literal("cash_deposit_reprint"),
+      v.literal("withdrawal_reprint")
+    ),
+    performed_by: v.optional(v.id("users")),
+    note: v.optional(v.string()),
+    created_at: v.number(),
+  })
+    .index("by_branch_date", ["branch_id", "created_at"]),
 
   // POS Sessions table for tracking active POS sessions
   pos_sessions: defineTable({
@@ -4271,8 +4348,12 @@ export default defineSchema({
     impersonator_id: v.id("users"),
     impersonator_name: v.string(),
     impersonator_role: v.string(),
-    target_branch_id: v.id("branches"),
-    target_branch_name: v.string(),
+    // Role being acted as (super_admin / branch_admin / staff / barber).
+    // Optional for backward compatibility with older branch-only mirror sessions.
+    target_role: v.optional(v.string()),
+    // Branch is only required for branch-level roles; super_admin needs none.
+    target_branch_id: v.optional(v.id("branches")),
+    target_branch_name: v.optional(v.string()),
     started_at: v.number(),
     ended_at: v.optional(v.number()),
     is_active: v.boolean(),
