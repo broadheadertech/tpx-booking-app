@@ -51,7 +51,6 @@ export function useCurrentUser() {
   // the branch_admin view. The real user identity (_id, name, email) is
   // preserved, and the swap is only active for roles that can impersonate.
   const canImpersonate =
-    realUser?.role === 'admin' ||
     realUser?.role === 'super_admin' ||
     realUser?.role === 'it_admin';
 
@@ -60,11 +59,14 @@ export function useCurrentUser() {
     realUser?._id && canImpersonate ? { user_id: realUser._id } : "skip"
   );
 
+  // Swap to the impersonated role (and branch, for branch-scoped roles) so the
+  // rest of the app renders that role's view. Real identity is preserved.
+  // Falls back to branch_admin for legacy sessions with no target_role.
   const user = (realUser && activeImpersonation)
     ? {
         ...realUser,
-        role: 'branch_admin',
-        branch_id: activeImpersonation.target_branch_id,
+        role: activeImpersonation.target_role || 'branch_admin',
+        branch_id: activeImpersonation.target_branch_id ?? realUser.branch_id,
         _real_role: realUser.role,
         _real_branch_id: realUser.branch_id,
         _impersonation: activeImpersonation,

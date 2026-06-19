@@ -37,12 +37,13 @@ const ImpersonationBanner = () => {
         <div className="flex items-center gap-2 min-w-0">
           <Eye className="w-4 h-4 flex-shrink-0" />
           <span className="text-sm font-semibold whitespace-nowrap">
-            Mirror mode
+            Acting as
           </span>
-          <span className="text-white/80 text-sm hidden sm:inline">·</span>
           <span className="text-sm truncate">
-            <span className="text-white/80 hidden sm:inline">Viewing as </span>
-            <strong>{impersonation.target_branch_name}</strong>
+            <strong className="capitalize">{(impersonation.target_role || 'branch_admin').replace('_', ' ')}</strong>
+            {impersonation.target_branch_name ? (
+              <span className="text-white/90"> · {impersonation.target_branch_name}</span>
+            ) : ''}
           </span>
         </div>
 
@@ -59,10 +60,10 @@ const ImpersonationBanner = () => {
             onClick={handleStop}
             disabled={busy}
             className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white/15 hover:bg-white/25 active:bg-white/30 rounded-md text-sm font-medium transition-colors disabled:opacity-60"
-            title="Exit mirror mode"
+            title="Stop and return to your account"
           >
             <X className="w-4 h-4" />
-            {busy ? "Exiting…" : "Exit mirror"}
+            {busy ? "Stopping…" : "Stop"}
           </button>
         </div>
       </div>

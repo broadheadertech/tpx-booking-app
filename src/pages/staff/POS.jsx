@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react'
-import { ArrowLeft, User, UserPlus, QrCode, CreditCard, Receipt, Trash2, Plus, Minus, Search, Scissors, Package, Gift, Calculator, CheckCircle, Grid3X3, List, ChevronLeft, ChevronRight, X, AlertCircle, Banknote, Store, Calendar, Clock, ChevronDown, ChevronUp, Filter, ShoppingBag, History, HelpCircle, Ticket, Printer, Crown } from 'lucide-react'
+import { ArrowLeft, User, UserPlus, QrCode, CreditCard, Receipt, Trash2, Plus, Minus, Search, Scissors, Package, Gift, Calculator, CheckCircle, Grid3X3, List, ChevronLeft, ChevronRight, X, AlertCircle, Banknote, Store, Calendar, Clock, ChevronDown, ChevronUp, Filter, ShoppingBag, History, HelpCircle, Ticket, Printer, Crown, FileText } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { useQuery, useMutation } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
@@ -11,6 +11,9 @@ import CollectPaymentModal from '../../components/staff/CollectPaymentModal'
 import CustomerSelectionModal from '../../components/staff/CustomerSelectionModal'
 import ReceiptModal from '../../components/staff/ReceiptModal'
 import ReprintReceiptsModal from '../../components/staff/ReprintReceiptsModal'
+import ReadingsModal from '../../components/staff/ReadingsModal'
+import OfflineBanner from '../../components/common/OfflineBanner'
+import { useOnlineStatus } from '../../hooks/useOnlineStatus'
 import Modal from '../../components/common/Modal'
 import { sendWelcomeEmail, isEmailServiceConfigured, sendBarberBookingNotification } from '../../services/emailService'
 import { APP_VERSION } from '../../config/version'
@@ -51,6 +54,7 @@ const BarberAvatar = ({ barber, className = "w-12 h-12" }) => {
 const POS = () => {
   const { showAlert, showPrompt } = useAppModal()
   const { user, loading } = useCurrentUser()
+  const isOnline = useOnlineStatus()
   const [selectedBarber, setSelectedBarber] = useState(null)
   const [currentTransaction, setCurrentTransaction] = useState({
     customer: null,
@@ -156,6 +160,7 @@ const POS = () => {
   // Convex mutations
   const createTransaction = useMutation(api.services.transactions.createTransaction)
   const redeemMembership = useMutation(api.services.customerSubscriptions.redeemEntitlement)
+  const logPosEvent = useMutation(api.services.posReadings.logPosEvent)
   const updateBookingPaymentStatus = useMutation(api.services.bookings.updatePaymentStatus)
   const updateBookingStatus = useMutation(api.services.bookings.updateBooking)
   const createUser = useMutation(api.services.auth.createUser)
@@ -930,6 +935,24 @@ const POS = () => {
       items.splice(index, 1)
       return { ...prev, [type]: items }
     })
+    // Count as a BIR "line void" for X/Z readings (fire-and-forget).
+    const bId = currentBranch?._id || user?.branch_id
+    if (bId) {
+      logPosEvent({ branch_id: bId, event_type: 'line_void', performed_by: user?._id }).catch(() => {})
+    }
+  }
+
+  // No Sale — open the drawer without a sale (logged for BIR readings)
+  const handleNoSale = async () => {
+    const bId = currentBranch?._id || user?.branch_id
+    if (!bId) return
+    if (!window.confirm('Open drawer with NO SALE? This will be recorded for the X/Z reading.')) return
+    try {
+      await logPosEvent({ branch_id: bId, event_type: 'no_sale', performed_by: user?._id })
+      setAlertModal({ show: true, title: 'No Sale Recorded', message: 'A No-Sale event was logged for the reading.', type: 'success' })
+    } catch (e) {
+      setAlertModal({ show: true, title: 'Error', message: e?.message || 'Failed to record No Sale', type: 'error' })
+    }
   }
 
   // Clear transaction
@@ -980,6 +1003,15 @@ const POS = () => {
 
   // Open payment confirmation modal
   const openPaymentModal = () => {
+    if (!isOnline) {
+      setAlertModal({
+        show: true,
+        title: 'No Internet Connection',
+        message: 'You appear to be offline. Reconnect before processing a sale — nothing has been charged or recorded.',
+        type: 'error'
+      })
+      return
+    }
     if (!user || !user._id) {
       setAlertModal({
         show: true,
@@ -1060,6 +1092,16 @@ const POS = () => {
 
   // Process payment after confirmation
   const processPayment = async (paymentData) => {
+    // Hard stop if offline — never attempt a server write we can't confirm.
+    if (!isOnline) {
+      setAlertModal({
+        show: true,
+        title: 'No Internet Connection',
+        message: 'The sale was NOT recorded because you are offline. Please reconnect and try again — nothing has been charged.',
+        type: 'error'
+      })
+      return
+    }
     try {
       // Resolve branch to use for the transaction (barber branch takes precedence)
       const resolvedBranchId = selectedBarber?.branch_id || user?.branch_id
@@ -1593,6 +1635,7 @@ const POS = () => {
 
     return (
       <div className="min-h-screen bg-gradient-to-br from-[#1A1A1A] via-[#2A2A2A] to-[#1A1A1A] pb-32">
+        <OfflineBanner />
         {/* Mobile Header - Compact */}
         <div className="sticky top-0 z-50 bg-[#050505] border-b border-[#1A1A1A]/30" style={{ paddingTop: 'env(safe-area-inset-top)' }}>
           <div className="px-3 py-2">
@@ -1610,6 +1653,22 @@ const POS = () => {
                   <p className="text-[10px] text-[var(--color-primary)]">Point of Sale</p>
                 </div>
               </div>
+
+              <button
+                onClick={handleNoSale}
+                className="w-9 h-9 bg-[#0A0A0A] rounded-lg flex items-center justify-center border border-[#1A1A1A]/50"
+                title="No Sale (open drawer)"
+              >
+                <Banknote className="w-4 h-4 text-gray-400" />
+              </button>
+
+              <button
+                onClick={() => setActiveModal('readings')}
+                className="w-9 h-9 bg-[#0A0A0A] rounded-lg flex items-center justify-center border border-[#1A1A1A]/50"
+                title="X / Z Reading"
+              >
+                <FileText className="w-4 h-4 text-gray-400" />
+              </button>
 
               <button
                 onClick={() => setActiveModal('reprintReceipts')}
@@ -2234,6 +2293,7 @@ const POS = () => {
             <button
               onClick={openPaymentModal}
               disabled={
+                !isOnline ||
                 (posMode === 'service' && !selectedBarber) ||
                 (posMode === 'service' && currentTransaction.services.length === 0) ||
                 (posMode === 'retail' && currentTransaction.products.length === 0)
@@ -2337,6 +2397,15 @@ const POS = () => {
           />
         )}
 
+        {activeModal === 'readings' && (
+          <ReadingsModal
+            isOpen={true}
+            onClose={() => setActiveModal(null)}
+            branchInfo={currentBranch}
+            staffInfo={user}
+          />
+        )}
+
         {activeModal === 'cancelBooking' && (
           <Modal isOpen={true} onClose={() => setActiveModal(null)} title="Cancel Booking" size="sm">
             <div className="text-center py-4">
@@ -2422,6 +2491,7 @@ const POS = () => {
   // Desktop Layout (existing code)
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#1A1A1A] via-[#2A2A2A] to-[#1A1A1A]">
+      <OfflineBanner />
       {/* Subtle background pattern */}
       <div className="absolute inset-0">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(255,140,66,0.03),transparent_50%)]"></div>
@@ -2508,6 +2578,24 @@ const POS = () => {
                   <ArrowLeft className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-[var(--color-primary)] group-hover:text-[var(--color-primary)] transition-colors duration-200" />
                   <span className="hidden sm:inline text-[var(--color-primary)] group-hover:text-[var(--color-primary)] font-semibold text-xs transition-colors duration-200">Back</span>
                 </Link>
+
+                <button
+                  onClick={handleNoSale}
+                  className="bg-white/5 backdrop-blur-sm rounded-lg flex items-center space-x-1 px-2 sm:px-3 py-1.5 hover:bg-white/10 transition-all duration-200 border border-white/10 group"
+                  title="No Sale (open drawer)"
+                >
+                  <Banknote className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-gray-400 group-hover:text-white transition-colors duration-200" />
+                  <span className="hidden sm:inline text-gray-400 group-hover:text-white font-semibold text-xs transition-colors duration-200">No Sale</span>
+                </button>
+
+                <button
+                  onClick={() => setActiveModal('readings')}
+                  className="bg-white/5 backdrop-blur-sm rounded-lg flex items-center space-x-1 px-2 sm:px-3 py-1.5 hover:bg-white/10 transition-all duration-200 border border-white/10 group"
+                  title="X / Z Reading"
+                >
+                  <FileText className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-gray-400 group-hover:text-white transition-colors duration-200" />
+                  <span className="hidden sm:inline text-gray-400 group-hover:text-white font-semibold text-xs transition-colors duration-200">Readings</span>
+                </button>
 
                 <button
                   onClick={() => setActiveModal('reprintReceipts')}
@@ -3713,6 +3801,7 @@ const POS = () => {
                     <button
                       onClick={openPaymentModal}
                       disabled={
+                        !isOnline ||
                         (posMode === 'service' && !selectedBarber) ||
                         (posMode === 'service' && currentTransaction.services.length === 0) ||
                         (posMode === 'retail' && currentTransaction.products.length === 0)
@@ -3824,6 +3913,15 @@ const POS = () => {
 
       {activeModal === 'reprintReceipts' && (
         <ReprintReceiptsModal
+          isOpen={true}
+          onClose={() => setActiveModal(null)}
+          branchInfo={currentBranch}
+          staffInfo={user}
+        />
+      )}
+
+      {activeModal === 'readings' && (
+        <ReadingsModal
           isOpen={true}
           onClose={() => setActiveModal(null)}
           branchInfo={currentBranch}
