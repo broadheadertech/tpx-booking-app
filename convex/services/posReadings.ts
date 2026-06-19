@@ -21,6 +21,14 @@ function phDateString(ts: number): string {
   return new Date(ts + 8 * 3600 * 1000).toISOString().slice(0, 10);
 }
 
+// Start / end of a PH calendar date ("YYYY-MM-DD") as epoch ms.
+function phStartMs(dateStr: string): number {
+  return Date.parse(`${dateStr}T00:00:00.000+08:00`);
+}
+function phEndMs(dateStr: string): number {
+  return Date.parse(`${dateStr}T23:59:59.999+08:00`);
+}
+
 /** Most recent Z-reading for a branch (highest z_counter), or null. */
 async function getLastZ(ctx: any, branchId: any) {
   return await ctx.db
@@ -172,6 +180,45 @@ export const getXReading = query({
       machine_serial: ctxInfo.machine_serial,
       accumulated_grand_total_beginning: round2(accumBegin),
       accumulated_grand_total_ending: round2(accumBegin + agg.gross_sales),
+      is_bir_accredited: ctxInfo.isAccredited,
+      ...agg,
+    };
+  },
+});
+
+// ============================================================================
+// RANGE REPORT — Z-style sales summary for any date range (no reset)
+// ============================================================================
+
+export const getRangeReading = query({
+  args: {
+    branch_id: v.id("branches"),
+    start_date: v.string(), // "YYYY-MM-DD"
+    end_date: v.string(),   // "YYYY-MM-DD"
+  },
+  handler: async (ctx, args) => {
+    const startTs = phStartMs(args.start_date);
+    const endTs = phEndMs(args.end_date);
+    if (isNaN(startTs) || isNaN(endTs) || endTs < startTs) {
+      throw new Error("Invalid date range.");
+    }
+    // periodStart is exclusive (>) so subtract 1ms to include the start instant.
+    const agg = await aggregatePeriod(ctx, args.branch_id, startTs - 1, endTs);
+    const ctxInfo = await buildContext(ctx, args.branch_id);
+
+    return {
+      type: "RANGE" as const,
+      branch_id: args.branch_id,
+      branch_name: ctxInfo.branch?.name || "",
+      reading_datetime: Date.now(),
+      range_start: args.start_date,
+      range_end: args.end_date,
+      period_start: startTs,
+      period_end: endTs,
+      store_code: ctxInfo.store_code,
+      terminal_no: ctxInfo.terminal_no,
+      machine_min: ctxInfo.machine_min,
+      machine_serial: ctxInfo.machine_serial,
       is_bir_accredited: ctxInfo.isAccredited,
       ...agg,
     };

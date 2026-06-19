@@ -15,7 +15,7 @@
  *   "breaking" — Breaking/major change (bumps MAJOR)
  */
 
-export const APP_VERSION = '2.25.0';
+export const APP_VERSION = '2.27.0';
 export const LAST_DEPLOY = '2026-06-11';
 export const VERSION_INFO = {
   version: APP_VERSION,
@@ -28,6 +28,20 @@ export const VERSION_INFO = {
  * Each entry: { version, date, changes: [{ tag, text }] }
  */
 export const CHANGELOG = [
+  {
+    version: '2.27.0',
+    date: '2026-06-11',
+    changes: [
+      { tag: 'feature', text: 'Past Z-Readings — new option in POS Readings to browse previous Z closes (Z#, date, txns, cashier, gross) and reprint any one exactly as recorded. Reprint uses the stored snapshot, so historical Z-Readings stay accurate.' },
+    ],
+  },
+  {
+    version: '2.26.0',
+    date: '2026-06-11',
+    changes: [
+      { tag: 'feature', text: 'Date-Range Sales Report — new option in POS Readings to generate a Z-style sales summary for any custom period (From/To dates) without closing or resetting. Same BIR breakdown (gross, VAT, discounts, net, tender, transaction details) for the chosen range, printable on the 58mm slip. Omits Z-counter/accumulated totals since it is not a close.' },
+    ],
+  },
   {
     version: '2.25.0',
     date: '2026-06-11',
