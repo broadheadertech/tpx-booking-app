@@ -96,6 +96,7 @@ import type * as services_receiptNumbering from "../services/receiptNumbering.js
 import type * as services_resendEmail from "../services/resendEmail.js";
 import type * as services_royalty from "../services/royalty.js";
 import type * as services_securityMonitoring from "../services/securityMonitoring.js";
+import type * as services_serviceCategories from "../services/serviceCategories.js";
 import type * as services_services from "../services/services.js";
 import type * as services_settlementInsights from "../services/settlementInsights.js";
 import type * as services_settlements from "../services/settlements.js";
@@ -212,6 +213,7 @@ declare const fullApi: ApiFromModules<{
   "services/resendEmail": typeof services_resendEmail;
   "services/royalty": typeof services_royalty;
   "services/securityMonitoring": typeof services_securityMonitoring;
+  "services/serviceCategories": typeof services_serviceCategories;
   "services/services": typeof services_services;
   "services/settlementInsights": typeof services_settlementInsights;
   "services/settlements": typeof services_settlements;

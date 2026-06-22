@@ -71,51 +71,30 @@ function StaffDashboard() {
 
   // Convex queries for data - adjust based on user role
   // Added pagination limits to avoid Convex byte limit errors
-  const bookingsData =
-    user?.role === "super_admin"
-      ? useQuery(api.services.bookings.getAllBookings, { limit: 100 })
-      : user?.branch_id
-        ? useQuery(api.services.bookings.getBookingsByBranch, {
-          branch_id: user.branch_id,
-          limit: 100,
-        })
-        : undefined;
+  // Hooks must run unconditionally — disable the unused branch query with "skip".
+  const isSuperAdmin = user?.role === "super_admin";
+  const branchScope = !isSuperAdmin && user?.branch_id ? { branch_id: user.branch_id } : "skip";
+
+  const allBookings = useQuery(api.services.bookings.getAllBookings, isSuperAdmin ? { limit: 100 } : "skip");
+  const branchBookings = useQuery(api.services.bookings.getBookingsByBranch, !isSuperAdmin && user?.branch_id ? { branch_id: user.branch_id, limit: 100 } : "skip");
+  const bookingsData = isSuperAdmin ? allBookings : (user?.branch_id ? branchBookings : undefined);
   const bookings = bookingsData?.bookings || [];
 
-  const services =
-    user?.role === "super_admin"
-      ? useQuery(api.services.services.getAllServices)
-      : user?.branch_id
-        ? useQuery(api.services.services.getServicesByBranch, {
-          branch_id: user.branch_id,
-        })
-        : undefined;
+  const allServices = useQuery(api.services.services.getAllServices, isSuperAdmin ? {} : "skip");
+  const branchServices = useQuery(api.services.services.getServicesByBranch, branchScope);
+  const services = isSuperAdmin ? allServices : (user?.branch_id ? branchServices : undefined);
 
-  const barbers =
-    user?.role === "super_admin"
-      ? useQuery(api.services.barbers.getAllBarbers)
-      : user?.branch_id
-        ? useQuery(api.services.barbers.getBarbersByBranch, {
-          branch_id: user.branch_id,
-        })
-        : undefined;
+  const allBarbers = useQuery(api.services.barbers.getAllBarbers, isSuperAdmin ? {} : "skip");
+  const branchBarbers = useQuery(api.services.barbers.getBarbersByBranch, branchScope);
+  const barbers = isSuperAdmin ? allBarbers : (user?.branch_id ? branchBarbers : undefined);
 
-  const vouchers =
-    user?.role === "super_admin"
-      ? useQuery(api.services.vouchers.getAllVouchers, {})
-      : user?.branch_id
-        ? useQuery(api.services.vouchers.getVouchersByBranch, {
-          branch_id: user.branch_id,
-        })
-        : undefined;
-  const events =
-    user?.role === "super_admin"
-      ? useQuery(api.services.events.getAllEvents)
-      : user?.branch_id
-        ? useQuery(api.services.events.getEventsByBranch, {
-          branch_id: user.branch_id,
-        })
-        : undefined;
+  const allVouchers = useQuery(api.services.vouchers.getAllVouchers, isSuperAdmin ? {} : "skip");
+  const branchVouchers = useQuery(api.services.vouchers.getVouchersByBranch, branchScope);
+  const vouchers = isSuperAdmin ? allVouchers : (user?.branch_id ? branchVouchers : undefined);
+
+  const allEvents = useQuery(api.services.events.getAllEvents, isSuperAdmin ? {} : "skip");
+  const branchEvents = useQuery(api.services.events.getEventsByBranch, branchScope);
+  const events = isSuperAdmin ? allEvents : (user?.branch_id ? branchEvents : undefined);
   // Fetch customers scoped to branch when available, otherwise system-wide
   const customers = useQuery(api.services.auth.getAllUsers,
     user?.branch_id

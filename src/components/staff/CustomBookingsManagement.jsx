@@ -61,23 +61,20 @@ const CustomBookingsManagement = ({ onRefresh, user }) => {
   })
 
   // Queries
-  const submissions = user?.role === 'super_admin'
-    ? useQuery(api.services.customBookingSubmissions.getAllSubmissions)
-    : user?.branch_id
-      ? useQuery(api.services.customBookingSubmissions.getSubmissionsByBranch, { branch_id: user.branch_id })
-      : undefined
+  const isSuperAdmin = user?.role === 'super_admin'
+  const branchScope = !isSuperAdmin && user?.branch_id ? { branch_id: user.branch_id } : 'skip'
 
-  const forms = user?.role === 'super_admin'
-    ? useQuery(api.services.customBookingForms.getAllForms)
-    : user?.branch_id
-      ? useQuery(api.services.customBookingForms.getFormsByBranch, { branch_id: user.branch_id })
-      : undefined
+  const allSubmissions = useQuery(api.services.customBookingSubmissions.getAllSubmissions, isSuperAdmin ? {} : 'skip')
+  const branchSubmissions = useQuery(api.services.customBookingSubmissions.getSubmissionsByBranch, branchScope)
+  const submissions = isSuperAdmin ? allSubmissions : (user?.branch_id ? branchSubmissions : undefined)
 
-  const barbers = user?.role === 'super_admin'
-    ? useQuery(api.services.barbers.getAllBarbers)
-    : user?.branch_id
-      ? useQuery(api.services.barbers.getBarbersByBranch, { branch_id: user.branch_id })
-      : undefined
+  const allForms = useQuery(api.services.customBookingForms.getAllForms, isSuperAdmin ? {} : 'skip')
+  const branchForms = useQuery(api.services.customBookingForms.getFormsByBranch, branchScope)
+  const forms = isSuperAdmin ? allForms : (user?.branch_id ? branchForms : undefined)
+
+  const allBarbers = useQuery(api.services.barbers.getAllBarbers, isSuperAdmin ? {} : 'skip')
+  const branchBarbers = useQuery(api.services.barbers.getBarbersByBranch, branchScope)
+  const barbers = isSuperAdmin ? allBarbers : (user?.branch_id ? branchBarbers : undefined)
 
   const pendingCount = useQuery(
     api.services.customBookingSubmissions.getPendingCount,

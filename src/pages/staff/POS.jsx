@@ -131,27 +131,25 @@ const POS = () => {
   }, [])
 
   // Convex queries - use branch-scoped queries for staff
-  const services = user?.role === 'super_admin'
-    ? useQuery(api.services.services.getAllServices)
-    : user?.branch_id
-      ? useQuery(api.services.services.getServicesByBranch, { branch_id: user.branch_id })
-      : []
+  // Hooks must run unconditionally — disable the unused branch query with "skip".
+  const isSuperAdmin = user?.role === 'super_admin'
+  const branchScope = !isSuperAdmin && user?.branch_id ? { branch_id: user.branch_id } : 'skip'
+
+  const allServices = useQuery(api.services.services.getAllServices, isSuperAdmin ? {} : 'skip')
+  const branchServices = useQuery(api.services.services.getServicesByBranch, branchScope)
+  const services = isSuperAdmin ? allServices : (user?.branch_id ? branchServices : [])
 
   const products = useQuery(api.services.products.getAllProducts,
     user?.branch_id ? { branch_id: user.branch_id } : {}
   )
 
-  const barbers = user?.role === 'super_admin'
-    ? useQuery(api.services.barbers.getAllBarbers)
-    : user?.branch_id
-      ? useQuery(api.services.barbers.getBarbersByBranch, { branch_id: user.branch_id })
-      : []
+  const allBarbers = useQuery(api.services.barbers.getAllBarbers, isSuperAdmin ? {} : 'skip')
+  const branchBarbers = useQuery(api.services.barbers.getBarbersByBranch, branchScope)
+  const barbers = isSuperAdmin ? allBarbers : (user?.branch_id ? branchBarbers : [])
 
-  const customers = user?.role === 'super_admin'
-    ? useQuery(api.services.auth.getAllUsers)
-    : user?.branch_id
-      ? useQuery(api.services.auth.getUsersByBranch, { branch_id: user.branch_id })
-      : []
+  const allCustomers = useQuery(api.services.auth.getAllUsers, isSuperAdmin ? {} : 'skip')
+  const branchCustomers = useQuery(api.services.auth.getUsersByBranch, branchScope)
+  const customers = isSuperAdmin ? allCustomers : (user?.branch_id ? branchCustomers : [])
 
   // Get branch information for the current user
   const branches = useQuery(api.services.branches.getAllBranches) || []

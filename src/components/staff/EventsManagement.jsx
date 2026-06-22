@@ -30,11 +30,10 @@ const EventsManagement = ({ onRefresh, user }) => {
   const [isFormValid, setIsFormValid] = useState(false)
 
   // Convex queries and mutations - use branch-scoped queries for staff
-  const events = user?.role === 'super_admin'
-    ? useQuery(api.services.events.getAllEvents)
-    : user?.branch_id
-      ? useQuery(api.services.events.getEventsByBranch, { branch_id: user.branch_id })
-      : []
+  const isSuperAdmin = user?.role === 'super_admin'
+  const allEvents = useQuery(api.services.events.getAllEvents, isSuperAdmin ? {} : 'skip')
+  const branchEvents = useQuery(api.services.events.getEventsByBranch, !isSuperAdmin && user?.branch_id ? { branch_id: user.branch_id } : 'skip')
+  const events = isSuperAdmin ? allEvents : (user?.branch_id ? branchEvents : [])
   const createEvent = useMutation(api.services.events.createEvent)
   const updateEvent = useMutation(api.services.events.updateEvent)
   const deleteEvent = useMutation(api.services.events.deleteEvent)

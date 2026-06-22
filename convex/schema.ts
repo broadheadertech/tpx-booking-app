@@ -571,6 +571,19 @@ export default defineSchema({
     .index("by_active", ["is_active"])
     .index("by_branch", ["branch_id"]),
 
+  // Configurable service categories (super-admin managed). The category string
+  // stored on a service must match an active row here (validation is lenient
+  // when none are configured, for backward compatibility).
+  service_categories: defineTable({
+    name: v.string(),                 // value stored on services (e.g. "Haircut")
+    is_active: v.boolean(),
+    display_order: v.optional(v.number()),
+    created_at: v.number(),
+    updated_at: v.number(),
+  })
+    .index("by_name", ["name"])
+    .index("by_active", ["is_active"]),
+
   // Bookings table
   bookings: defineTable({
     booking_code: v.string(),

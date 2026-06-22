@@ -74,11 +74,19 @@ const BarbersManagement = ({ barbers = [], onRefresh, user }) => {
 
   // Convex queries - with pagination limits to avoid byte limit errors
   // Get services filtered by branch to avoid showing duplicates from other branches
-  const services = user?.role === 'super_admin'
-    ? useQuery(api.services.services.getAllServices)
-    : user?.branch_id
-      ? useQuery(api.services.services.getServicesByBranch, { branch_id: user.branch_id })
-      : undefined
+  // NOTE: call both hooks unconditionally (Rules of Hooks) and disable the
+  // unused one with "skip" — calling useQuery inside a ternary on `user`
+  // changes the hook count when `user` loads and crashes the whole view.
+  const isSuperAdmin = user?.role === 'super_admin'
+  const allServices = useQuery(
+    api.services.services.getAllServices,
+    isSuperAdmin ? {} : 'skip'
+  )
+  const branchServices = useQuery(
+    api.services.services.getServicesByBranch,
+    !isSuperAdmin && user?.branch_id ? { branch_id: user.branch_id } : 'skip'
+  )
+  const services = isSuperAdmin ? allServices : branchServices
   const allBookingsData = useQuery(api.services.bookings.getAllBookings, { limit: 100 })
   const allBookings = allBookingsData?.bookings || []
 
