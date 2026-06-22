@@ -16,9 +16,9 @@ const BarberBookings = () => {
   const isToday = selectedDate === today
 
   // Get barber data
-  const barbers = user?.branch_id
-    ? useQuery(api.services.barbers.getBarbersByBranch, { branch_id: user.branch_id })
-    : useQuery(api.services.barbers.getAllBarbers)
+  const branchBarbers = useQuery(api.services.barbers.getBarbersByBranch, user?.branch_id ? { branch_id: user.branch_id } : 'skip')
+  const allBarbersQ = useQuery(api.services.barbers.getAllBarbers, user?.branch_id ? 'skip' : {})
+  const barbers = user?.branch_id ? branchBarbers : allBarbersQ
   const currentBarber = barbers?.find(barber => barber.user === user?._id)
 
   // Auto-create barber profile
@@ -31,9 +31,9 @@ const BarberBookings = () => {
   }, [user, barbers, currentBarber, createBarberProfile])
 
   // Get bookings
-  const allBookingsData = user?.branch_id
-    ? useQuery(api.services.bookings.getBookingsByBranch, { branch_id: user.branch_id, limit: 100 })
-    : useQuery(api.services.bookings.getAllBookings, { limit: 100 })
+  const branchBookingsData = useQuery(api.services.bookings.getBookingsByBranch, user?.branch_id ? { branch_id: user.branch_id, limit: 100 } : 'skip')
+  const allBookingsQ = useQuery(api.services.bookings.getAllBookings, user?.branch_id ? 'skip' : { limit: 100 })
+  const allBookingsData = user?.branch_id ? branchBookingsData : allBookingsQ
   const allBookings = allBookingsData?.bookings || []
   const barberBookings = allBookings.filter(booking => booking.barber === currentBarber?._id)
 

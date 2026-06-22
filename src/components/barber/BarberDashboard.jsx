@@ -400,9 +400,9 @@ const BarberDashboard = () => {
   if (!isOnBarberRoute) return null;
 
   // Get barber data
-  const barbers = user?.branch_id
-    ? useQuery(api.services.barbers.getBarbersByBranch, { branch_id: user.branch_id })
-    : useQuery(api.services.barbers.getAllBarbers);
+  const branchBarbers = useQuery(api.services.barbers.getBarbersByBranch, user?.branch_id ? { branch_id: user.branch_id } : 'skip');
+  const allBarbersQ = useQuery(api.services.barbers.getAllBarbers, user?.branch_id ? 'skip' : {});
+  const barbers = user?.branch_id ? branchBarbers : allBarbersQ;
   const currentBarber = barbers?.find((barber) => barber.user === user?._id);
 
   // Mutations
@@ -417,9 +417,9 @@ const BarberDashboard = () => {
   }, [user, barbers, currentBarber, createBarberProfile]);
 
   // Get transactions - with pagination limits to avoid byte limit errors
-  const transactionsData = user?.branch_id
-    ? useQuery(api.services.transactions.getTransactionsByBranch, { branch_id: user.branch_id, limit: 100 })
-    : useQuery(api.services.transactions.getAllTransactions, { limit: 100 });
+  const branchTx = useQuery(api.services.transactions.getTransactionsByBranch, user?.branch_id ? { branch_id: user.branch_id, limit: 100 } : 'skip');
+  const allTx = useQuery(api.services.transactions.getAllTransactions, user?.branch_id ? 'skip' : { limit: 100 });
+  const transactionsData = user?.branch_id ? branchTx : allTx;
   const allTransactions = transactionsData?.transactions || [];
 
   // Get bookings for this barber

@@ -53,7 +53,7 @@ const MyBookings = ({ onBack }) => {
   const accentColor = branding?.accent_color || '#1E3932';
 
   // Convex queries - only call when user exists
-  const bookings = user?._id ? useQuery(api.services.bookings.getBookingsByCustomer, { customerId: user._id }) : undefined;
+  const bookings = useQuery(api.services.bookings.getBookingsByCustomer, user?._id ? { customerId: user._id } : 'skip');
   const services = useQuery(api.services.services.getAllServices);
   const barbers = useQuery(api.services.barbers.getAllBarbers);
   

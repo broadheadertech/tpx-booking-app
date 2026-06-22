@@ -79,17 +79,21 @@ const BookingsManagement = ({ onRefresh, user }) => {
   // If date filter is applied, use server-side date filtering
   const hasDateFilter = startDate && endDate
 
-  const bookingsData = hasDateFilter
-    ? useQuery(api.services.bookings.getBookingsByDateRange, {
-      startDate,
-      endDate,
-      branch_id: user?.branch_id
-    })
-    : user?.role === 'super_admin'
-      ? useQuery(api.services.bookings.getAllBookings, { limit: 100 })
-      : user?.branch_id
-        ? useQuery(api.services.bookings.getBookingsByBranch, { branch_id: user.branch_id, limit: 100 })
-        : null
+  // Hooks must run unconditionally — pick the active source with "skip".
+  const isSuper = user?.role === 'super_admin'
+  const rangeData = useQuery(
+    api.services.bookings.getBookingsByDateRange,
+    hasDateFilter ? { startDate, endDate, branch_id: user?.branch_id } : 'skip'
+  )
+  const allData = useQuery(
+    api.services.bookings.getAllBookings,
+    !hasDateFilter && isSuper ? { limit: 100 } : 'skip'
+  )
+  const branchData = useQuery(
+    api.services.bookings.getBookingsByBranch,
+    !hasDateFilter && !isSuper && user?.branch_id ? { branch_id: user.branch_id, limit: 100 } : 'skip'
+  )
+  const bookingsData = hasDateFilter ? rangeData : isSuper ? allData : user?.branch_id ? branchData : null
 
   // Handle data structure differences: getBookingsByDateRange returns raw array, others return { bookings: [...] }
   const bookings = hasDateFilter

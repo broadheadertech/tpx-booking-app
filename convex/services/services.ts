@@ -11,6 +11,29 @@ const VALID_CATEGORIES = [
   "premium-package",
 ];
 
+/**
+ * Whether a category is allowed, based on the configurable `service_categories`
+ * list. Lenient by design:
+ *  - undefined category → allowed (no change)
+ *  - equals the service's current category → allowed (so you can never get
+ *    locked out of editing a service whose category was later removed)
+ *  - no categories configured yet → allowed (backward compatible before seed)
+ */
+async function categoryAllowed(
+  ctx: any,
+  category: string | undefined,
+  currentCategory?: string
+): Promise<boolean> {
+  if (category === undefined) return true;
+  if (currentCategory !== undefined && category === currentCategory) return true;
+  const active = await ctx.db
+    .query("service_categories")
+    .withIndex("by_active", (q: any) => q.eq("is_active", true))
+    .collect();
+  if (active.length === 0) return true;
+  return active.some((r: any) => r.name === category);
+}
+
 // Determine category from service name/description
 function inferCategory(name: string, description: string): string {
   const n = name.toLowerCase();
@@ -148,11 +171,11 @@ export const createService = mutation({
         "Duration must be greater than 0 minutes."
       );
     }
-    if (!VALID_CATEGORIES.includes(args.category)) {
+    if (!(await categoryAllowed(ctx, args.category))) {
       throwUserError(
         ERROR_CODES.INVALID_INPUT,
         "Invalid category",
-        `Category must be one of: ${VALID_CATEGORIES.join(", ")}.`
+        "That category isn't in the configured list. Add it under Service Categories settings."
       );
     }
 
@@ -242,11 +265,11 @@ export const updateService = mutation({
         "Duration must be greater than 0 minutes."
       );
     }
-    if (updates.category !== undefined && !VALID_CATEGORIES.includes(updates.category)) {
+    if (!(await categoryAllowed(ctx, updates.category, service?.category))) {
       throwUserError(
         ERROR_CODES.INVALID_INPUT,
         "Invalid category",
-        `Category must be one of: ${VALID_CATEGORIES.join(", ")}.`
+        "That category isn't in the configured list. Add it under Service Categories settings."
       );
     }
 

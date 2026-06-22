@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import Modal from '../common/Modal'
 import { Scissors, Clock, DollarSign, AlertCircle } from 'lucide-react'
-import { useMutation } from 'convex/react'
+import { useMutation, useQuery } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
 
 const CreateServiceModal = ({ isOpen, onClose, onSubmit, editingService = null, branchId }) => {
@@ -18,6 +18,20 @@ const CreateServiceModal = ({ isOpen, onClose, onSubmit, editingService = null, 
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [fieldErrors, setFieldErrors] = useState({})
+
+  // Configurable categories (super-admin managed). Always include the current
+  // value so an editing service's category still renders even if removed.
+  const categories = useQuery(api.services.serviceCategories.listServiceCategories, {}) || []
+  const categoryNames = categories.map((c) => c.name)
+  const categoryOptions = Array.from(new Set([...categoryNames, formData.category].filter(Boolean)))
+
+  // Default a new service to the first configured category.
+  useEffect(() => {
+    if (!editingService && categoryNames.length > 0 && !categoryNames.includes(formData.category)) {
+      setFormData((prev) => ({ ...prev, category: categoryNames[0] }))
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [categories, editingService])
 
   // Update form data when editingService changes
   useEffect(() => {
@@ -99,10 +113,16 @@ const CreateServiceModal = ({ isOpen, onClose, onSubmit, editingService = null, 
       }
     }
 
-    // Category validation
-    const validCategories = ['Haircut', 'Package', 'Other Services']
-    if (!validCategories.includes(formData.category)) {
-      errors.category = 'Invalid category selected'
+    // Category validation — against the configured list (lenient: allow the
+    // current service's category and don't block before the list is loaded).
+    if (!formData.category || !formData.category.trim()) {
+      errors.category = 'Please select a category'
+    } else if (
+      categoryNames.length > 0 &&
+      !categoryNames.includes(formData.category) &&
+      formData.category !== editingService?.category
+    ) {
+      errors.category = 'Select a category from the list'
     }
 
     return errors
@@ -254,9 +274,10 @@ const CreateServiceModal = ({ isOpen, onClose, onSubmit, editingService = null, 
                 onChange={(e) => handleInputChange('category', e.target.value)}
                 className="w-full h-9 px-2.5 border border-[#444444] rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-[var(--color-primary)] bg-[#1A1A1A] text-gray-300 transition-all"
               >
-                <option value="Haircut">Haircut</option>
-                <option value="Package">Package</option>
-                <option value="Other Services">Other Services</option>
+                {categoryOptions.length === 0 && <option value="">No categories configured</option>}
+                {categoryOptions.map((name) => (
+                  <option key={name} value={name}>{name}</option>
+                ))}
               </select>
               {fieldErrors.category && (
                 <p className="text-red-400 text-xs mt-0.5">{fieldErrors.category}</p>
