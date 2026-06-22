@@ -34,23 +34,20 @@ const CreateBookingModal = ({ isOpen, onClose, onSubmit, user }) => {
   const customerDropdownRef = useRef(null)
 
   // Convex queries for dropdown data - use branch-scoped queries for staff
-  const services = user?.role === 'super_admin'
-    ? useQuery(api.services.services.getAllServices)
-    : user?.branch_id
-      ? useQuery(api.services.services.getServicesByBranch, { branch_id: user.branch_id })
-      : undefined
-      
-  const barbers = user?.role === 'super_admin'
-    ? useQuery(api.services.barbers.getActiveBarbers)
-    : user?.branch_id
-      ? useQuery(api.services.barbers.getBarbersByBranch, { branch_id: user.branch_id })?.filter(b => b.is_active)
-      : undefined
-      
-  const customers = user?.role === 'super_admin'
-    ? useQuery(api.services.auth.getAllUsers)
-    : user?.branch_id
-      ? useQuery(api.services.auth.getUsersByBranch, { branch_id: user.branch_id })
-      : undefined
+  const isSuperAdmin = user?.role === 'super_admin'
+  const branchScope = !isSuperAdmin && user?.branch_id ? { branch_id: user.branch_id } : 'skip'
+
+  const allServices = useQuery(api.services.services.getAllServices, isSuperAdmin ? {} : 'skip')
+  const branchServices = useQuery(api.services.services.getServicesByBranch, branchScope)
+  const services = isSuperAdmin ? allServices : (user?.branch_id ? branchServices : undefined)
+
+  const allBarbers = useQuery(api.services.barbers.getActiveBarbers, isSuperAdmin ? {} : 'skip')
+  const branchBarbers = useQuery(api.services.barbers.getBarbersByBranch, branchScope)
+  const barbers = isSuperAdmin ? allBarbers : (user?.branch_id ? branchBarbers?.filter(b => b.is_active) : undefined)
+
+  const allCustomers = useQuery(api.services.auth.getAllUsers, isSuperAdmin ? {} : 'skip')
+  const branchCustomers = useQuery(api.services.auth.getUsersByBranch, branchScope)
+  const customers = isSuperAdmin ? allCustomers : (user?.branch_id ? branchCustomers : undefined)
   const barberAvailability = useQuery(api.services.bookings.getBookingsByBarberAndDate,
     (formData.barber && formData.date) ? {
       barberId: formData.barber,

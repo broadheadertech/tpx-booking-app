@@ -15,8 +15,8 @@
  *   "breaking" — Breaking/major change (bumps MAJOR)
  */
 
-export const APP_VERSION = '2.27.0';
-export const LAST_DEPLOY = '2026-06-11';
+export const APP_VERSION = '2.28.0';
+export const LAST_DEPLOY = '2026-06-20';
 export const VERSION_INFO = {
   version: APP_VERSION,
   lastDeploy: LAST_DEPLOY,
@@ -28,6 +28,21 @@ export const VERSION_INFO = {
  * Each entry: { version, date, changes: [{ tag, text }] }
  */
 export const CHANGELOG = [
+  {
+    version: '2.28.0',
+    date: '2026-06-20',
+    changes: [
+      { tag: 'fix', text: 'Service saving "Invalid category" error — the backend only accepted 5 hard-coded categories while the form offered different ones (Haircut/Package/Other Services), so saving any service failed. Categories are now a configurable list, seeded from your existing service categories, so all current services save correctly.' },
+      { tag: 'feature', text: 'Service Categories settings — super/IT admin can manage the service category list (add, hide, remove) via a new "Categories" button in Services management. The service form\'s category dropdown is driven by this list. Validation stays lenient: a service can always keep its current category, and nothing is blocked before the list is configured.' },
+    ],
+  },
+  {
+    version: '2.27.1',
+    date: '2026-06-20',
+    changes: [
+      { tag: 'fix', text: 'Barber editing crash + codebase-wide Rules of Hooks sweep — many views called useQuery conditionally (inside a ternary on the logged-in user), which crashed the whole view with no visible error once the user loaded. This caused the silent barber-editing failure. Swept and fixed every occurrence (Barbers, staff Dashboard, POS, Reports, Bookings, Custom Bookings, Events, Branch Users, Recent Activity, My Bookings, Vouchers, barber dashboards) to call queries unconditionally with "skip".' },
+    ],
+  },
   {
     version: '2.27.0',
     date: '2026-06-11',

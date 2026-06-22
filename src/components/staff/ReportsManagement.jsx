@@ -44,34 +44,39 @@ const ReportsManagement = ({ onRefresh, user }) => {
 
   // Fetch data with specific date ranges to support "This Year" and other long periods
   // We fetch enough data for current period + previous period comparison
-  const bookingsData = user?.role === 'super_admin'
-    ? useQuery(api.services.bookings.getBookingsByDateRange, { startDate: startDateStr, endDate: endDateStr })
-    : user?.branch_id
-      ? useQuery(api.services.bookings.getBookingsByDateRange, { startDate: startDateStr, endDate: endDateStr, branch_id: user.branch_id })
-      : null
+  const isSuperAdmin = user?.role === 'super_admin'
+  const branchScope = !isSuperAdmin && user?.branch_id ? { branch_id: user.branch_id } : 'skip'
+
+  const bookingsData = useQuery(
+    api.services.bookings.getBookingsByDateRange,
+    isSuperAdmin
+      ? { startDate: startDateStr, endDate: endDateStr }
+      : user?.branch_id
+        ? { startDate: startDateStr, endDate: endDateStr, branch_id: user.branch_id }
+        : 'skip'
+  )
 
   // Handle both array return (from new date range query) and object return (legacy pagination support if needed)
   const bookings = Array.isArray(bookingsData) ? bookingsData : (bookingsData?.bookings || [])
 
-  const transactionsData = user?.role === 'super_admin'
-    ? useQuery(api.services.transactions.getTransactionsByDateRange, { startDate: queryStart, endDate: queryEnd })
-    : user?.branch_id
-      ? useQuery(api.services.transactions.getTransactionsByDateRange, { startDate: queryStart, endDate: queryEnd, branch_id: user.branch_id })
-      : null
+  const transactionsData = useQuery(
+    api.services.transactions.getTransactionsByDateRange,
+    isSuperAdmin
+      ? { startDate: queryStart, endDate: queryEnd }
+      : user?.branch_id
+        ? { startDate: queryStart, endDate: queryEnd, branch_id: user.branch_id }
+        : 'skip'
+  )
 
   const transactions = transactionsData || []
 
-  const barbers = user?.role === 'super_admin'
-    ? useQuery(api.services.barbers.getAllBarbers)
-    : user?.branch_id
-      ? useQuery(api.services.barbers.getBarbersByBranch, { branch_id: user.branch_id })
-      : []
+  const allBarbers = useQuery(api.services.barbers.getAllBarbers, isSuperAdmin ? {} : 'skip')
+  const branchBarbers = useQuery(api.services.barbers.getBarbersByBranch, branchScope)
+  const barbers = isSuperAdmin ? allBarbers : (user?.branch_id ? branchBarbers : [])
 
-  const services = user?.role === 'super_admin'
-    ? useQuery(api.services.services.getAllServices)
-    : user?.branch_id
-      ? useQuery(api.services.services.getServicesByBranch, { branch_id: user.branch_id })
-      : []
+  const allServices = useQuery(api.services.services.getAllServices, isSuperAdmin ? {} : 'skip')
+  const branchServices = useQuery(api.services.services.getServicesByBranch, branchScope)
+  const services = isSuperAdmin ? allServices : (user?.branch_id ? branchServices : [])
 
   const products = useQuery(api.services.products.getAllProducts, {})
 

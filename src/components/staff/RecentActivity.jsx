@@ -8,17 +8,17 @@ const RecentActivity = ({ activities: propActivities = [] }) => {
   const { user } = useCurrentUser()
   
   // Fetch recent bookings to generate activity feed - with pagination limits
-  const bookingsData = user?.role === 'super_admin'
-    ? useQuery(api.services.bookings.getAllBookings, { limit: 50 })
-    : user?.branch_id
-      ? useQuery(api.services.bookings.getBookingsByBranch, { branch_id: user.branch_id, limit: 50 })
-      : undefined
+  const isSuperAdmin = user?.role === 'super_admin'
+  const allBookingsData = useQuery(api.services.bookings.getAllBookings, isSuperAdmin ? { limit: 50 } : 'skip')
+  const branchBookingsData = useQuery(api.services.bookings.getBookingsByBranch, !isSuperAdmin && user?.branch_id ? { branch_id: user.branch_id, limit: 50 } : 'skip')
+  const bookingsData = isSuperAdmin ? allBookingsData : (user?.branch_id ? branchBookingsData : undefined)
   const bookings = bookingsData?.bookings || []
 
   // Fetch recent transactions - with pagination limits
-  const transactionsData = user?.branch_id
-    ? useQuery(api.services.transactions.getTransactionsByBranch, { branch_id: user.branch_id, limit: 50 })
-    : undefined
+  const transactionsData = useQuery(
+    api.services.transactions.getTransactionsByBranch,
+    user?.branch_id ? { branch_id: user.branch_id, limit: 50 } : 'skip'
+  )
   const transactions = transactionsData?.transactions || []
   
   // Transform bookings and transactions into activity items

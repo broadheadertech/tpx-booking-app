@@ -53,9 +53,9 @@ const BarberProfile = () => {
   const [uploadingCertIndex, setUploadingCertIndex] = useState(null)
 
   // Get barber data
-  const barbers = user?.branch_id
-    ? useQuery(api.services.barbers.getBarbersByBranch, { branch_id: user.branch_id })
-    : useQuery(api.services.barbers.getAllBarbers)
+  const branchBarbers = useQuery(api.services.barbers.getBarbersByBranch, user?.branch_id ? { branch_id: user.branch_id } : 'skip')
+  const allBarbersQ = useQuery(api.services.barbers.getAllBarbers, user?.branch_id ? 'skip' : {})
+  const barbers = user?.branch_id ? branchBarbers : allBarbersQ
   const currentBarber = barbers?.find(barber => barber.user === user?._id)
 
   // Mutations

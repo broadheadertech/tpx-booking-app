@@ -27,8 +27,8 @@ const VoucherManagement = ({ onBack }) => {
   const canvasRef = useRef(null)
 
   // Convex queries - only call when user exists
-  const vouchers = user?.id ? useQuery(api.services.vouchers.getVouchersByUser, { userId: user.id }) : undefined
-  const debugData = user?.id ? useQuery(api.services.vouchers.debugUserVouchers, { userId: user.id }) : undefined
+  const vouchers = useQuery(api.services.vouchers.getVouchersByUser, user?.id ? { userId: user.id } : 'skip')
+  const debugData = useQuery(api.services.vouchers.debugUserVouchers, user?.id ? { userId: user.id } : 'skip')
   const loading = vouchers === undefined && user?.id // Loading when user exists but vouchers not loaded yet
   const error = null // No global error state needed for vouchers - handled individually
 

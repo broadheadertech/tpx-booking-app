@@ -120,9 +120,10 @@ export default function BranchUserManagement() {
   const [enrollUser, setEnrollUser] = useState(null)
 
   // Face enrollment status
-  const enrollments = user?.branch_id
-    ? useQuery(api.services.faceAttendance.getEnrollmentsByBranch, { branch_id: user.branch_id })
-    : null
+  const enrollments = useQuery(
+    api.services.faceAttendance.getEnrollmentsByBranch,
+    user?.branch_id ? { branch_id: user.branch_id } : 'skip'
+  )
   const enrolledUserIds = new Set(enrollments?.filter(e => e.user_id).map(e => e.user_id) || [])
 
   const initialFormData = {
@@ -141,9 +142,10 @@ export default function BranchUserManagement() {
   const [error, setError] = useState('')
 
   // Queries - only get users from current branch
-  const branchUsers = user?.branch_id
-    ? useQuery(api.services.auth.getUsersByBranch, { branch_id: user.branch_id }) || []
-    : []
+  const branchUsers = useQuery(
+    api.services.auth.getUsersByBranch,
+    user?.branch_id ? { branch_id: user.branch_id } : 'skip'
+  ) || []
 
   const branches = useQuery(api.services.branches.getAllBranches) || []
   const currentBranch = branches.find(b => b._id === user?.branch_id)

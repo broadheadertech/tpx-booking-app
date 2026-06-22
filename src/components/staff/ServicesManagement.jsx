@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react'
-import { Scissors, Clock, DollarSign, Search, Filter, Plus, Edit, Trash2, RotateCcw, Grid, List, ChevronLeft, ChevronRight, Download, HelpCircle } from 'lucide-react'
+import { Scissors, Clock, DollarSign, Search, Filter, Plus, Edit, Trash2, RotateCcw, Grid, List, ChevronLeft, ChevronRight, Download, HelpCircle, Tag } from 'lucide-react'
 import WalkthroughOverlay from '../common/WalkthroughOverlay'
 import { servicesManagementSteps } from '../../config/walkthroughSteps'
 import { useMutation } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
 import { useAppModal } from '../../context/AppModalContext'
 import CreateServiceModal from './CreateServiceModal'
+import ServiceCategoriesModal from './ServiceCategoriesModal'
 
 const ServicesManagement = ({ services = [], onRefresh, user }) => {
   const { showAlert, showConfirm } = useAppModal()
@@ -13,6 +14,7 @@ const ServicesManagement = ({ services = [], onRefresh, user }) => {
   const [searchTerm, setSearchTerm] = useState('')
   const [sortBy, setSortBy] = useState('name')
   const [showCreateModal, setShowCreateModal] = useState(false)
+  const [showCategoriesModal, setShowCategoriesModal] = useState(false)
   const [editingService, setEditingService] = useState(null)
   const [loading, setLoading] = useState(false)
   const [viewMode, setViewMode] = useState('table') // 'card' or 'table' - DEFAULT TABLE
@@ -221,6 +223,16 @@ const ServicesManagement = ({ services = [], onRefresh, user }) => {
               <RotateCcw className="h-4 w-4" />
               <span>Refresh</span>
             </button>
+            {(user?.role === 'super_admin' || user?.role === 'it_admin') && (
+              <button
+                onClick={() => setShowCategoriesModal(true)}
+                className="flex items-center space-x-1.5 px-3 py-2 bg-[#2A2A2A] text-gray-300 rounded-md hover:bg-[#333333] transition-colors text-sm border border-[#3A3A3A]"
+                title="Manage service categories"
+              >
+                <Tag className="h-4 w-4" />
+                <span>Categories</span>
+              </button>
+            )}
             <button
               onClick={handleCreate}
               className="flex items-center space-x-1.5 px-3 py-2 bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-accent)] text-white rounded-md hover:from-[var(--color-accent)] hover:brightness-110 transition-colors text-sm"
@@ -242,6 +254,11 @@ const ServicesManagement = ({ services = [], onRefresh, user }) => {
         onSubmit={handleModalSubmit}
         editingService={editingService}
         branchId={user?.branch_id}
+      />
+
+      <ServiceCategoriesModal
+        isOpen={showCategoriesModal}
+        onClose={() => setShowCategoriesModal(false)}
       />
 
       {/* Services Display */}
