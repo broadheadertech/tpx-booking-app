@@ -1,22 +1,19 @@
 import React, { useState, useEffect, useCallback } from 'react'
-import { Scissors, Clock, DollarSign, Search, Plus, Edit, Trash2, RotateCcw, Save, X, Sparkles, HelpCircle } from 'lucide-react'
+import { Scissors, Clock, DollarSign, Search, Plus, Edit, Trash2, RotateCcw, Save, X, Sparkles, HelpCircle, Tag } from 'lucide-react'
 import { useQuery, useMutation } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
 import { useAppModal } from '../../context/AppModalContext'
 import WalkthroughOverlay from '../common/WalkthroughOverlay'
 import { defaultServicesSteps } from '../../config/walkthroughSteps'
-
-const CATEGORIES = [
-  { value: 'haircut', label: 'Haircut' },
-  { value: 'beard-care', label: 'Beard Care' },
-  { value: 'hair-treatment', label: 'Hair Treatment' },
-  { value: 'hair-styling', label: 'Hair Styling' },
-  { value: 'premium-package', label: 'Premium Package' },
-  { value: 'other', label: 'Other' },
-]
+import ServiceCategoriesModal from '../staff/ServiceCategoriesModal'
 
 export default function DefaultServicesManager() {
   const { showConfirm } = useAppModal()
+  // Dynamic categories — same source the staff/branch-admin service form reads,
+  // so categories stay consistent across admin and staff.
+  const categories = useQuery(api.services.serviceCategories.listServiceCategories, {}) || []
+  const categoryNames = categories.map((c) => c.name)
+  const [showCategoriesModal, setShowCategoriesModal] = useState(false)
   const [showTutorial, setShowTutorial] = useState(false)
   const handleTutorialDone = useCallback(() => setShowTutorial(false), [])
   const services = useQuery(api.services.defaultServices.getAllDefaultServices) || []
@@ -40,6 +37,17 @@ export default function DefaultServicesManager() {
     is_active: true,
     hide_price: false,
   })
+
+  // Always include the current value so editing a service whose category was
+  // later removed from the list never loses its selection.
+  const categoryOptions = Array.from(new Set([...categoryNames, formData.category].filter(Boolean)))
+
+  // When creating a new service, default to the first configured category.
+  useEffect(() => {
+    if (showForm && !editingService && categoryNames.length > 0 && !categoryNames.includes(formData.category)) {
+      setFormData((prev) => ({ ...prev, category: categoryNames[0] }))
+    }
+  }, [showForm, editingService, categoryNames, formData.category])
 
   const filteredServices = services
     .filter(s =>
@@ -215,6 +223,14 @@ export default function DefaultServicesManager() {
               </button>
             )}
             <button
+              onClick={() => setShowCategoriesModal(true)}
+              className="flex items-center gap-1.5 px-3 py-2 bg-[#2A2A2A] text-gray-300 rounded-md hover:bg-[#333333] transition-colors text-sm border border-[#3A3A3A]"
+              title="Manage service categories"
+            >
+              <Tag className="h-4 w-4" />
+              <span>Categories</span>
+            </button>
+            <button
               data-tour="services-add-btn"
               onClick={() => { resetForm(); setShowForm(true) }}
               className="flex items-center gap-1.5 px-3 py-2 bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-accent)] text-white rounded-md hover:brightness-110 transition-colors text-sm"
@@ -254,8 +270,9 @@ export default function DefaultServicesManager() {
                   onChange={(e) => setFormData({ ...formData, category: e.target.value })}
                   className="w-full px-3 py-2 bg-[#2A2A2A] border border-[#3A3A3A] text-white rounded-md focus:ring-2 focus:ring-[var(--color-primary)] text-sm"
                 >
-                  {CATEGORIES.map(c => (
-                    <option key={c.value} value={c.value}>{c.label}</option>
+                  {categoryOptions.length === 0 && <option value="">No categories configured</option>}
+                  {categoryOptions.map((name) => (
+                    <option key={name} value={name}>{name}</option>
                   ))}
                 </select>
               </div>
@@ -434,6 +451,11 @@ export default function DefaultServicesManager() {
           )}
         </div>
       )}
+
+      <ServiceCategoriesModal
+        isOpen={showCategoriesModal}
+        onClose={() => setShowCategoriesModal(false)}
+      />
     </div>
   )
 }

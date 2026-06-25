@@ -223,7 +223,7 @@ const ServicesManagement = ({ services = [], onRefresh, user }) => {
               <RotateCcw className="h-4 w-4" />
               <span>Refresh</span>
             </button>
-            {(user?.role === 'super_admin' || user?.role === 'it_admin') && (
+            {(user?.role === 'super_admin' || user?.role === 'it_admin' || user?.role === 'admin' || user?.role === 'branch_admin' || user?.role === 'staff') && (
               <button
                 onClick={() => setShowCategoriesModal(true)}
                 className="flex items-center space-x-1.5 px-3 py-2 bg-[#2A2A2A] text-gray-300 rounded-md hover:bg-[#333333] transition-colors text-sm border border-[#3A3A3A]"

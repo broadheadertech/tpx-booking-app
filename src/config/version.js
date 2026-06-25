@@ -15,8 +15,8 @@
  *   "breaking" — Breaking/major change (bumps MAJOR)
  */
 
-export const APP_VERSION = '2.28.2';
-export const LAST_DEPLOY = '2026-06-23';
+export const APP_VERSION = '2.29.0';
+export const LAST_DEPLOY = '2026-06-25';
 export const VERSION_INFO = {
   version: APP_VERSION,
   lastDeploy: LAST_DEPLOY,
@@ -28,6 +28,15 @@ export const VERSION_INFO = {
  * Each entry: { version, date, changes: [{ tag, text }] }
  */
 export const CHANGELOG = [
+  {
+    version: '2.29.0',
+    date: '2026-06-25',
+    changes: [
+      { tag: 'fix', text: 'Service categories now consistent between admin and staff — the admin "Default Services" manager used its own hard-coded 6-category list while the staff/branch-admin service form read the configurable service_categories table, so categories added by one side never appeared for the other. The admin manager now reads the same dynamic list and has its own "Categories" button. Both sides share one source of truth.' },
+      { tag: 'feature', text: 'Branch admin and staff can now manage service categories (add/enable/remove), not just super/IT admin. The "Categories" button appears in both the admin and staff service managers.' },
+      { tag: 'improve', text: 'Category seed now includes a standard baseline (Haircut, Beard Care, Hair Treatment, Hair Styling, Premium Package, Other) plus any categories already used by services, so the list is never empty.' },
+    ],
+  },
   {
     version: '2.28.2',
     date: '2026-06-23',
