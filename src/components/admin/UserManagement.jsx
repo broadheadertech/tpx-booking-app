@@ -12,9 +12,16 @@ export default function UserManagement() {
   const { user: currentUser } = useCurrentUser()
   const isItAdmin = currentUser?.role === 'it_admin'
 
-  // IT Admin can only manage IT Admins; others get the default set
+  // IT Admin manages the full roster (all admin roles incl. other IT Admins);
+  // others get the default set.
   const availableRoles = isItAdmin
-    ? [{ value: 'it_admin', label: 'IT Administrator' }]
+    ? [
+        { value: 'super_admin', label: 'Super Admin' },
+        { value: 'admin', label: 'Admin' },
+        { value: 'branch_admin', label: 'Branch Admin' },
+        { value: 'staff', label: 'Staff' },
+        { value: 'it_admin', label: 'IT Administrator' },
+      ]
     : [
         { value: 'branch_admin', label: 'Branch Admin' },
         { value: 'staff', label: 'Staff' },
@@ -32,7 +39,7 @@ export default function UserManagement() {
     password: '',
     mobile_number: '',
     address: '',
-    role: isItAdmin ? 'it_admin' : 'branch_admin',
+    role: 'branch_admin',
     branch_id: '',
     page_access: []
   })
@@ -49,7 +56,7 @@ export default function UserManagement() {
   const users = useQuery(api.services.auth.getAllUsers, {
     limit: 1000,
     roles: isItAdmin
-      ? ['it_admin']
+      ? ['super_admin', 'admin', 'branch_admin', 'staff', 'it_admin']
       : ['super_admin', 'admin', 'branch_admin', 'staff']
   }) || []
   const branches = useQuery(api.services.branches.getActiveBranches) || []
@@ -106,7 +113,7 @@ export default function UserManagement() {
       password: '',
       mobile_number: '',
       address: '',
-      role: isItAdmin ? 'it_admin' : 'branch_admin',
+      role: 'branch_admin',
       branch_id: '',
       page_access: []
     })

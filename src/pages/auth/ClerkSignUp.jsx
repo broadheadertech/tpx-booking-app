@@ -10,6 +10,7 @@ import { useNavigate } from "react-router-dom";
 import { useBranding } from "../../context/BrandingContext";
 import { APP_VERSION } from "../../config/version";
 import bannerImage from "../../assets/img/banner.jpg";
+import InAppBrowserNotice from "../../components/common/InAppBrowserNotice";
 
 function ClerkSignUp() {
   const navigate = useNavigate();
@@ -99,6 +100,9 @@ function ClerkSignUp() {
               Create your account to get started.
             </p>
           </div>
+
+          {/* Warn users in Messenger/IG/FB in-app browsers (Google OAuth blocked) */}
+          <InAppBrowserNotice />
 
           {/* Clerk SignUp Component */}
           <div className="clerk-signup-container">
