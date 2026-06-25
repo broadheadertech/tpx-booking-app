@@ -45,7 +45,7 @@ export const getMyBarberProfile = query({
       name: barber.full_name,
       email: user.email || barber.email || "",
       phone: user.mobile_number || barber.phone || "",
-      avatarUrl: barber.avatar || "/img/avatar_default.jpg",
+      avatarUrl: (barber.avatarStorageId ? await ctx.storage.getUrl(barber.avatarStorageId) : null) || barber.avatar || "/img/avatar_default.jpg",
       branch_name: branch?.name || "Unknown Branch",
       user_id: user._id,
     };
@@ -228,7 +228,7 @@ export const getAllBarbers = query({
             // Use user email first, fallback to barber's own email field
             email: user?.email || barber.email || '',
             phone: user?.mobile_number || barber.phone || '',
-            avatarUrl: barber.avatar || '/img/avatar_default.jpg',
+            avatarUrl: (barber.avatarStorageId ? await ctx.storage.getUrl(barber.avatarStorageId) : null) || barber.avatar || '/img/avatar_default.jpg',
             branch_name: branch?.name || 'Unknown Branch',
           };
         } catch (error) {
@@ -243,7 +243,7 @@ export const getAllBarbers = query({
             // Fallback to barber's own email field if user lookup fails
             email: barber.email || '',
             phone: barber.phone || '',
-            avatarUrl: barber.avatar || '/img/avatar_default.jpg',
+            avatarUrl: (barber.avatarStorageId ? await ctx.storage.getUrl(barber.avatarStorageId) : null) || barber.avatar || '/img/avatar_default.jpg',
             branch_name: 'Unknown Branch',
           };
         }
@@ -279,7 +279,7 @@ export const getBarbersByBranch = query({
             // Use user email first, fallback to barber's own email field
             email: user?.email || barber.email || '',
             phone: user?.mobile_number || barber.phone || '',
-            avatarUrl: barber.avatar || '/img/avatar_default.jpg',
+            avatarUrl: (barber.avatarStorageId ? await ctx.storage.getUrl(barber.avatarStorageId) : null) || barber.avatar || '/img/avatar_default.jpg',
           };
         } catch (error) {
           return {
@@ -288,7 +288,7 @@ export const getBarbersByBranch = query({
             // Fallback to barber's own email field if user lookup fails
             email: barber.email || '',
             phone: barber.phone || '',
-            avatarUrl: barber.avatar || '/img/avatar_default.jpg',
+            avatarUrl: (barber.avatarStorageId ? await ctx.storage.getUrl(barber.avatarStorageId) : null) || barber.avatar || '/img/avatar_default.jpg',
           };
         }
       })
@@ -312,7 +312,7 @@ export const getBarberById = query({
       // Use user email first, fallback to barber's own email field
       email: user?.email || barber.email || '',
       phone: user?.mobile_number || barber.phone || '',
-      avatarUrl: barber.avatar || '/img/avatar_default.jpg',
+      avatarUrl: (barber.avatarStorageId ? await ctx.storage.getUrl(barber.avatarStorageId) : null) || barber.avatar || '/img/avatar_default.jpg',
     };
   },
 });
@@ -563,7 +563,7 @@ export const getBarbersByService = query({
           // Use user email first, fallback to barber's own email field
           email: user?.email || barber.email || '',
           phone: user?.mobile_number || barber.phone || '',
-          avatarUrl: barber.avatar || '/img/avatar_default.jpg',
+          avatarUrl: (barber.avatarStorageId ? await ctx.storage.getUrl(barber.avatarStorageId) : null) || barber.avatar || '/img/avatar_default.jpg',
         };
       })
     );
@@ -596,7 +596,7 @@ export const getActiveBarbers = query({
             // Use user email first, fallback to barber's own email field
             email: user?.email || barber.email || '',
             phone: user?.mobile_number || barber.phone || '',
-            avatarUrl: barber.avatar || '/img/avatar_default.jpg',
+            avatarUrl: (barber.avatarStorageId ? await ctx.storage.getUrl(barber.avatarStorageId) : null) || barber.avatar || '/img/avatar_default.jpg',
           };
         } catch (error) {
           return {
@@ -605,7 +605,7 @@ export const getActiveBarbers = query({
             // Fallback to barber's own email field if user lookup fails
             email: barber.email || '',
             phone: barber.phone || '',
-            avatarUrl: barber.avatar || '/img/avatar_default.jpg',
+            avatarUrl: (barber.avatarStorageId ? await ctx.storage.getUrl(barber.avatarStorageId) : null) || barber.avatar || '/img/avatar_default.jpg',
           };
         }
       })

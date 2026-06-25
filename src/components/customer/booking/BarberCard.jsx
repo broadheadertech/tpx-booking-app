@@ -42,11 +42,14 @@ const BarberCard = ({
     return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
   }
 
-  // Get avatar URL
+  // Get avatar URL. Barber records expose the resolved photo as `avatarUrl`
+  // (with `avatar` as a fallback); the old snake_case fields are kept last for
+  // safety. The bundled default placeholder is treated as "no photo" so we
+  // still show initials rather than a generic silhouette.
   const getAvatarUrl = () => {
-    if (barber.avatar_url) return barber.avatar_url
-    if (barber.profile_image) return barber.profile_image
-    return null
+    const url = barber.avatarUrl || barber.avatar || barber.avatar_url || barber.profile_image
+    if (!url || (typeof url === 'string' && url.includes('avatar_default'))) return null
+    return url
   }
 
   return (
@@ -228,9 +231,9 @@ export const BarberCardCompact = ({
   }
 
   const getAvatarUrl = () => {
-    if (barber.avatar_url) return barber.avatar_url
-    if (barber.profile_image) return barber.profile_image
-    return null
+    const url = barber.avatarUrl || barber.avatar || barber.avatar_url || barber.profile_image
+    if (!url || (typeof url === 'string' && url.includes('avatar_default'))) return null
+    return url
   }
 
   return (
