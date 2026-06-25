@@ -13,12 +13,14 @@
 import { v } from "convex/values";
 import { mutation, query } from "../_generated/server";
 
-const ADMIN_ROLES = new Set(["super_admin", "it_admin"]);
+// Roles allowed to manage the service category list. Includes branch admin and
+// staff so branches can maintain their own categories, not just super/IT admin.
+const MANAGER_ROLES = new Set(["super_admin", "it_admin", "admin", "branch_admin", "staff"]);
 
-async function requireAdmin(ctx: any, userId: any) {
+async function requireManager(ctx: any, userId: any) {
   const u = await ctx.db.get(userId);
-  if (!u || !ADMIN_ROLES.has(u.role)) {
-    throw new Error("Only a super admin or IT admin can manage service categories.");
+  if (!u || !MANAGER_ROLES.has(u.role)) {
+    throw new Error("You are not allowed to manage service categories.");
   }
   return u;
 }
@@ -39,7 +41,7 @@ export const listServiceCategories = query({
 export const addServiceCategory = mutation({
   args: { name: v.string(), actor_id: v.id("users") },
   handler: async (ctx, args) => {
-    await requireAdmin(ctx, args.actor_id);
+    await requireManager(ctx, args.actor_id);
     const name = args.name.trim();
     if (!name) throw new Error("Category name is required.");
 
@@ -70,7 +72,7 @@ export const addServiceCategory = mutation({
 export const setServiceCategoryActive = mutation({
   args: { id: v.id("service_categories"), is_active: v.boolean(), actor_id: v.id("users") },
   handler: async (ctx, args) => {
-    await requireAdmin(ctx, args.actor_id);
+    await requireManager(ctx, args.actor_id);
     await ctx.db.patch(args.id, { is_active: args.is_active, updated_at: Date.now() });
     return { success: true };
   },
@@ -79,22 +81,34 @@ export const setServiceCategoryActive = mutation({
 export const removeServiceCategory = mutation({
   args: { id: v.id("service_categories"), actor_id: v.id("users") },
   handler: async (ctx, args) => {
-    await requireAdmin(ctx, args.actor_id);
+    await requireManager(ctx, args.actor_id);
     await ctx.db.delete(args.id);
     return { success: true };
   },
 });
 
+// Standard baseline categories so the list is never empty. These mirror the
+// categories the admin "default services" manager used to hard-code, so admin
+// and staff start from the same set.
+const STANDARD_CATEGORIES = [
+  "Haircut",
+  "Beard Care",
+  "Hair Treatment",
+  "Hair Styling",
+  "Premium Package",
+  "Other",
+];
+
 /**
- * Seed the category list from categories already used by existing services.
- * Idempotent and safe — only adds names that don't already exist. Public so it
- * can be run once via `npx convex run` (no auth context needed).
+ * Seed the category list from the standard baseline plus categories already used
+ * by existing services. Idempotent and safe — only adds names that don't already
+ * exist. Public so it can be run once via `npx convex run` (no auth context).
  */
 export const seedServiceCategoriesFromServices = mutation({
   args: {},
   handler: async (ctx) => {
     const services = await ctx.db.query("services").collect();
-    const names = new Set<string>();
+    const names = new Set<string>(STANDARD_CATEGORIES);
     for (const s of services) {
       if (s.category && s.category.trim()) names.add(s.category.trim());
     }
