@@ -1224,7 +1224,7 @@ export const getAllUsers = query({
     // For legacy session auth (no Clerk JWT), allow through for backward compatibility
     const currentUser = await getAuthenticatedUser(ctx);
     if (currentUser) {
-      const allowedRoles = ["staff", "admin", "branch_admin", "super_admin", "barber"];
+      const allowedRoles = ["staff", "admin", "branch_admin", "super_admin", "barber", "it_admin"];
       if (!allowedRoles.includes(currentUser.role)) {
         return [];
       }

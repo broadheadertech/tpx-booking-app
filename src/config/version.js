@@ -15,8 +15,8 @@
  *   "breaking" — Breaking/major change (bumps MAJOR)
  */
 
-export const APP_VERSION = '2.28.0';
-export const LAST_DEPLOY = '2026-06-20';
+export const APP_VERSION = '2.28.2';
+export const LAST_DEPLOY = '2026-06-23';
 export const VERSION_INFO = {
   version: APP_VERSION,
   lastDeploy: LAST_DEPLOY,
@@ -28,6 +28,20 @@ export const VERSION_INFO = {
  * Each entry: { version, date, changes: [{ tag, text }] }
  */
 export const CHANGELOG = [
+  {
+    version: '2.28.2',
+    date: '2026-06-23',
+    changes: [
+      { tag: 'fix', text: 'Barber profile photos not showing — uploading a barber photo in the back office saved it to storage (avatarStorageId), but the barber queries built avatarUrl only from the old avatar field and never resolved the storage URL, so it always fell back to initials. Barber queries now resolve avatarUrl from avatarStorageId, and the "Choose Your Barber" card reads the correct avatarUrl field. Uploaded photos now appear.' },
+    ],
+  },
+  {
+    version: '2.28.1',
+    date: '2026-06-23',
+    changes: [
+      { tag: 'fix', text: 'In-app browser Google sign-in (Error 403: disallowed_useragent) — when the login/signup page is opened inside Messenger, Facebook, Instagram and other in-app browsers (where Google blocks OAuth), it now shows a clear notice to open in a real browser or sign in with email/password, with a "Copy link" button. The block itself is Google policy; this guides users around it.' },
+    ],
+  },
   {
     version: '2.28.0',
     date: '2026-06-20',
